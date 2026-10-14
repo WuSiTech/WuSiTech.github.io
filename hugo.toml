@@ -1,4 +1,16 @@
-baseURL = 'WuSiTech.github.io/'
+baseURL = 'https://wusitech.github.io/'
 locale = 'zh-cn'
-title = 'WuSi Blog!'
-theme = "PaperMod"
+title = '吾思 梦阁'
+theme = "reimu"
+
+# 主题新增的配置
+mainSections = ["posts"]          # 文章所在目录（content/posts）
+author = "吾思"
+description = "思集成之大道，考计科之行踪"
+subtitle = "DAZE~"        # 副标题
+
+# 代码块高亮：主题要求用 class 模式，否则 Hugo 会用 Monokai 内联样式
+# （背景 #272822），与主题 CSS 的 --highlight-foreground 冲突导致代码看不清
+[markup.highlight]
+guessSyntax = true
+noClasses = false

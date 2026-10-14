@@ -1,0 +1,22 @@
+# ============ Hugo ============
+# 构建产物：GitHub Actions 会在 CI 中重新生成（hugo --minify），无需提交
+/public/
+
+# Hugo 的资源缓存（图片处理 / SCSS 编译缓存），仅根目录这份
+/resources/
+
+# Hugo 构建时生成的锁文件
+/.hugo_build.lock
+
+# ============ 本地临时目录 ============
+# 构建/验证时使用的临时输出目录（仅根目录）
+/.verify*/
+/.imgwork/
+/.shot/
+
+# ============ 系统 / 编辑器 ============
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 注意：static/resources/ 是主题的本地 vendor 库，必须保留跟踪，不要 ignore。
