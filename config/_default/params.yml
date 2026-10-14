@@ -60,7 +60,7 @@ subtitle:
     showCursor: true            # 是否显示闪烁的字符
     cursorChar: "|"             # 字符
     smartBackspace: false       # 智能退格，只删除不同的部分
-  text: "少女祈祷中..."        # 当 typing.enable = false 时使用
+  text: "BAKA DA☆ZE!"        # 当 typing.enable = false 时使用
 
 banner: "images/banner.webp"
 # You can also write it in the form of the following url
@@ -118,7 +118,7 @@ footer:
   since: 2020 # 2020-current year
   powered: true
   count: true
-  busuanzi: false  # 关闭页脚「总访问量 / 总访客量」（同时不再加载不蒜子脚本）
+  busuanzi: false  # 关闭页脚「总访问量 / 总访客量」（同时不再加载脚本）
   icon:
     url: "../images/taichi.png" # this path is relative to the css/main.css, so it needs to go up one level to reach the images folder
     rotate: true
