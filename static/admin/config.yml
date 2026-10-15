@@ -1,3 +1,5 @@
+site_url: https://wstk.pages.dev/admin
+
 backend:
   name: turbo-github
   repo: WuSiTech/WuSiTech.github.io
