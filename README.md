@@ -1,5 +1,7 @@
 # 吾思 梦阁
 
+[![Build and deploy](https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml/badge.svg?branch=main)](https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml)
+
 Hugo + [reimu](https://github.com/D-Sketon/hugo-theme-reimu) 主题的个人博客。
 
 同一份源码同时部署到两个站点，各自有**指向自己域名**的 `sitemap.xml` 与 `robots.txt`：
@@ -40,6 +42,16 @@ hugo --minify --baseURL https://wstk.pages.dev/     # 想本地预览 Cloudflare
 推送到 `main` 触发 `.github/workflows/hugo.yaml`：安装 Hugo Extended →
 `hugo --minify --baseURL "<Pages URL>"` → 上传 artifact → 部署。
 sitemap 与 robots.txt 自动使用 `https://wusitech.github.io/`。
+
+**构建状态**看顶部那枚徽章：
+
+- `passing`：最近一次 `main` 构建并部署成功；
+- `failing`：点徽章进 [Actions 日志](https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml)
+  排查（常见原因：Front Matter 语法、主题子模块没拉下来、Hugo 版本变更）。
+
+徽章对应的地址是
+`https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml/badge.svg?branch=main`，
+工作流改名或换文件后记得一起改。
 
 ### Cloudflare Pages
 
