@@ -147,7 +147,8 @@ collections:
     label: 评论
     label_singular: 评论文件
     folder: static/comments/posts
-    create: false
+    # 允许手动新建：某篇文章还没有任何评论时，你可以先建文件再写博主回复
+    create: true
     extension: json
     format: json
     identifier_field: slug
