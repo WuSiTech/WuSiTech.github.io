@@ -9,7 +9,7 @@
       "body": "111111111",
       "ts": "2026-10-15T14:21:40.611Z",
       "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.",
-      "hidden": true,
+      "hidden": false,
       "author": false
     }
   ]
