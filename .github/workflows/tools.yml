@@ -87,3 +87,6 @@ jobs:
 
       - name: 构建（只验证，不部署）
         run: '"${HOME}/.local/hugo" --minify --baseURL https://wusitech.github.io/'
+
+      - name: 校验构建产物（断链 / 外部资源 / sitemap）
+        run: python3 tools/check_site.py --dir public
