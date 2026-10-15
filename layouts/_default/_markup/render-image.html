@@ -1,14 +1,13 @@
-{{- /* 项目级 render-image 钩子（支持 GLightbox + lazysizes） */ -}}
+{{- /* Reimu 主题：Fancybox 灯箱 + lazysizes 懒加载 */ -}}
 {{- $dest := .Destination -}}
 {{- if not (or (hasPrefix $dest "http://") (hasPrefix $dest "https://") (hasPrefix $dest "//") (hasPrefix $dest "data:")) -}}
   {{- $dest = $dest | relURL -}}
 {{- end -}}
 
-{{- /* 用 <a> 包裹图片，class 供 GLightbox 识别，href 指向原图 */ -}}
+{{- if .Page.Site.Params.fancybox -}}
 <a
   href="{{ $dest }}"
-  class="glightbox"
-  data-gallery="post-gallery"
+  data-fancybox="gallery"
   {{- with .Title }} data-caption="{{ . }}"{{ end -}}
 >
   <img
@@ -19,3 +18,12 @@
     {{- with .Title }} title="{{ . }}"{{ end }}
   />
 </a>
+{{- else -}}
+<img
+  class="lazyload"
+  data-src="{{ $dest }}"
+  data-sizes="auto"
+  alt="{{ .Text }}"
+  {{- with .Title }} title="{{ . }}"{{ end }}
+/>
+{{- end -}}
