@@ -4,7 +4,8 @@ backend:
   name: turbo-github
   repo: WuSiTech/WuSiTech.github.io
   branch: main
-
+  app_id: "Ov23lipjPqKoXHMFAGzN"
+  squash_merges: true
 media_folder: "static/uploads"
 public_folder: "/uploads"
 
