@@ -246,7 +246,10 @@ custom_font:
 # https://fonts.google.com/
 # Google Fonts, higher priority than local_font
 font:
-  enable: true
+  # ⚠️ 关闭：国内无法访问 fonts.googleapis.com / fonts.gstatic.com，
+  # 而且它是 <head> 里的渲染阻塞样式表，会让整页等到超时。
+  # 关掉后使用下面的 local_font 系统字体（Win 上是微软雅黑，macOS 上是苹方），速度快且无外部请求。
+  enable: false
   article:
     - Mulish
     - Noto Serif SC
@@ -281,8 +284,8 @@ dark_mode:
 # Analytics
 ########################################
 
-baidu_analytics: true
-google_analytics: true
+baidu_analytics: false   # 原本是 true（被当成站点 ID，生成 hm.js?true，无效）；填真实 ID 才会生效
+google_analytics: false  # 关闭：www.googletagmanager.com 国内不可达；要统计建议用百度统计或 Cloudflare Web Analytics
 clarity: false
 
 ########################################
@@ -691,9 +694,10 @@ injector:
   #    要等 lazysizes 运行后才有 src；CSS 里 .sidebar-author img{opacity:0}
   #    只有补上 .lazyloaded 才显示。这里在 DOM 就绪前同步设好 src 并切好 class。
   body_end: |
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js"></script>
+    <!-- Fancybox 灯箱所需资源已本地化到 static/vendor/，不再依赖 cdn.jsdelivr.net（国内经常超时） -->
+    <link rel="stylesheet" href="/vendor/fancybox/fancybox-3.5.7.min.css" />
+    <script src="/vendor/jquery/jquery-3.7.1.min.js"></script>
+    <script src="/vendor/fancybox/fancybox-3.5.7.min.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', function () {
         if (window.jQuery && jQuery.fn.fancybox) {
