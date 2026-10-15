@@ -1,7 +1,10 @@
-baseURL = '/'
+baseURL = 'https://wusitech.github.io/'
 locale = 'zh-cn'
 title = '吾思 梦阁'
 theme = "reimu"
+
+# 生成 robots.txt，让搜索引擎爬虫自动发现 sitemap.xml（模板见 layouts/robots.txt）
+enableRobotsTXT = true
 
 # 主题新增的配置
 mainSections = ["posts"]          # 文章所在目录（content/posts）
@@ -9,7 +12,10 @@ author = "吾思"
 description = "思集成之大道，考计科之行踪"
 subtitle = "DAZE~"        # 副标题
 
-relativeURLs = true
+# ⚠️ 不要用 baseURL = '/' + relativeURLs = true：
+# sitemap.xml 里的 <loc>、以及 canonical / og:url 都必须是绝对地址，
+# 否则搜索引擎拿到的是 "/posts/xxx/" 这种相对地址，无法正确收录。
+# 本地预览无需为此改配置：hugo server 会自动用 http://localhost:1313/ 覆盖 baseURL。
 canonifyURLs = false
 
 # 代码块高亮：主题要求用 class 模式，否则 Hugo 会用 Monokai 内联样式
