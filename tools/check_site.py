@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""check_site.py —— 校验构建产物（public/），把三类问题在部署前拦住
+"""check_site.py —— 校验构建产物（public/），把四类问题在部署前拦住
 
 用法：
     python tools/check_site.py                 # 默认检查 public/
     python tools/check_site.py --dir out       # 指定构建输出目录
     python tools/check_site.py --allow cdn.example.com   # 额外允许某个外部域名（放行用）
 
-检查三件事：
+检查四件事：
   1. 站内引用（img 的 src/data-src、a 的 href、link 的 href）是否都能在产物里找到对应文件
      —— 断图、错路径、改了 slug 忘改链接，都会在这里暴露
   2. 浏览器**会真正请求**的外部资源是否在允许清单内
      —— 保证“不依赖被墙资源”这条要求不被后续改动破坏
      （只看 src/link/url() 这类会发起请求的引用，正文里的普通外链不算）
   3. sitemap.xml 里每个 <loc> 是否都有对应页面
+  4. 首页 index.html 是否还有导航链接
+     —— 防止后台（导航栏目 / 站点文案）写坏后，首页静默地把导航整块丢掉
 
 退出码：0 全部通过；1 有问题；2 用法错误。
 只用标准库，任何 Python 3.8+ 都能跑。
@@ -44,6 +46,11 @@ ANCHOR_HREF = re.compile(r"""<a\b[^>]*?href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]
 CSS_URL = re.compile(r"""url\(\s*(?:"([^"]*)"|'([^']*)'|([^)'"]+))\s*\)""", re.IGNORECASE)
 LOC = re.compile(r"<loc>\s*([^<\s]+)\s*</loc>", re.IGNORECASE)
 
+# 首页导航断言：首页必须有导航链接，防止后台把菜单写坏后静默丢导航。
+# 判定从宽（至少命中 NAV_MIN_HIT 个），这样以后增删一个合法栏目不会误报。
+NAV_LINKS = ("/", "/archives", "/categories", "/tags", "/friend", "/about")
+NAV_MIN_HIT = 5
+
 
 def pick(match: re.Match) -> str:
     for group in match.groups():
@@ -61,6 +68,28 @@ def host_of(url: str) -> str:
         return (urlparse(url).hostname or "").lower()
     except ValueError:
         return ""
+
+
+def nav_path_of(url: str) -> str | None:
+    """把首页里的一个 href 归一成站内路径（/archives/ → /archives）；不像站内链接返回 None。
+
+    --minify 会把属性引号去掉（写成 href=/archives），所以匹配一律不依赖引号
+    （ANCHOR_HREF 就是这么写的）；这里再去掉域名、查询串和结尾斜杠，
+    即使 --baseURL 让导航渲染成绝对地址（https://wusitech.github.io/archives/）也不会漏判。
+    """
+    if not url or url.startswith(("#", "mailto:", "tel:", "javascript:", "data:")):
+        return None
+    parsed = urlparse(url)
+    if parsed.scheme or url.startswith("//"):
+        # 绝对地址只在指向本站时才算导航；外链导航（友链等）不算
+        if parsed.scheme not in ("http", "https") or (parsed.hostname or "").lower() not in SELF_HOSTS:
+            return None
+    path = unquote(parsed.path or "")
+    if not path.startswith("/"):
+        path = "/" + path
+    if path != "/":
+        path = path.rstrip("/")
+    return path or "/"
 
 
 def internal_target(url: str, page: Path, out_dir: Path) -> Path | None:
@@ -88,7 +117,7 @@ def main(argv=None) -> int:
         except Exception:
             pass
 
-    ap = argparse.ArgumentParser(description="校验构建产物：断链 / 外部资源 / sitemap")
+    ap = argparse.ArgumentParser(description="校验构建产物：断链 / 外部资源 / sitemap / 首页导航")
     ap.add_argument("--dir", default="public", help="构建输出目录（默认 public/）")
     ap.add_argument("--allow", nargs="*", default=[], help="额外允许的外部域名（会发起请求的）")
     ap.add_argument("--max-report", type=int, default=15, help="每类问题最多列出多少条")
@@ -182,6 +211,34 @@ def main(argv=None) -> int:
     else:
         sitemap_errors.append("(构建产物里没有 sitemap.xml)")
 
+    # 首页导航
+    # 只查首页：菜单是后台（导航栏目 / 站点文案集合）可改的，写坏之后首页会静默少一大块导航，
+    # 断链检查发现不了（少了链接不算断链），所以单独断言一条。
+    nav_errors: list[str] = []
+    index_page = out_dir / "index.html"
+    if not index_page.exists():
+        nav_errors.append("(构建产物里没有 index.html，无法校验首页导航)")
+    else:
+        text = index_page.read_text(encoding="utf-8", errors="replace")
+        found = set()
+        for match in ANCHOR_HREF.finditer(text):
+            path = nav_path_of(pick(match))
+            if path:
+                found.add(path)
+        hit = [link for link in NAV_LINKS if link in found]
+        if len(hit) < NAV_MIN_HIT:
+            miss = [link for link in NAV_LINKS if link not in found]
+            nav_errors.append(
+                "首页 index.html 只命中 {}/{} 个导航链接（要求至少 {} 个）；"
+                "命中：{}；缺失：{}".format(
+                    len(hit),
+                    len(NAV_LINKS),
+                    NAV_MIN_HIT,
+                    " ".join(hit) if hit else "(无)",
+                    " ".join(miss) if miss else "(无)",
+                )
+            )
+
     def dump(title: str, items: list, fmt) -> None:
         print(f"  {title}: {len(items)}")
         for item in items[: args.max_report]:
@@ -194,13 +251,14 @@ def main(argv=None) -> int:
     dump("[1] 站内引用找不到文件", missing, lambda x: f"{x[0]}  ->  {x[1]}")
     dump("[2] 会真正请求的外部资源（不在允许清单）", blocked, lambda x: f"{x[0]}  ->  {x[1]}")
     dump("[3] sitemap 指向不存在的页面", sitemap_errors, lambda x: x)
+    dump("[4] 首页导航链接缺失", nav_errors, lambda x: x)
 
     print(f"\n  正文里的普通外链（不发起资源请求，已忽略）：{ignored_external} 个")
-    bad = len(missing) + len(blocked) + len(sitemap_errors)
+    bad = len(missing) + len(blocked) + len(sitemap_errors) + len(nav_errors)
     if bad:
         print(f"\nRESULT: FAILED（{bad} 处问题）")
         return 1
-    print("\nRESULT: ALL PASS（无断链、无未授权外部资源、sitemap 完整）")
+    print("\nRESULT: ALL PASS（无断链、无未授权外部资源、sitemap 完整、首页导航正常）")
     return 0
 
 

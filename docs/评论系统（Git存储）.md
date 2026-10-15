@@ -36,6 +36,34 @@ Function 调 GitHub API，评论数据就是仓库里的文件，`git clone` 即
 
 - **读不加任何动态接口**：Hugo 把 `static/comments/` 原样发布成 `/comments/`，浏览器直接取 JSON。
   所以评论列表是页面加载后异步渲染的，不参与 SEO。
+- **读固定从 Cloudflare 域名取**：同一份代码部署在两个域名上，两边各自构建各自部署，先后必然不一致，
+  会出现「一个域名已更新、另一个还是旧数据」——访客换个域名打开就会以为「我的评论没了」。
+  所以 `static/js/comments.js` 把数据源写死成 `https://wstk.pages.dev`：
+  页面本来就在 `wstk.pages.dev` 上就**同域读** `/comments/<slug>.json`（省一次跨域），
+  其它域名（如 `wusitech.github.io`）**跨域读** `${GC_DATA_BASE}/comments/<slug>.json`；
+  跨域失败（被拦 / 非 200 / JSON 坏了）时再**回退到同域** `/comments/<slug>.json` 试一次，
+  两个来源都失败才显示「还没有评论」。这样两个域名看到的评论永远来自同一份数据。
+
+  跨域能通靠的是 [`static/_headers`](../static/_headers)（Cloudflare Pages 会在**构建产物根目录**
+  读这个文件，语法是「路径行顶格 + 响应头缩进两格」）：
+
+  ```
+  # 评论数据允许跨域读取：评论组件固定从 https://wstk.pages.dev 取 JSON，
+  # 这样两个域名（wstk.pages.dev / wusitech.github.io）看到的评论永远一致。
+  /comments/*
+    Access-Control-Allow-Origin: *
+    Cache-Control: public, max-age=60
+  ```
+
+  GitHub Pages **不支持** `_headers`，会忽略它（当作普通静态文件发布，无副作用）——它那侧照样能显示，
+  因为数据是从 Cloudflare 跨域读的，而 Cloudflare 已经被这个文件允许了跨域。
+
+  > 本机预览（`hugo server` / `wrangler pages dev`）想读本地那份 JSON，在引入 `comments.js`
+  > **之前**加一行覆盖数据源（默认值就是 `https://wstk.pages.dev`）：
+  > ```html
+  > <script>window.GIT_COMMENTS_DATA_BASE = 'http://localhost:1313';</script>
+  > ```
+  > 覆盖成当前域名时会自动走同域读，不会因为跨域而多绕一次。
 - **写只有一条路径**：Function 里带着一个细粒度 GitHub 令牌，调 Contents API 提交到仓库。
 - **三种运行方式**（环境变量 `COMMENT_MODE` + `COMMENT_PENDING`，两者组合决定行为）：
 
@@ -107,17 +135,25 @@ functions/api/comment.js   →   POST /api/comment
 
 `wusitech.github.io` 只能托管静态文件、跑不了 Functions，所以：
 
-- 评论列表：从同域的 `/comments/xxx.json` 读（GitHub Pages 上也有这份文件，能正常显示）
+- 评论列表：**跨域从 `https://wstk.pages.dev/comments/xxx.json` 读**（数据源固定，见第一节），
+  这样 GitHub Pages 与 Cloudflare Pages 看到的评论永远一致；跨域失败会自动回退到同域
+  `/comments/xxx.json`（GitHub Pages 上也有这份文件，只是可能比 Cloudflare 那边旧）
 - 评论提交：跨域 `POST` 到 `https://wstk.pages.dev/api/comment`（这是 `static/js/comments.js` 里写死的默认值）
 
-Function 的 CORS 白名单里已经包含 `https://wusitech.github.io`，所以跨域能通。
-如果你换了 Cloudflare 域名，改两处：
+Function 的 CORS 白名单里已经包含 `https://wusitech.github.io`，所以跨域 POST 能通；
+而评论数据的跨域读由 [`static/_headers`](../static/_headers) 放行（`/comments/*` → `Access-Control-Allow-Origin: *`）。
+如果你换了 Cloudflare 域名，改三处：
 
 1. `functions/api/comment.js` 里 `DEFAULT_ALLOWED_ORIGINS`，或在 Pages 环境变量里设 `ALLOWED_ORIGINS`
-2. 页面里在引入 `comments.js` **之前**加一行覆盖：
+2. 页面里在引入 `comments.js` **之前**加一行覆盖提交地址：
    ```html
    <script>window.GIT_COMMENTS_ENDPOINT = 'https://你的域名/api/comment';</script>
    ```
+3. 同一处再覆盖数据源（否则列表还是去读老的 `wstk.pages.dev`）：
+   ```html
+   <script>window.GIT_COMMENTS_DATA_BASE = 'https://你的域名';</script>
+   ```
+   同时记得 `static/_headers` 是跟着域名走的，无需改动（它按路径匹配）。
 
 ### 5. 验证部署成功
 
@@ -162,6 +198,13 @@ npx wrangler pages dev public \
   window.GIT_COMMENTS_ENDPOINT = 'http://localhost:8788/api/comment';
   ```
   然后刷新页面（`comments.js` 是 `defer` 加载的，必须在它执行前设置）。
+- **评论列表同理**：默认从 `https://wstk.pages.dev` 读（数据源固定，见第一节），所以在本地看到的
+  是线上那份评论。想读本地构建出来的 `public/comments/*.json`，同样在刷新前覆盖数据源：
+  ```js
+  window.GIT_COMMENTS_DATA_BASE = 'http://localhost:8788';
+  ```
+  覆盖成当前域名（`localhost:8788`）后会走同域读，不再跨域。`hugo server` 也一样，把它设成
+  `http://localhost:1313` 即可（记得先让页面加载完静态文件，再在控制台设置并刷新）。
 
 不启 wrangler 也能测逻辑——直接跑测试脚本，它用假的 fetch 顶替 GitHub：
 
@@ -191,8 +234,8 @@ node tools/git-comments/test.mjs
 6. 不想展示：**什么都不用做**（一直留着 `hidden` 开着，页面上永远看不到）。
    想彻底删掉就在同一个界面删除该条并保存。
 
-> 小提示：评论框下方那句固定说明（「评论会先提交到 GitHub，审核合并后公开显示……」）是写在
-> `static/js/comments.js` 里的静态文案，只有**提交后的提示**（`data.message`）才会跟着模式变。
+> 小提示：评论框下方那句固定说明（「评论提交后需站长审核，通过后才会显示在这里」）是写在
+> `static/js/comments.js` 里的静态文案（`gc-tip`），只有**提交后的提示**（`data.message`）才会跟着模式变。
 > 也就是说 `direct` 模式下提交成功时会明确显示「待站长审核后显示」或「约 1 分钟后显示」，
 > 而框下面那行说明可以按自己的模式改一改（改 `comments.js` 里 `gc-tip` 那段）。
 >

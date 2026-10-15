@@ -2,9 +2,13 @@
 /**
  * 自建评论系统前端（原生 JS，无依赖）
  * ----------------------------------------------------------------------------
- * 「读」：直接取静态文件 /comments/<slug>.json（由 Hugo 从 static/comments/ 发布）
+ * 「读」：取静态文件 /comments/<slug>.json（由 Hugo 从 static/comments/ 发布）。
+ *        列表**固定从 Cloudflare 域名 wstk.pages.dev 读**：在 wstk.pages.dev 上就同域读
+ *        （省一次跨域），其它域名（如 wusitech.github.io）跨域读那边那一份，跨域失败再回退同域。
+ *        详见下面 GC_DATA_BASE 的注释。
  * 「写」：POST 到 Cloudflare Pages Function /api/comment，
- *        由它调用 GitHub API 把评论写进仓库（默认走 PR，合并后才会出现在 JSON 里）
+ *        由它调用 GitHub API 把评论写进仓库（默认 COMMENT_MODE=direct + COMMENT_PENDING=true，
+ *        即「直接入库 + 默认隐藏」，站长在后台放行后才会出现在页面上）
  *
  * GitHub Pages 那边只能托管静态文件、跑不了 Functions，所以提交地址写死到
  * Cloudflare 域名，同时允许用 window.GIT_COMMENTS_ENDPOINT 覆盖（本地调试用）。
@@ -16,6 +20,37 @@
   var DEFAULT_ENDPOINT = 'https://wstk.pages.dev/api/comment';
   var MAX_NAME = 40;
   var MAX_BODY = 2000;
+
+  /**
+   * 评论列表的数据源（**固定** Cloudflare 域名，不是同域）
+   * ------------------------------------------------------------------
+   * 为什么要固定：同一份代码部署在两个域名上（Cloudflare Pages 的 wstk.pages.dev 和
+   * GitHub Pages 的 wusitech.github.io），两边各自构建各自部署，先后必然不一致，
+   * 于是会出现「一个域名已经是新数据、另一个还是旧数据」——访客换个域名打开就会以为
+   * 「我的评论没了」。评论列表和提交都锚定 Cloudflare 那一边，两个域名看到的就是同一份数据。
+   *
+   * 跨域读要对方允许：static/_headers 里给 /comments/* 加了
+   * `Access-Control-Allow-Origin: *`（Cloudflare Pages 会在构建产物根目录读这个文件；
+   * GitHub Pages 会忽略它，没有任何副作用）。
+   *
+   * 兜底：主来源失败（跨域被拦 / 非 200 / JSON 坏了）时换另一个来源再试一次
+   * （非 wstk 域名会回退到同域 /comments/<slug>.json），两个都失败才显示「还没有评论」。
+   *
+   * 本机预览（hugo server / wrangler pages dev）想读本地那份数据，就在引入本脚本**之前**加一行：
+   *   window.GIT_COMMENTS_DATA_BASE = 'http://localhost:1313';
+   * （写成页面里的内联脚本，或直接在浏览器控制台执行后刷新。）
+   */
+  const GC_DATA_BASE =
+    (typeof window !== 'undefined' && window.GIT_COMMENTS_DATA_BASE) || 'https://wstk.pages.dev';
+
+  /** 当前页面是不是就在数据源域名上（是的话同域读，省一次跨域） */
+  function onDataHost() {
+    try {
+      return new URL(GC_DATA_BASE, location.href).host === location.host;
+    } catch (e) {
+      return false;
+    }
+  }
 
   /* ---------------------------------------------------------------- */
   /* 定位当前文章                                                      */
@@ -223,11 +258,7 @@
     actions.appendChild(msg);
     form.appendChild(actions);
 
-    var tip = el(
-      'p',
-      'gc-tip',
-      '评论会先提交到 GitHub，审核合并后公开显示（数据存在仓库里，可随时删除）。',
-    );
+    var tip = el('p', 'gc-tip', '评论提交后需站长审核，通过后才会显示在这里');
     form.appendChild(tip);
 
     section.appendChild(form);
@@ -237,12 +268,26 @@
       msg.className = 'gc-msg ' + (isError ? 'is-err' : 'is-ok');
     }
 
+    /** 取一份评论 JSON；非 200（404 / 403 / 5xx）一律当失败，交给调用方换来源重试 */
+    function fetchJson(url) {
+      return fetch(url, { cache: 'no-cache' }).then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      });
+    }
+
     function load() {
-      var url = '/comments/' + slug + '.json';
-      fetch(url, { cache: 'no-cache' })
-        .then(function (res) {
-          if (!res.ok) throw new Error('not found');
-          return res.json();
+      var sameOrigin = '/comments/' + slug + '.json';
+      var crossOrigin = GC_DATA_BASE + '/comments/' + slug + '.json';
+      // 在 wstk.pages.dev 上就同域读；别的域名（含 GitHub Pages）先跨域读固定那一份，
+      // 这样两个域名看到的评论永远来自同一个地方。
+      var primary = onDataHost() ? sameOrigin : crossOrigin;
+      var fallback = onDataHost() ? crossOrigin : sameOrigin;
+
+      fetchJson(primary)
+        // 主来源失败（跨域被拦、那边还没部署、JSON 坏了……）→ 换另一个来源再试一次
+        .catch(function () {
+          return fetchJson(fallback);
         })
         .then(function (data) {
           var all = data && Array.isArray(data.comments) ? data.comments : [];
@@ -268,7 +313,7 @@
           count.textContent = '（共 ' + comments.length + ' 条）';
         })
         .catch(function () {
-          // 404（这篇文章还没人评论）或 JSON 坏了：都按「还没有评论」处理
+          // 两个来源都失败：这篇文章还没人评论（或 JSON 坏了），按「还没有评论」处理
           listNode.style.display = 'none';
           empty.style.display = '';
           empty.textContent = '还没有评论，来抢沙发吧～';
