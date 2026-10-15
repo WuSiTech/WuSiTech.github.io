@@ -556,8 +556,15 @@ export async function onRequestOptions(context) {
   return new Response(null, { status: 204, headers: corsHeaders(request, env) });
 }
 
-// 兜底：GET/PUT/DELETE 等一律 405（Cloudflare Pages 在定义了 onRequestPost 之后，
-// 未定义的方法本来就会 405，这里显式写出来是为了错误信息统一成中文 JSON）。
+// 兜底：GET/PUT/DELETE 等一律 405（行为保持不变）。
+//
+// 事实说明（别被「Pages 会优先调 onRequest，所以必须在这里分发给 POST」误导）：
+// Cloudflare Pages 是按请求方法分发的 —— POST 直接命中上面的 onRequestPost，
+// 不会先进 onRequest；没有对应方法处理器的请求，Pages 自己也会回 405。
+// 之前实测到的 POST 405，真实原因是那一次部署还没跑完，不是路由问题：
+// 部署完成后 POST 一直由 onRequestPost 正常处理。
+// 这里显式写 onRequest 只是为了把非 POST/OPTIONS 的响应统一成中文 JSON，
+// 顺带把 OPTIONS 转给 onRequestOptions；删掉它 Pages 依旧 405，只是错误信息变英文。
 export async function onRequest(context) {
   const { request } = context;
   if (request.method === 'OPTIONS') return onRequestOptions(context);
