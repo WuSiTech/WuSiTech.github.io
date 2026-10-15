@@ -1,0 +1,15 @@
+# 随机封面池（覆盖主题自带的那份）
+#
+# 主题的 randomCover.html 会从 hugo.Data.covers 里随机取一张，用在：
+#   - 没写 cover 的文章卡片（首页/列表/上一篇下一篇导航）
+#   - home_categories 里没填 cover 的分类卡片
+#
+# 主题默认那份只有一个外链：https://d-sketon.top/img/_backwebp/bg1.webp
+# （主题作者的服务器）。国内访问它可能慢或不通，所以这里全部换成本站自己的图。
+#
+# 想加图：把图片放进 static/images/ 下，再往下面追加一行路径即可（建议 16:9 或 3:2，宽度 ≥ 800）。
+- /images/banner.webp
+- /images/banner-800w.webp
+- /images/banner-600w.webp
+- /images/stm32/interrupt-path.webp
+- /images/stm32/hardware-wiring.webp

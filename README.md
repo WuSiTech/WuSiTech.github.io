@@ -112,8 +112,11 @@ Cloudflare Dashboard → Workers & Pages → 该项目 → Settings → Builds &
 - `layouts/robots.txt`：robots.txt 模板
 - `static/images/`、`static/avatar/`：图片资源
 - `static/admin/`：写作后台页面（Sveltia CMS，入口 `/admin/`）
-- `static/resources/`：主题 vendor 库的本地副本（twikoo 评论前端在这里）
-- `data/vendor.yml`：vendor 库走 CDN 还是本地（**整文件覆盖主题那份**，改动后注意同步）
+- `static/resources/`：主题 vendor 库的本地副本（twikoo 评论前端、lazysizes、photoswipe 等 41 个）
+- `data/vendor.yml`：vendor 库走 CDN 还是本地（**整文件覆盖主题那份**）。
+  现在已全部切成本地（`local|`），页面不请求任何第三方 CDN；
+  主题升级后建议：重新复制主题那份 → 跑 `python tools/localize_vendor.py` 一键再本地化。
+- `data/covers.yml`：随机封面池（覆盖主题默认那份，主题默认指向 `d-sketon.top` 外链，已换成本站图片）
 - `docs/`：部署指南等文档
-- `tools/`：docx→Markdown、图片转 WebP、后台登录中转 Worker
+- `tools/`：docx→Markdown、图片转 WebP、后台登录中转 Worker、vendor 本地化脚本
 - `public/`、`resources/`、`.verify*/` 均为构建产物，已在 `.gitignore` 中忽略
