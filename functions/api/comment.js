@@ -9,12 +9,25 @@
  *   - COMMENT_MODE=pr     新建分支 → 写文件 → 开 PR，你在 GitHub 上审核合并后才上线（默认）
  *   - COMMENT_MODE=direct 直接写 GITHUB_BRANCH，等一次构建部署即可看到
  *
+ * COMMENT_MODE=direct 时还可以再叠加 COMMENT_PENDING（新评论默认隐藏，站长在后台放行）：
+ *   - COMMENT_PENDING=true（未设置时的默认值）：新评论照常写进 JSON，但 hidden 落成 true，
+ *     前端 comments.js 不渲染 hidden===true 的条目 —— 也就是「直接提交、默认隐藏」。
+ *     站长在后台 CMS（/admin/ → 评论）把这条的「隐藏」关掉并保存后，
+ *     等一次构建部署（约 1 分钟）就会出现在页面上。数据一直都在仓库里，不会丢。
+ *   - COMMENT_PENDING=false：新评论 hidden=false，等一次构建（约 1 分钟）直接显示。
+ *   取值大小写不敏感：true / TRUE / True 都算「开」，false / FALSE / False 都算「关」；
+ *   其他任何值（含空字符串、yes、1、拼错的值）一律按默认值 true 处理
+ *   —— 拿不准时宁可先隐藏，不要让垃圾评论直接上线。
+ *   COMMENT_MODE=pr 不受 COMMENT_PENDING 影响：评论本来就停在分支上等人合并，
+ *   PR 本身就是待审状态，所以 pr 模式写出来的评论始终 hidden=false。
+ *
  * 需要配置的环境变量（Cloudflare Pages → Settings → Environment variables）：
  *   GITHUB_TOKEN    必填。细粒度令牌，只选 WuSiTech.github.io，
  *                   权限：Contents 读写 + Pull requests 读写
  *   GITHUB_REPO     默认 WuSiTech/WuSiTech.github.io
  *   GITHUB_BRANCH   默认 main
  *   COMMENT_MODE    pr / direct，默认 pr
+ *   COMMENT_PENDING 仅对 direct 生效，true / false，默认 true（待站长审核）
  *   ALLOWED_ORIGINS 逗号分隔，默认 https://wusitech.github.io,https://wstk.pages.dev
  *
  * 核心逻辑写成可注入依赖的纯函数 handleComment(request, env, deps)，
@@ -179,11 +192,26 @@ function fail(request, env, status, error) {
 /* GitHub API                                                          */
 /* ------------------------------------------------------------------ */
 
+/**
+ * COMMENT_PENDING 是否开启（只对 COMMENT_MODE=direct 有意义）。
+ *   - 未设置 / 空字符串 / 其他任何拼错的值 → true（默认：新评论先隐藏，等站长放行）
+ *   - 'true'（大小写不敏感）→ true
+ *   - 'false'（大小写不敏感）→ false
+ * 也就是说：只有明确写成 false / FALSE / False 才会「提交即公开」。
+ */
+function pendingEnabled(env) {
+  const raw = env.COMMENT_PENDING;
+  if (raw === undefined || raw === null) return true;
+  return String(raw).trim().toLowerCase() !== 'false';
+}
+
 function repoConfig(env) {
   return {
     repo: env.GITHUB_REPO || DEFAULT_REPO,
     branch: env.GITHUB_BRANCH || DEFAULT_BRANCH,
     mode: (env.COMMENT_MODE || 'pr').toLowerCase() === 'direct' ? 'direct' : 'pr',
+    // pr 模式与 pending 无关（PR 本身待审），这里只记录 direct 模式要用的开关
+    pending: pendingEnabled(env),
   };
 }
 
@@ -397,8 +425,13 @@ export async function handleComment(request, env, deps) {
 
   // 4) 蜜罐：隐藏字段被填了说明是机器人。
   //    直接当成功返回，但什么都不写（也不做任何 GitHub 请求），让脚本以为提交成功了。
+  //    这里的响应形状与真提交成功时保持一致（含 direct 模式的 pending 字段）。
   if (typeof raw.hp === 'string' && raw.hp.trim() !== '') {
-    return ok(request, env, { mode: cfg.mode, message: '评论已提交' });
+    return ok(request, env, {
+      mode: cfg.mode,
+      ...(cfg.mode === 'direct' ? { pending: cfg.pending } : {}),
+      message: '评论已提交',
+    });
   }
 
   // 5) 字段校验
@@ -445,9 +478,17 @@ export async function handleComment(request, env, deps) {
   // 字段必须与 static/admin/config.yml 里 comments 集合声明的完全一致：
   // 严格包含且只包含这 9 个键，顺序也保持一致（多一个或少一个，后台保存该文件时
   // 都会把多出来的字段丢掉，所以这里不能省字段、也不能顺手加字段）。
-  //   - hidden：true 时前端不渲染这一条（数据保留，后台可以随时改回来）
+  //   - hidden：true 时前端不渲染这一条
   //   - author：true 时前端在昵称旁边显示「博主」标记
-  // 新提交的评论一律 hidden=false、author=false；这两个开关由后台人工调整。
+  // 新评论的 hidden 由模式决定（author 一律 false，这两个开关之后都由后台人工调整）：
+  //   - direct + pending（默认）：hidden=true。评论【仍然照常写进 JSON】，数据一点不丢，
+  //     只是前端 comments.js 会把 hidden===true 的条目过滤掉（不渲染）。
+  //     站长在后台 /admin/ → 评论 里把「隐藏」关掉并保存后，等一次构建部署
+  //     （约 1 分钟）这条评论才会出现在页面上。
+  //   - direct + 不 pending：hidden=false，等一次构建（约 1 分钟）直接显示。
+  //   - pr：hidden=false。评论停在分支上等人合并，PR 本身就是待审状态，
+  //     所以 COMMENT_PENDING 对 pr 模式没有任何影响。
+  const hidden = cfg.mode === 'direct' && cfg.pending;
   const comment = {
     id: `c_${tsMs}_${suffix}`,
     name,
@@ -456,7 +497,7 @@ export async function handleComment(request, env, deps) {
     body,
     ts: ref.iso,
     ua,
-    hidden: false,
+    hidden,
     author: false,
   };
 
@@ -469,11 +510,15 @@ export async function handleComment(request, env, deps) {
       await appendCommentToFile(d, env, path, comment, name, cfg.branch);
       return ok(request, env, {
         mode: 'direct',
-        message: '评论已提交，约 1 分钟后显示',
+        pending: cfg.pending,
+        message: cfg.pending
+          ? '评论已提交，待站长审核后显示'
+          : '评论已提交，约 1 分钟后显示',
       });
     }
 
     // PR 模式：新建分支 → 在分支上写文件 → 开 PR
+    // 这里刻意不看 COMMENT_PENDING：评论根本还没进 main，合并与否由站长在 GitHub 上决定。
     const branchName = await createCommentBranch(d, env, ref, slug);
     await appendCommentToFile(d, env, path, comment, name, branchName);
     const pr = await openPullRequest(d, env, branchName, form, ref);
