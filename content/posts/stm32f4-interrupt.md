@@ -1,12 +1,12 @@
 +++
-date = '2026-10-14T22:30:00+08:00'
+title = "STM32F4 配置中断"
+date = "2026-10-14T22:30:00+08:00"
 draft = false
-title = 'STM32F4 配置中断'
-description = '以 STM32F411CEU6 与标准外设库为例，完整实现「PA0 下降沿触发 EXTI0 中断、翻转 PC13 电平」的中断链路：时钟使能、GPIO 配置、SYSCFG 线映射、EXTI 触发条件、NVIC 优先级分组与中断服务程序，并给出寄存器级实现与排查思路。'
-categories = ['STM32']
-tags = ['STM32F4', 'STM32F411', 'EXTI', 'NVIC', '标准外设库']
-cover = 'images/stm32/interrupt-path.webp'   # 首页卡片缩略图：中断通路图
-banner = 'images/banner.webp'                # 文章页顶部大图：沿用站点原 banner
+description = "以 STM32F411CEU6 与标准外设库为例，完整实现「PA0 下降沿触发 EXTI0 中断、翻转 PC13 电平」的中断链路：时钟使能、GPIO 配置、SYSCFG 线映射、EXTI 触发条件、NVIC 优先级分组与中断服务程序，并给出寄存器级实现与排查思路。"
+categories = [ "STM32" ]
+tags = [ "STM32F4", "中断" ]
+cover = "images/stm32/interrupt-path.webp"
+banner = "images/banner.webp"
 +++
 
 以 **STM32F411CEU6** 与 **标准外设库（Standard Peripheral Library，以下简称 SPL）** 为例，完整实现「PA0 下降沿触发 → EXTI0 中断 → 翻转 PC13 电平」这一中断链路。文中代码取自实际工程 `STM32_SPL`（Keil 工程，启动文件 `startup_stm32f411xe.s`），可直接编译运行。
