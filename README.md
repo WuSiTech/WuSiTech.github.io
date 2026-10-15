@@ -117,6 +117,9 @@ Cloudflare Dashboard → Workers & Pages → 该项目 → Settings → Builds &
   现在已全部切成本地（`local|`），页面不请求任何第三方 CDN；
   主题升级后建议：重新复制主题那份 → 跑 `python tools/localize_vendor.py` 一键再本地化。
 - `data/covers.yml`：随机封面池（覆盖主题默认那份，主题默认指向 `d-sketon.top` 外链，已换成本站图片）
+- 已知的**按需**本地化项：主题的看板娘 `live2d` / `live2d_widgets` 开关（默认关闭）如果打开，
+  资源会去 `fastly.jsdelivr.net` 与 `fghrsh/live2d_api`（国内可能不通），
+  且完整本地化要拖进几 MB 的模型文件；需要的话再单独处理。
 - `docs/`：部署指南等文档
 - `tools/`：docx→Markdown、图片转 WebP、后台登录中转 Worker、vendor 本地化脚本
 - `public/`、`resources/`、`.verify*/` 均为构建产物，已在 `.gitignore` 中忽略
