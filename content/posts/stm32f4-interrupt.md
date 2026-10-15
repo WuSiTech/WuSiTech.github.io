@@ -11,16 +11,16 @@ banner = "images/banner.webp"
 
 以 **STM32F411CEU6** 与 **标准外设库（Standard Peripheral Library，以下简称 SPL）** 为例，完整实现「PA0 下降沿触发 → EXTI0 中断 → 翻转 PC13 电平」这一中断链路。文中代码取自实际工程 `STM32_SPL`（Keil 工程，启动文件 `startup_stm32f411xe.s`），可直接编译运行。
 
-![STM32F4 外部中断通路：引脚 → SYSCFG → EXTI → NVIC → ISR](/images/stm32/interrupt-path.webp)
+![](/images/stm32/interrupt-path.webp)
 
-*图 1：外部中断的信号通路，以及各环节对应的寄存器。*
+_图 1：外部中断的信号通路，以及各环节对应的寄存器。_
 
 该链路是单向的：**引脚 → SYSCFG 选线 → EXTI 边沿触发 → NVIC 仲裁与使能 → ISR 执行**。所谓配置中断，本质上是依次打通上述五个环节。
 
 ## 一、中断配置涉及的六个环节
 
-| # | 环节 | 关键技术点 | 相关函数 |
-| - | ---- | ---------- | -------- |
+| \# | 环节 | 关键技术点 | 相关函数 |
+| --- | --- | --- | --- |
 | 1 | 时钟使能 | GPIO 挂载于 AHB1，SYSCFG 挂载于 APB2 | `RCC_AHB1PeriphClockCmd`、`RCC_APB2PeriphClockCmd` |
 | 2 | GPIO 配置 | 中断引脚须配置为输入，上下拉决定空闲电平 | `GPIO_Init` |
 | 3 | 线映射 | EXTI 仅有 16 条信号线，由 SYSCFG 指定其归属端口 | `SYSCFG_EXTILineConfig` |
@@ -100,9 +100,9 @@ int main(void)
 
 中断的触发条件由硬件连接决定，因此先明确本工程的接线：
 
-![硬件接线：KEY 接在 PA0 与 GND 之间，PA0 设为上拉输入，LED 接在 PC13](/images/stm32/hardware-wiring.webp)
+![](/images/stm32/hardware-wiring.webp)
 
-*图 2：KEY 一端接 PA0、一端接 GND，因此 PA0 平时被上拉为高电平，按下时接地——这正是「上拉 + 下降沿触发」的由来。PC13 上挂载的是 LED（多数 F411 最小系统板为低电平点亮）。*
+_图 2：KEY 一端接 PA0、一端接 GND，因此 PA0 平时被上拉为高电平，按下时接地——这正是「上拉 + 下降沿触发」的由来。PC13 上挂载的是 LED（多数 F411 最小系统板为低电平点亮）。_
 
 ### 1. 时钟使能：最易遗漏的一步
 
@@ -125,7 +125,7 @@ PC13 上的 LED：多数 F411 最小系统板（如 WeAct Blackpill）将 LED �
 
 ### 3. SYSCFG：16 条 EXTI 线的端口归属
 
-EXTI 仅有 **EXTI0 ~ EXTI15** 共 16 条信号线，而每个端口均有 16 个引脚，因此约定：**引脚号即 EXTI 线号**，同号线在不同端口之间由 SYSCFG 二选一。
+EXTI 仅有 **EXTI0 \~ EXTI15** 共 16 条信号线，而每个端口均有 16 个引脚，因此约定：**引脚号即 EXTI 线号**，同号线在不同端口之间由 SYSCFG 二选一。
 
 ```c
 SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);  /* EXTI0 ← PA0 */
@@ -136,7 +136,7 @@ SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);  /* EXTI0 ← PA0 
 ### 4. EXTI 配置：四个字段各有作用
 
 | 字段 | 本例取值 | 说明 |
-| ---- | -------- | ---- |
+| --- | --- | --- |
 | `EXTI_Line` | `EXTI_Line0` | 选择信号线 EXTI0 |
 | `EXTI_Mode` | `EXTI_Mode_Interrupt` | 产生中断请求并进入 ISR；`Event` 仅产生事件，不进入 ISR |
 | `EXTI_Trigger` | `EXTI_Trigger_Falling` | 下降沿触发；双边沿用 `EXTI_Trigger_Rising_Falling` |
@@ -147,12 +147,12 @@ SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);  /* EXTI0 ← PA0 
 Cortex-M4 的 NVIC 在 STM32F4 上实现了 **4 个优先级位，对应 16 个优先级**，且**数值越小优先级越高**（0 为最高）。这 4 位由「分组」划分为抢占优先级与子优先级：
 
 | 分组 | 抢占位数 | 子优先级位数 | 抢占取值范围 | 子优先级取值范围 | 是否支持嵌套 |
-| ---- | -------- | ------------ | ------------ | ---------------- | ------------ |
-| `NVIC_PriorityGroup_0` | 0 | 4 | 0 | 0 ~ 15 | 外部中断之间不能互相打断 |
-| `NVIC_PriorityGroup_1` | 1 | 3 | 0 ~ 1 | 0 ~ 7 | 支持 |
-| `NVIC_PriorityGroup_2` | 2 | 2 | 0 ~ 3 | 0 ~ 3 | 支持 |
-| `NVIC_PriorityGroup_3` | 3 | 1 | 0 ~ 7 | 0 ~ 1 | 支持 |
-| `NVIC_PriorityGroup_4` | 4 | 0 | 0 ~ 15 | 0 | 支持 |
+| --- | --- | --- | --- | --- | --- |
+| `NVIC_PriorityGroup_0` | 0 | 4 | 0 | 0 \~ 15 | 外部中断之间不能互相打断 |
+| `NVIC_PriorityGroup_1` | 1 | 3 | 0 \~ 1 | 0 \~ 7 | 支持 |
+| `NVIC_PriorityGroup_2` | 2 | 2 | 0 \~ 3 | 0 \~ 3 | 支持 |
+| `NVIC_PriorityGroup_3` | 3 | 1 | 0 \~ 7 | 0 \~ 1 | 支持 |
+| `NVIC_PriorityGroup_4` | 4 | 0 | 0 \~ 15 | 0 | 支持 |
 
 - **抢占优先级**决定能否打断正在执行的中断，即嵌套关系；
 - **子优先级**仅在同一抢占级的多个中断同时挂起时决定执行顺序，**不产生嵌套**；
@@ -160,7 +160,7 @@ Cortex-M4 的 NVIC 在 STM32F4 上实现了 **4 个优先级位，对应 16 个�
 
 本例采用 `NVIC_PriorityGroup_2` + 抢占 2 + 子优先级 2，SPL 最终写入 `NVIC->IP[EXTI0_IRQn]` 的值为 `0xA0`：
 
-```
+```plain
 0b1010_0000
   └┬┘└┬┘
    │  └─ 子优先级 = 0b10 = 2
@@ -184,20 +184,18 @@ void EXTI0_IRQHandler(void)
 
 1. **函数名必须与 `startup_stm32f411xe.s` 的向量表一致**。启动文件中各入口均为弱定义：
 
-   ```asm
-   .weak      EXTI0_IRQHandler
-   .thumb_set EXTI0_IRQHandler,Default_Handler
-   ```
+```asm
+.weak      EXTI0_IRQHandler
+.thumb_set EXTI0_IRQHandler,Default_Handler
+```
 
    若函数名拼写有误（例如写成 `EXTIO_IRQHandler`），编译不会报错，但会链接至 `Default_Handler` 的无限循环，表现为程序失控。
 
 2. **进入 ISR 后应先判断标志**，确认挂起源，再执行处理。多个引脚共用同一向量时，这一步尤为必要。
-
 3. **必须清除挂起标志**。`EXTI_ClearITPendingBit()` 的实质是向 `EXTI->PR` 的对应位**写 1**；若不清除，标志将一直有效，退出 ISR 后会立即再次进入，表现为中断被反复触发。
-
 4. **ISR 应尽量简短**：不应在其中执行延时、串口打印等耗时操作，否则会延长中断响应时间，甚至丢失后续中断。
 
-此外需注意向量的**共享关系**：`EXTI0_IRQHandler` 服务于所有映射到 EXTI0 的引脚（PA0/PB0/…），`EXTI15_10_IRQHandler` 则服务于 EXTI10 ~ EXTI15。若同时使用 PA0 与 PB0，须在 ISR 内进一步判断具体引脚。
+此外需注意向量的**共享关系**：`EXTI0_IRQHandler` 服务于所有映射到 EXTI0 的引脚（PA0/PB0/…），`EXTI15_10_IRQHandler` 则服务于 EXTI10 \~ EXTI15。若同时使用 PA0 与 PB0，须在 ISR 内进一步判断具体引脚。
 
 ## 四、寄存器级实现对照
 
@@ -243,13 +241,13 @@ void EXTI0_IRQHandler(void)
 ## 五、常见问题与排查思路
 
 | 现象 | 可能原因 |
-| ---- | -------- |
+| --- | --- |
 | 完全不触发中断 | 未使能 SYSCFG 时钟；未调用 `SYSCFG_EXTILineConfig` 或端口选择有误；NVIC 通道未使能；触发边沿选择与实际电平变化相反（按键为按下接地却配置为上升沿） |
 | 程序失控或进入死循环 | ISR 函数名与启动文件向量表不一致，落入 `Default_Handler`；或触发 HardFault |
 | 反复进入中断 | 未清除 `EXTI->PR` 挂起标志；ISR 中存在无法满足的等待条件 |
-| 按一次键触发多次 | 机械按键抖动，需 10 ~ 20 ms 软件消抖，或增加 RC 滤波 |
+| 按一次键触发多次 | 机械按键抖动，需 10 \~ 20 ms 软件消抖，或增加 RC 滤波 |
 | 更换引脚后失效 | 同一 EXTI 线已被 SYSCFG 分配给其他端口；或该引脚未配置为输入 |
-| 优先级行为与预期不符 | `NVIC_PriorityGroupConfig` 被多处调用而互相覆盖；抢占优先级取值超出当前分组的取值范围（分组 2 时为 0 ~ 3） |
+| 优先级行为与预期不符 | `NVIC_PriorityGroupConfig` 被多处调用而互相覆盖；抢占优先级取值超出当前分组的取值范围（分组 2 时为 0 \~ 3） |
 | LED 亮度异常或驱动不足 | PC13 属备份域，限 2 MHz / 3 mA；且多数开发板的 LED 为低电平点亮 |
 
 调试建议：在 ISR 内设置断点最为直接；亦可在变量窗口观察 `EXTI->PR`、`EXTI->IMR`、`NVIC->ISER[0]` 与 `NVIC->IP[6]`，据此定位到具体环节。
@@ -258,49 +256,49 @@ void EXTI0_IRQHandler(void)
 
 1. **`TimingDelay` 当前不会发生递减**。`stm32f4xx_it.c` 的 `SysTick_Handler()` 已调用 `TimingDelay_Decrement()`，但 `main()` 中缺少 `SysTick_Config()`，系统节拍中断未使能，计数恒为 0。若后续需要软件延时，应先行补充：
 
-   ```c
-   /* 系统节拍 1 ms 中断（SystemCoreClock = 100 MHz 时） */
-   if (SysTick_Config(SystemCoreClock / 1000))
-   {
-       while (1);   /* 配置失败 */
-   }
-   ```
+```c
+/* 系统节拍 1 ms 中断（SystemCoreClock = 100 MHz 时） */
+if (SysTick_Config(SystemCoreClock / 1000))
+{
+    while (1);   /* 配置失败 */
+}
+```
 
 2. **将中断初始化封装为独立函数**，`main()` 仅保留调用，以提高可读性与复用性；ISR 建议统一置于 `stm32f4xx_it.c`（置于 `main.c` 亦可正常运行）：
 
-   ```c
-   static void EXTI0_Config(void)
-   {
-       GPIO_InitTypeDef GPIO_Struct;
-       EXTI_InitTypeDef EXTI_Struct;
-       NVIC_InitTypeDef NVIC_Struct;
+```c
+static void EXTI0_Config(void)
+{
+    GPIO_InitTypeDef GPIO_Struct;
+    EXTI_InitTypeDef EXTI_Struct;
+    NVIC_InitTypeDef NVIC_Struct;
 
-       RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOC, ENABLE);
-       RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOC, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 
-       GPIO_Struct.GPIO_Mode  = GPIO_Mode_IN;
-       GPIO_Struct.GPIO_OType = GPIO_OType_PP;   /* 输入模式不使用，显式赋值以避免读取未初始化成员 */
-       GPIO_Struct.GPIO_Pin   = GPIO_Pin_0;
-       GPIO_Struct.GPIO_PuPd  = GPIO_PuPd_UP;
-       GPIO_Struct.GPIO_Speed = GPIO_Fast_Speed;
-       GPIO_Init(GPIOA, &GPIO_Struct);
+    GPIO_Struct.GPIO_Mode  = GPIO_Mode_IN;
+    GPIO_Struct.GPIO_OType = GPIO_OType_PP;   /* 输入模式不使用，显式赋值以避免读取未初始化成员 */
+    GPIO_Struct.GPIO_Pin   = GPIO_Pin_0;
+    GPIO_Struct.GPIO_PuPd  = GPIO_PuPd_UP;
+    GPIO_Struct.GPIO_Speed = GPIO_Fast_Speed;
+    GPIO_Init(GPIOA, &GPIO_Struct);
 
-       SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);
+    SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);
 
-       EXTI_Struct.EXTI_Line    = EXTI_Line0;
-       EXTI_Struct.EXTI_Mode    = EXTI_Mode_Interrupt;
-       EXTI_Struct.EXTI_Trigger = EXTI_Trigger_Falling;
-       EXTI_Struct.EXTI_LineCmd = ENABLE;
-       EXTI_Init(&EXTI_Struct);
+    EXTI_Struct.EXTI_Line    = EXTI_Line0;
+    EXTI_Struct.EXTI_Mode    = EXTI_Mode_Interrupt;
+    EXTI_Struct.EXTI_Trigger = EXTI_Trigger_Falling;
+    EXTI_Struct.EXTI_LineCmd = ENABLE;
+    EXTI_Init(&EXTI_Struct);
 
-       NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
-       NVIC_Struct.NVIC_IRQChannel                   = EXTI0_IRQn;
-       NVIC_Struct.NVIC_IRQChannelPreemptionPriority = 2;
-       NVIC_Struct.NVIC_IRQChannelSubPriority        = 2;
-       NVIC_Struct.NVIC_IRQChannelCmd                = ENABLE;
-       NVIC_Init(&NVIC_Struct);
-   }
-   ```
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+    NVIC_Struct.NVIC_IRQChannel                   = EXTI0_IRQn;
+    NVIC_Struct.NVIC_IRQChannelPreemptionPriority = 2;
+    NVIC_Struct.NVIC_IRQChannelSubPriority        = 2;
+    NVIC_Struct.NVIC_IRQChannelCmd                = ENABLE;
+    NVIC_Init(&NVIC_Struct);
+}
+```
 
    如此，`main()` 中仅保留 PC13 的 LED 初始化、`EXTI0_Config()` 调用与主循环。
 
