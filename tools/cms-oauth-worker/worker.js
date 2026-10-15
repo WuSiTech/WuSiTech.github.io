@@ -46,13 +46,20 @@ async function hmacHex(secret, data) {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// 注意：这里刻意不用 escape()/unescape()——它们是 Node/浏览器遗留函数，
+// Cloudflare Workers（workerd）里不保证存在，用 TextEncoder/TextDecoder 才稳。
 function b64urlEncode(text) {
-  return btoa(unescape(encodeURIComponent(text))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function b64urlDecode(text) {
   const padded = text.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (text.length % 4)) % 4);
-  return decodeURIComponent(escape(atob(padded)));
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
 }
 
 function html(body) {

@@ -18,6 +18,8 @@ Hugo + [reimu](https://github.com/D-Sketon/hugo-theme-reimu) 主题的个人博�
 
 - **写作后台**：https://wusitech.github.io/admin/ —— Sveltia CMS，用 GitHub 账号登录，
   手机上也能写；保存即提交到 `main` 并自动构建部署，文章仍然是仓库里的 Markdown。
+  - 想**马上用**：点「使用访问令牌登录」，粘一个只对该仓库可读写的 GitHub 令牌即可（零配置，2 分钟）
+  - 想**长期省事**：按部署指南配一个免费的 Cloudflare Worker 登录中转，之后点一下按钮就登录
 - **评论**：Twikoo（前端已自托管在 `static/resources/`，不请求任何第三方 CDN）。
 - 两者的完整配置步骤（GitHub OAuth App、Cloudflare Worker、Netlify + MongoDB Atlas）见
   [docs/后台与评论部署指南.md](docs/后台与评论部署指南.md)。
