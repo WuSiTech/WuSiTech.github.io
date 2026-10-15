@@ -37,11 +37,17 @@ Function 调 GitHub API，评论数据就是仓库里的文件，`git clone` 即
 - **读不加任何动态接口**：Hugo 把 `static/comments/` 原样发布成 `/comments/`，浏览器直接取 JSON。
   所以评论列表是页面加载后异步渲染的，不参与 SEO。
 - **写只有一条路径**：Function 里带着一个细粒度 GitHub 令牌，调 Contents API 提交到仓库。
-- **两种写入模式**（环境变量 `COMMENT_MODE`）：
-  | 模式 | 行为 | 适合 |
-  | --- | --- | --- |
-  | `pr`（默认） | 新建分支 `comment/<slug>-<时间戳>` → 在分支上写文件 → 开 PR | 想先审一遍再公开 |
-  | `direct` | 直接写 `main` | 自己一个人的博客，不想管 PR |
+- **三种运行方式**（环境变量 `COMMENT_MODE` + `COMMENT_PENDING`，两者组合决定行为）：
+
+  | `COMMENT_MODE` | `COMMENT_PENDING` | 新评论怎么进仓库 | 新评论何时显示 | 适合 |
+  | --- | --- | --- | --- | --- |
+  | `pr`（默认） | 不生效 | 新建分支 `comment/<slug>-<时间戳>` → 在分支上写文件 → 开 PR | 你在 GitHub 上合并 PR 后，等一次构建 | 想在 GitHub 上先审一遍再公开 |
+  | `direct` | `true`（默认） | **直接写 `main`**，但评论的 `hidden` 落成 `true` | 你在后台 `/admin/` 把「隐藏」关掉并保存后，等约 1 分钟构建 | **推荐**：不想碰 PR，但想自己决定哪条展示 |
+  | `direct` | `false` | 直接写 `main`，`hidden: false` | 等约 1 分钟构建 | 完全自动、提交即公开 |
+
+  也就是说：**`COMMENT_PENDING` 只对 `direct` 有意义**。`pr` 模式下评论根本还没进 `main`，
+  PR 本身就是「待审核」状态，所以 `COMMENT_PENDING` 对它没有任何影响（写出来的评论始终 `hidden: false`，
+  等你合并 PR 后自然可见）。
 
 ---
 
@@ -69,9 +75,20 @@ Function 调 GitHub API，评论数据就是仓库里的文件，`git clone` 即
 | --- | --- | --- | --- |
 | `GITHUB_TOKEN` | **Secret**（加密） | 第 1 步的令牌 | 是 |
 | `COMMENT_MODE` | Text | `pr` 或 `direct`（默认 `pr`） | 否 |
+| `COMMENT_PENDING` | Text | `true` / `false`，默认 `true`；**只在 `COMMENT_MODE=direct` 时生效** | 否 |
 | `GITHUB_REPO` | Text | 默认 `WuSiTech/WuSiTech.github.io` | 否 |
 | `GITHUB_BRANCH` | Text | 默认 `main` | 否 |
 | `ALLOWED_ORIGINS` | Text | 默认 `https://wusitech.github.io,https://wstk.pages.dev` | 否 |
+
+`COMMENT_PENDING` 的解析规则（`functions/api/comment.js` 里的 `pendingEnabled()`）：
+
+- 取值大小写不敏感：`true` / `TRUE` / `True` 都算「开」，`false` / `FALSE` / `False` 都算「关」。
+- 未设置、空字符串、或写成别的值（`yes`、`1`、拼错的值……）一律**按默认值 `true` 处理**——
+  拿不准时宁可先隐藏，也不要让垃圾评论直接上线。
+- 想「提交即公开」就必须**明确写 `false`**。
+
+> 站长推荐配置：`COMMENT_MODE=direct` + `COMMENT_PENDING=true`（或不设，本来就是默认）。
+> 效果是「别人发评论 → 直接进仓库 → 他在后台看到 → 他决定是否展示」。
 
 加完变量后**重新部署一次**（Deployments → 最新一次 → Retry deployment），变量才会生效。
 
@@ -132,6 +149,9 @@ npx wrangler pages dev public \
   --binding GITHUB_TOKEN=<你的令牌>
 ```
 
+> 想本地试「直接提交 + 默认隐藏（待站长审核）」，把 `--binding COMMENT_MODE=pr` 换成
+> `--binding COMMENT_MODE=direct --binding COMMENT_PENDING=true`（`COMMENT_PENDING` 不写也是默认 true）。
+
 然后：
 
 - 打开 `http://localhost:8788/posts/stm32f4-interrupt/` 提交一条评论
@@ -151,7 +171,36 @@ node tools/git-comments/test.mjs
 
 ---
 
-## 四、日常审核流程（`COMMENT_MODE=pr`）
+## 四、日常审核流程
+
+### A. `direct` + `COMMENT_PENDING=true`（推荐给不想合并 PR 的人）
+
+这就是「**直接提交但默认隐藏（待站长审核）**」：评论立刻进仓库，但对访客不可见，
+站长在后台点一下才放行。
+
+1. 有人提交评论后，访客那边看到「评论已提交，待站长审核后显示」。
+   与此同时这条评论**已经写进** `static/comments/<slug>.json` 了，只是 `hidden: true`。
+   前端 `static/js/comments.js` 会把 `hidden === true` 的评论**过滤掉不渲染**
+   （数据保留在 JSON 里，随时可以改回来或删除）。
+2. 站长打开后台 **`https://wstk.pages.dev/admin/`**（Decap CMS，GitHub 登录）。
+3. 左侧选 **「评论」**（comments）集合 → 找到**对应文章**的那一份条目 →
+   逐条看昵称 / 内容 / 时间（`hidden` 开着的那条就是新评论）。
+4. 要展示：把该条的 **「隐藏」开关关掉** → **保存**。
+   保存相当于往 `main` 提交一次修改。
+5. 等一次构建部署（**约 1 分钟**）→ 刷新页面，这条评论就出现了。
+6. 不想展示：**什么都不用做**（一直留着 `hidden` 开着，页面上永远看不到）。
+   想彻底删掉就在同一个界面删除该条并保存。
+
+> 小提示：评论框下方那句固定说明（「评论会先提交到 GitHub，审核合并后公开显示……」）是写在
+> `static/js/comments.js` 里的静态文案，只有**提交后的提示**（`data.message`）才会跟着模式变。
+> 也就是说 `direct` 模式下提交成功时会明确显示「待站长审核后显示」或「约 1 分钟后显示」，
+> 而框下面那行说明可以按自己的模式改一改（改 `comments.js` 里 `gc-tip` 那段）。
+>
+> 后台一次保存会把整个 `comments` 数组写回 JSON（2 空格缩进 + 末尾换行），
+> 字段集合和 Function 写出来的完全一致（恰好 9 个：`id, name, email, website, body, ts, ua, hidden, author`），
+> 所以两边来回改都不会互相弄丢字段。
+
+### B. `COMMENT_MODE=pr`（在 GitHub 上审 PR）
 
 1. 有人提交评论后，仓库里会出现一个 PR，标题形如：
    ```
@@ -172,13 +221,21 @@ GitHub 的 PR 列表可以按 `comment/` 前缀搜分支名筛选：
 https://github.com/WuSiTech/WuSiTech.github.io/pulls?q=is%3Apr+is%3Aopen+head%3Acomment%2F
 ```
 
-### 切成 `direct`（即时发布，不审核）
+### 怎么切换这三种方式
 
-Cloudflare Pages → Settings → Environment variables → 把 `COMMENT_MODE` 改成 `direct` →
-重新部署一次。之后提交的评论会直接写进 `main`，前端会提示「评论已提交，约 1 分钟后显示」。
+Cloudflare Pages → Settings → Environment variables → 改 `COMMENT_MODE` / `COMMENT_PENDING`
+→ **重新部署一次**（变量才会生效）。改完只影响**之后**提交的评论，已经写进仓库的评论不受影响。
 
-> `direct` 模式下没有审核环节，垃圾评论会被直接提交到仓库。至少确认：
-> 蜜罐字段、限流、链接数量限制都还在生效（它们对两种模式都起作用）。
+| 想要的效果 | `COMMENT_MODE` | `COMMENT_PENDING` |
+| --- | --- | --- |
+| 直接进仓库 + 默认隐藏，站长在后台放行（**推荐**） | `direct` | `true`（或删除这个变量） |
+| 直接进仓库 + 提交即公开（全自动） | `direct` | `false` |
+| 开 PR 审核合并（回到老流程） | `pr` | 随便（不生效） |
+
+> `direct` + `COMMENT_PENDING=false` 时没有审核环节，垃圾评论会被直接提交到仓库并立刻公开。至少确认：
+> 蜜罐字段、限流、链接数量限制都还在生效（它们对三种方式都起作用）。
+> `direct` + `COMMENT_PENDING=true`（推荐）下，垃圾评论虽然也会进仓库，但**不会出现在页面上**，
+> 你在后台忽略它即可（想清理再删除条目）。
 
 ---
 
@@ -209,9 +266,10 @@ git archive --format=zip -o comments-backup.zip HEAD static/comments
 | 限制 | 说明 |
 | --- | --- |
 | 评论不参与 SEO | 列表是页面加载后 `fetch` JSON 再渲染的；搜索引擎抓不到，**禁用 JS 时也看不到评论** |
-| 提交后有延迟 | `pr` 模式要等你合并 + 构建（约 1-2 分钟）；`direct` 模式也要等一次构建部署 |
+| 提交后有延迟 | `pr` 模式要等你合并 PR + 构建（约 1-2 分钟）；`direct` 模式也要等一次构建部署；`direct` + `COMMENT_PENDING=true`（默认）还要**再等你在后台放行**，放行后约 1 分钟才出现 |
+| 新评论默认不可见 | `direct` + `COMMENT_PENDING=true`（默认）时，新评论会带 `hidden: true` 写进 JSON 并被前端过滤掉——**这是设计如此，不是数据丢了**，在后台把「隐藏」关掉就显示 |
 | 限流是内存级的 | 同一 IP 60 秒最多 3 条，但用的是 Function 实例内的 Map，**实例重启或请求落到别的实例就清零**；只能挡基本刷屏。要严格限流得上 KV / Durable Objects |
-| 提交是匿名的 | 没有登录，昵称随便填；只靠蜜罐 + 限流 + 链接数 + 人工审核（`pr` 模式）防垃圾 |
+| 提交是匿名的 | 没有登录，昵称随便填；只靠蜜罐 + 限流 + 链接数 + 人工审核（`pr` 模式审 PR，或 `direct`+`COMMENT_PENDING=true` 在后台放行）防垃圾 |
 | 并发提交会撞车 | 两个人同时评论同一篇文章时，GitHub 会返回 409/422，Function 会重新读文件合并重试，最多 3 次；仍失败会提示「并发冲突，请稍后再提交一次」 |
 | 令牌有权限范围 | 令牌只对这一个仓库有 Contents + Pull requests 权限；泄露的影响面限于该仓库。**令牌只存在 Cloudflare 环境变量里，绝不会下发到浏览器** |
 | GitHub API 配额 | 细粒度令牌是 5000 请求/小时（每仓库）。正常博客访问量下远远够用；一次提交大约消耗 2-4 个请求 |
@@ -231,5 +289,7 @@ git archive --format=zip -o comments-backup.zip HEAD static/comments
 | 提交报 502「GitHub ... 403」 | 令牌权限不足（缺 Contents 或 Pull requests 写权限），或 API 配额用完 |
 | 提交报 502「GitHub ... 404」 | `GITHUB_REPO` 写错了，或令牌没勾这个仓库 |
 | 提交报 409「并发冲突」 | 同一时刻有别人在提交同一篇文章，稍后再试一次 |
-| 提示「评论已提交」但页面上一直没有 | `pr` 模式：去 PR 列表看看是不是还没合并。`direct` 模式：看仓库的 Actions / Cloudflare 构建是不是失败了 |
+| 提示「评论已提交」但页面上一直没有 | **`direct` + `COMMENT_PENDING=true`（默认）：先去后台看这条评论的「隐藏」开关是不是还开着**（见上一行）。`pr` 模式：去 PR 列表看看是不是还没合并。都不是：看仓库的 Actions / Cloudflare 构建是不是失败了 |
+| 新评论一直不显示（最常见原因） | ① 后台 `/admin/` →「评论」里对应文章的这条**还开着「隐藏」**——关掉并保存，等约 1 分钟 ② 刚放行不到 1 分钟，构建还没跑完 ③ 浏览器缓存：强制刷新（Ctrl+F5） ④ 构建失败（Cloudflare Pages → Deployments 看最新一次） |
+| 后台改完「隐藏」还是不显示 | 确认后台保存真的提交了（GitHub 上能看到一次 `Update …json` 提交）；再确认前端 `comments.js` 已加载、且该条评论的 `ts`/`body` 没被手改坏（JSON 坏掉时前端会整份放弃渲染） |
 | PR 列表里一堆垃圾 | 直接在 GitHub 上批量 Close，`pr` 模式下关掉即等于删除 |

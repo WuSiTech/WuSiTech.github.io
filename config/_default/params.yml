@@ -6,27 +6,11 @@
 fancybox: true
 
 # main menu navigation
-# for more icon information, please visit https://github.com/D-Sketon/hexo-theme-reimu/issues/30
-# NOTE: `name` must be lowercase and match a key in themes/reimu/i18n/<lang>.yml,
-# because the theme renders it with {{ i18n .name }} and Hugo's i18n lookup is case-sensitive.
-# Available keys: home, archives, about, categories, tags, friend
-menu:
-  - name: home
-    url: ""
-    icon: # default use taichi icon, you can use a hexadecimal representation of fontawesome or icon_font, like 'f0c1'
-  - name: archives
-    url: "archives"
-    icon:
-  - name: categories
-    url: "categories"
-  - name: tags
-    url: "tags"
-  - name: friend
-    url: "friend"
-    icon:
-  - name: about
-    url: "about"
-    icon:
+# ⚠️ 菜单已搬到 config/_default/params.toml（后台「站点设置」集合管理）。
+# 两点容易踩坑，改之前先看那里文件头的说明：
+#   1) params.toml 里表名不能再写 params. 前缀，要写 [menu] / [[menu]]；
+#   2) 每项 name 是 i18n 键（home / archives / categories / tags / friend / about），
+#      主题用 {{ i18n .name }} 渲染，填中文网页上会变成空白。
 
 # friend links
 friends:
@@ -43,9 +27,11 @@ monthFormat: "2006-01"
 dateFormat: "2006-01-02"
 timeFormat: "2006-01-02 15:04:05"
 
-author: WuSi
-email:
-description: "BAKA DA☆ZE!"
+# author / email / description / avatar / social 这五项（个人信息）
+# 已搬到 config/_default/params.toml（后台「站点设置」集合管理），
+# 这里不再定义，避免两处打架 —— 同一个键在 params.toml 和 params.yml 里
+# 都写会以其中一个为准，很难排查。
+
 # subtitle: "DA☆ZE"
 subtitle:
   typing:
@@ -81,7 +67,7 @@ banner_srcset:
     - src: "images/banner.webp"
       media: "(min-width: 800px)"
 
-avatar: "avatar.webp"
+# 头像（avatar）已搬到 config/_default/params.toml
 
 # Control the display of the post cover
 # If not set, the banner image will be displayed by default
@@ -135,36 +121,9 @@ sidebar:
   article:
     show_common: true # whether to show common sidebar, ignored on mobile devices
 
-social:
-  # email: mailto:xxx@gmail.com
-  # github: https://github.com/yourname
-  # google: https://plus.google.com/yourname
-  # twitter: https://twitter.com/yourname
-  # bluesky: https://bsky.app/profile/yourname
-  # facebook: https://www.facebook.com/yourname
-  # instagram: https://www.instagram.com/yourname
-  # linkedin: https://www.linkedin.com/in/yourname
-  # pinterest: https://www.pinterest.com/yourname
-  # youtube: https://www.youtube.com/channel/yourname
-  # vimeo: https://vimeo.com/yourname
-  # flickr: https://www.flickr.com/photos/yourname
-  # dribbble: https://dribbble.com/yourname
-  # behance: https://www.behance.net/yourname
-  # bilibili: https://space.bilibili.com/yourname
-  # weibo: https://weibo.com/yourname
-  # zhihu: https://www.zhihu.com/people/yourname
-  # reddit: https://www.reddit.com/user/yourname
-  # tumblr: https://yourname.tumblr.com
-  # medium: https://medium.com/@yourname
-  # deviantart: https://www.deviantart.com/yourname
-  # stackoverflow: https://stackoverflow.com/users/yourname
-  # keybase: https://keybase.io/yourname
-  # telegram: https://t.me/yourname
-  # discord: https://discordapp.com/users/yourname
-  # steam: https://steamcommunity.com/id/yourname
-  # weixin:
-  # qq:
-  # tiktok:
+# social（社交链接）已搬到 config/_default/params.toml —— 注意那边用的是
+# 「列表」写法（每项 name + url），不是这里原来的「键: 值」映射写法。
+# 主题两种写法都支持；完整图标名清单见 themes/reimu/README.md 的 social 一节。
 
 widgets:
   - category
@@ -643,13 +602,8 @@ share:
   # - weixin
 
 # show categories card on home page
-home_categories:
-  enable: true
-  # 只写"已经存在"的分类（分类由文章的 categories 自动生成）；
-  # 这里没列出的分类不会显示卡片，但分类页 /categories/ 依旧可以访问。
-  content:
-    - categories: STM32
-      cover: "images/stm32/interrupt-path.webp"
+# ⚠️ 首页分类卡片（home_categories）已搬到 config/_default/params.toml
+# （后台「站点设置」集合管理），要在网页首页加/删分类卡片可以直接在后台做。
 
 ########################################
 # Experimental features

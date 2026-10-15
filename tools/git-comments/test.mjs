@@ -224,7 +224,13 @@ const GOOD = {
 /* ------------------------------------------------------------------ */
 {
   const gh = makeGithub();
-  const res = await handleComment(req(GOOD), envOf({ COMMENT_MODE: 'direct' }), depsFor(gh));
+  // 这里显式关掉 COMMENT_PENDING，让本节继续验证「direct + 不 pending」这条老路径
+  // （hidden=false 直接公开）；direct 默认的 pending=true 在下面的 15 节单独测。
+  const res = await handleComment(
+    req(GOOD),
+    envOf({ COMMENT_MODE: 'direct', COMMENT_PENDING: 'false' }),
+    depsFor(gh),
+  );
   const data = await res.json();
   const file = gh.files['static/comments/posts/stm32f4-interrupt.json'];
   let doc = null;
@@ -326,6 +332,8 @@ const GOOD = {
 /* 3) 已有文件（direct）：带 sha，追加而不是覆盖                        */
 /* ------------------------------------------------------------------ */
 {
+  // 同样显式 COMMENT_PENDING=false，保持本节「新评论 hidden=false」的老断言；
+  // 「追加时旧评论原样保留 + 新评论 hidden=true」在 15e 单独测。
   const old = {
     slug: 'posts/stm32f4-interrupt',
     comments: [
@@ -348,7 +356,11 @@ const GOOD = {
       },
     },
   });
-  const res = await handleComment(req(GOOD), envOf({ COMMENT_MODE: 'direct' }), depsFor(gh));
+  const res = await handleComment(
+    req(GOOD),
+    envOf({ COMMENT_MODE: 'direct', COMMENT_PENDING: 'false' }),
+    depsFor(gh),
+  );
   const put = gh.resets()[0];
   const doc = JSON.parse(gh.files['static/comments/posts/stm32f4-interrupt.json'].content);
   const ok =
@@ -596,6 +608,188 @@ const GOOD = {
   const badJs = /\bunescape\s*\(|\bescape\s*\(/.test(jsSrc);
   check('14. 不用 Buffer / escape / unescape（Node 与 Workers 通用）', !badFn && !badJs,
     `function=${badFn} frontend=${badJs}`);
+}
+
+/* ------------------------------------------------------------------ */
+/* 15) COMMENT_PENDING：direct 默认「直接提交 + 默认隐藏」、可关掉、不影响 pr */
+/* ------------------------------------------------------------------ */
+
+/** 取出某个假仓库里写进去的第一条 / 最后一条评论，解析失败返回 null */
+function fileComments(gh, path = 'static/comments/posts/stm32f4-interrupt.json') {
+  const file = gh.files[path];
+  if (!file) return null;
+  try {
+    const parsed = JSON.parse(file.content);
+    return Array.isArray(parsed.comments) ? parsed.comments : null;
+  } catch {
+    return null;
+  }
+}
+
+{
+  // 15a. 站长要的模式：direct + 未设置 COMMENT_PENDING（按默认 true 处理）
+  //      → 直接进仓库但 hidden=true（前端不渲染），响应 pending:true + 待审核提示
+  const gh = makeGithub();
+  const res = await handleComment(req(GOOD), envOf({ COMMENT_MODE: 'direct' }), depsFor(gh));
+  const data = await res.json();
+  const list = fileComments(gh);
+  const c = list && list[0];
+  check(
+    '15a. direct 未设置 COMMENT_PENDING（默认）→ 写入 hidden=true，响应 pending=true 且提示待审',
+    res.status === 200 &&
+      data.ok === true &&
+      data.mode === 'direct' &&
+      data.pending === true &&
+      data.message === '评论已提交，待站长审核后显示' &&
+      sameFieldSet(c) &&
+      !!c &&
+      c.hidden === true &&
+      c.author === false,
+    `status=${res.status} pending=${JSON.stringify(data.pending)} message=${data.message} ${fieldDetail(c)}`,
+  );
+
+  // 15b. direct + COMMENT_PENDING=false → 老行为：提交即公开
+  const gh2 = makeGithub();
+  const res2 = await handleComment(
+    req(GOOD),
+    envOf({ COMMENT_MODE: 'direct', COMMENT_PENDING: 'false' }),
+    depsFor(gh2),
+  );
+  const data2 = await res2.json();
+  const list2 = fileComments(gh2);
+  const c2 = list2 && list2[0];
+  check(
+    '15b. direct + COMMENT_PENDING=false → hidden=false，响应 pending=false',
+    res2.status === 200 &&
+      data2.ok === true &&
+      data2.mode === 'direct' &&
+      data2.pending === false &&
+      data2.message === '评论已提交，约 1 分钟后显示' &&
+      sameFieldSet(c2) &&
+      !!c2 &&
+      c2.hidden === false,
+    `status=${res2.status} pending=${JSON.stringify(data2.pending)} message=${data2.message} ${fieldDetail(c2)}`,
+  );
+
+  // 15c. direct + COMMENT_PENDING=true（显式写法，与默认一致）
+  const gh3 = makeGithub();
+  const res3 = await handleComment(
+    req(GOOD),
+    envOf({ COMMENT_MODE: 'direct', COMMENT_PENDING: 'true' }),
+    depsFor(gh3),
+  );
+  const data3 = await res3.json();
+  const list3 = fileComments(gh3);
+  const c3 = list3 && list3[0];
+  check(
+    '15c. direct + COMMENT_PENDING=true → hidden=true，响应 pending=true',
+    res3.status === 200 &&
+      data3.pending === true &&
+      data3.message === '评论已提交，待站长审核后显示' &&
+      sameFieldSet(c3) &&
+      !!c3 &&
+      c3.hidden === true,
+    `status=${res3.status} pending=${JSON.stringify(data3.pending)} ${fieldDetail(c3)}`,
+  );
+
+  // 15d. pr 模式不受 COMMENT_PENDING 影响：照样开 PR，且 hidden=false
+  const gh4 = makeGithub();
+  const res4 = await handleComment(
+    req(GOOD),
+    envOf({ COMMENT_MODE: 'pr', COMMENT_PENDING: 'true' }),
+    depsFor(gh4),
+  );
+  const data4 = await res4.json();
+  const branchCalls4 = gh4.calls('POST', /\/git\/refs$/);
+  const pulls4 = gh4.calls('POST', /\/pulls$/);
+  const list4 = fileComments(gh4);
+  const c4 = list4 && list4[0];
+  check(
+    '15d. pr + COMMENT_PENDING=true → 仍开 PR、hidden=false、响应不带 pending',
+    res4.status === 200 &&
+      data4.ok === true &&
+      data4.mode === 'pr' &&
+      data4.pr === `https://github.com/${REPO}/pull/42` &&
+      data4.message === '评论已提交，审核合并后显示' &&
+      !('pending' in data4) &&
+      branchCalls4.length === 1 &&
+      pulls4.length === 1 &&
+      sameFieldSet(c4) &&
+      !!c4 &&
+      c4.hidden === false &&
+      c4.author === false,
+    `status=${res4.status} mode=${data4.mode} branch=${branchCalls4.length} pr=${pulls4.length} ${fieldDetail(c4)}`,
+  );
+
+  // 15e. 老文件里的旧评论（没有 hidden 字段）追加后必须原样保留，只有新评论带 hidden=true
+  const legacy = {
+    id: 'c_1_aaaaaa',
+    name: '老访客',
+    email: '',
+    website: '',
+    body: '旧评论（写入时还没有 hidden / author 字段）',
+    ts: '2026-01-01T00:00:00.000Z',
+  };
+  const oldDoc = { slug: 'posts/stm32f4-interrupt', comments: [legacy] };
+  const gh5 = makeGithub({
+    files: {
+      'static/comments/posts/stm32f4-interrupt.json': {
+        content: JSON.stringify(oldDoc, null, 2) + '\n',
+        sha: 'sha_old',
+        branch: BRANCH,
+      },
+    },
+  });
+  const res5 = await handleComment(req(GOOD), envOf({ COMMENT_MODE: 'direct' }), depsFor(gh5));
+  const list5 = fileComments(gh5);
+  const kept = list5 && list5[0];
+  const added = list5 && list5[1];
+  check(
+    '15e. 追加时旧评论原样保留（仍无 hidden），只有新评论 hidden=true',
+    res5.status === 200 &&
+      !!list5 &&
+      list5.length === 2 &&
+      JSON.stringify(kept) === JSON.stringify(legacy) &&
+      !('hidden' in (kept || {})) &&
+      !!added &&
+      sameFieldSet(added) &&
+      added.hidden === true &&
+      added.author === false,
+    `status=${res5.status} comments=${list5 ? list5.length : 'n/a'} 旧=${JSON.stringify(kept)}`,
+  );
+
+  // 15f. 取值解析：大小写不敏感，只有 false 才算关；空串 / 拼错的值一律按默认 true
+  const cases = [
+    ['TRUE', true],
+    ['False', false],
+    ['false', false],
+    [' true ', true],
+    ['', true],
+    ['yes', true],
+    ['0', true],
+  ];
+  let allOk = true;
+  const details = [];
+  for (const [value, expectPending] of cases) {
+    const gh6 = makeGithub();
+    const res6 = await handleComment(
+      req(GOOD),
+      envOf({ COMMENT_MODE: 'direct', COMMENT_PENDING: value }),
+      depsFor(gh6),
+    );
+    const data6 = await res6.json();
+    const list6 = fileComments(gh6);
+    const c6 = list6 && list6[0];
+    const pass =
+      res6.status === 200 &&
+      data6.pending === expectPending &&
+      !!c6 &&
+      c6.hidden === expectPending &&
+      sameFieldSet(c6);
+    if (!pass) allOk = false;
+    details.push(`"${value}"→${data6.pending}`);
+  }
+  check('15f. COMMENT_PENDING 取值解析（仅 false 关闭，其余按默认 true）', allOk, details.join(' '));
 }
 
 const failed = results.filter((r) => !r.pass);
