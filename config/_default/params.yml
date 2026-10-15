@@ -1,6 +1,8 @@
 ########################################
 # Basic Configuration
 ########################################
+
+# image lightbox (点击文章图片放大查看)
 fancybox = true
 
 # main menu navigation
@@ -42,7 +44,7 @@ timeFormat: "2006-01-02 15:04:05"
 
 author: WuSi
 email: 
-description: "REIMU DA☆ZE"
+description: "BAKA DA☆ZE!"
 # subtitle: "DA☆ZE"
 subtitle:
   typing:
@@ -54,7 +56,7 @@ subtitle:
       # - Sentence 4
     typeSpeed: 100              # 打字速度（毫秒/字符） 
     backSpeed: 50               # 删除速度（毫秒/字符）
-    backDelay: 2000             # 打完一句话后，等待时间
+    backDelay: 2000             # 打完一句话，等待时间
     startDelay: 300             # 页面加载后，等待时间
     loop: true                  # 是否循环播放
     shuffle: true              # 是否随机输出句子
@@ -154,7 +156,7 @@ social:
   # reddit: https://www.reddit.com/user/yourname
   # tumblr: https://yourname.tumblr.com
   # medium: https://medium.com/@yourname
-  # deviantart: https://yourname.deviantart.com
+  # deviantart: https://deviantart.com/@yourname
   # stackoverflow: https://stackoverflow.com/users/yourname
   # keybase: https://keybase.io/yourname
   # telegram: https://t.me/yourname
@@ -316,7 +318,7 @@ clipboard:
     zh-CN: 复制失败 (ﾟ⊿ﾟ)ﾂ
     zh-TW: 複製失敗 (ﾟ⊿ﾟ)ﾂ
     ja: コピー失敗 (ﾟ⊿ﾟ)ﾂ
-    pt-BR: Falha ao copiar (ﾟ⊿ﾟ)ﾂ
+    pt-BR: Falha ao copiar (*^▽^*)
   copyright:
     enable: false
     count: 50 # The number of characters when the copyright is displayed
@@ -597,7 +599,7 @@ top:
 
 # whether to display the notification when the article is outdated
 outdate:
-  enable: true
+  enable: false
   daysAgo: 180 # The number of days after which the article is considered outdated
   message:
     en: This article was last updated on {time}. Please note that the content may no longer be applicable.
@@ -696,12 +698,25 @@ injector:
       }
     </style>
   body_begin: # Inject code snippet right after <body>
-  # 让侧栏 / 移动栏的头像在页面解析阶段就直接请求加载，不再依赖 lazysizes。
-  # 原因：主题输出的是 <img class="lazyload" data-src="...">（没有 src），
-  # 要等 lazysizes 运行后才会拿到 src；而 CSS 里 .sidebar-author img{opacity:0}
-  # 只有补上 .lazyloaded 才显示，所以加载失败时会得到一个"空圆圈 + alt 文字"。
-  # 这里在 DOM 就绪前同步设好 src 并切好 class，头像立刻加载、立刻可见。
+  # 1) Fancybox 灯箱：配合 render-image.html 中输出的 <a data-fancybox="gallery">，
+  #    点击文章图片时弹出放大层而不是跳转到图片地址。
+  # 2) 头像立即加载：主题输出的是 <img class="lazyload" data-src="...">（没有 src），
+  #    要等 lazysizes 运行后才会拿到 src；而 CSS 里 .sidebar-author img{opacity:0}
+  #    只有补上 .lazyloaded 才显示，所以加载失败时会得到一个"空圆圈 + alt 文字"。
+  #    这里在 DOM 就绪前同步设好 src 并切好 class，头像立刻加载、立刻可见。
   body_end: |
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        if (window.jQuery && jQuery.fn.fancybox) {
+          jQuery('[data-fancybox="gallery"]').fancybox({
+            buttons: ["zoom", "close"]
+          });
+        }
+      });
+    </script>
     <script>
       (function () {
         var imgs = document.querySelectorAll(".sidebar-author img.lazyload[data-src]");
@@ -775,7 +790,7 @@ player:
       lrcType:
   meting:
     # https://github.com/metowolf/MetingJS
-    # if you want to use meting, please enable aplayer first
+    # if you want to use meting, you must enable aplayer first
     enable: false
     meting_api: # custom api
     options:
