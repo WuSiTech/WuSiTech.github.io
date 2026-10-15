@@ -135,6 +135,50 @@ collections:
             input_timezone: Asia/Shanghai
           - { label: 正文, name: body, widget: markdown }
 
+  # ---------------------------------------------------------------- 评论管理
+  # 评论数据在 static/comments/posts/ 下（每篇文章一个 JSON 文件），由 Cloudflare
+  # Pages Function 写入：默认走 PR 审核，合并后才出现在页面上。
+  # 这个集合用来管理【已经发布】的评论：
+  #   - 隐藏：把「隐藏」开关打开（数据保留，页面不再显示）
+  #   - 删除：直接移除这条
+  #   - 博主回复：新增一条评论，昵称写你自己，「博主身份」打开
+  # 注意：字段必须与 Function 写入的完全一致，否则保存时会把字段丢掉。
+  - name: comments
+    label: 评论
+    label_singular: 评论文件
+    folder: static/comments/posts
+    create: false
+    extension: json
+    format: json
+    identifier_field: slug
+    sortable_fields: [slug]
+    summary: "{{slug}}"
+    fields:
+      - label: 文章路径
+        name: slug
+        widget: string
+        hint: 与文章 URL 对应，例如 posts/stm32f4-interrupt（一般不用改）
+      - label: 评论
+        name: comments
+        widget: list
+        summary: "{{fields.name}}：{{fields.body}}"
+        fields:
+          - { label: 内部 ID, name: id, widget: hidden, required: false }
+          - { label: 昵称, name: name, widget: string }
+          - { label: 邮箱（不公开显示）, name: email, widget: string, required: false }
+          - { label: 网址, name: website, widget: string, required: false }
+          - { label: 正文, name: body, widget: text }
+          - { label: 时间, name: ts, widget: string, required: false, hint: ISO 时间，一般不用改 }
+          - { label: 浏览器信息, name: ua, widget: string, required: false }
+          - label: 隐藏（页面不再显示，数据保留）
+            name: hidden
+            widget: boolean
+            default: false
+          - label: 博主身份（显示「博主」标记）
+            name: author
+            widget: boolean
+            default: false
+
 # ---------------------------------------------------------------- 说明
 # 1) 站点级配置（config/_default/params.yml：菜单、首页分类、主题参数等）没有放进
 #    后台，因为 CMS 保存时会按表单字段重写整个文件，会把未声明的配置项丢掉。

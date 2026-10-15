@@ -427,8 +427,9 @@ waline:
 # 后端方案：Netlify（免费额度充足，官方文档标注"中国大陆访问速度不错"）
 #         + MongoDB Atlas 免费版存数据；部署步骤见 README 的「评论系统」一节。
 # 前端：static/resources/twikoo@2.0.15/（本地自托管，不走任何第三方 CDN）
+# 评论已改为自建 Git 存储方案，见 docs/评论系统（Git存储）.md —— 因此这里关闭 Twikoo
 twikoo:
-  enable: true # 已打开；但下面的 envId 为空时评论区不会渲染，所以现在线上不会有变化
+  enable: false # 已关闭；下面的配置行原样保留，方便需要时切回
   envId: # ← 部署好 Netlify 后把云函数地址填这里，例如 https://xxx.netlify.app/.netlify/functions/twikoo
   region: # ← Netlify / Vercel 部署留空；只有腾讯云 CloudBase 才需要（如 ap-shanghai）
 
@@ -723,6 +724,8 @@ injector:
         }
       })();
     </script>
+    <!-- 自建评论系统：读 static/comments/<slug>.json，提交到 Cloudflare Pages Function（详见 docs/评论系统（Git存储）.md） -->
+    <script src="/js/comments.js" defer></script>
   sidebar_begin: # Inject code snippet right after <aside>
   sidebar_end: # Inject code snippet right before </aside>
 
