@@ -406,12 +406,12 @@ waline:
   serverURL:
   locale: {} # https://waline.js.org/guide/features/i18n.html
   emoji:
-    - https://unpkg.com/@waline/emojis@1.2.0/weibo
-    - https://unpkg.com/@waline/emojis@1.2.0/alus
-    - https://unpkg.com/@waline/emojis@1.2.0/bilibili
-    - https://unpkg.com/@waline/emojis@1.2.0/qq
-    - https://unpkg.com/@waline/emojis@1.2.0/tieba
-    - https://unpkg.com/@waline/emojis@1.2.0/tw-emoji
+    - https://npm.webcache.cn/@waline/emojis@1.2.0/weibo
+    - https://npm.webcache.cn/@waline/emojis@1.2.0/alus
+    - https://npm.webcache.cn/@waline/emojis@1.2.0/bilibili
+    - https://npm.webcache.cn/@waline/emojis@1.2.0/qq
+    - https://npm.webcache.cn/@waline/emojis@1.2.0/tieba
+    - https://npm.webcache.cn/@waline/emojis@1.2.0/tw-emoji
   meta:
     - nick
     - mail
