@@ -1,6 +1,7 @@
 # 吾思 梦阁
 
 [![Build and deploy](https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml/badge.svg?branch=main)](https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml)
+[![Tools and config checks](https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml/badge.svg?branch=main)](https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml)
 
 Hugo + [reimu](https://github.com/D-Sketon/hugo-theme-reimu) 主题的个人博客。
 

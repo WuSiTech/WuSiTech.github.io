@@ -38,6 +38,8 @@ ENTRY = re.compile(r"(?P<indent>[ \t]*src:\s*)(?P<prefix>[A-Za-z0-9_\-]+)\|(?P<p
 def main(argv=None):
     ap = argparse.ArgumentParser(description="把 vendor.yml 里可本地化的库切成本地路径")
     ap.add_argument("--dry-run", action="store_true", help="只报告不写文件")
+    ap.add_argument("--strict", action="store_true",
+                    help="如果有条目仍然走外部 CDN 就以非零退出码结束（CI 里用，防止回退）")
     ap.add_argument("--vendor", default=str(VENDOR), help="vendor.yml 路径")
     args = ap.parse_args(argv)
 
@@ -70,6 +72,10 @@ def main(argv=None):
     print(f"  没有本地副本、保持 CDN {len(stats['missing'])} 条")
     for p in stats["missing"]:
         print(f"    ! {p}")
+
+    if args.strict and stats["missing"]:
+        print(f"[X] 有 {len(stats['missing'])} 个库仍走外部 CDN（见上面 ! 开头的条目）", file=sys.stderr)
+        return 1
 
     if args.dry_run:
         print("（--dry-run：未写入）")
