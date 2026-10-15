@@ -121,6 +121,6 @@ Cloudflare Dashboard → Workers & Pages → 该项目 → Settings → Builds &
 - 已知的**按需**本地化项：主题的看板娘 `live2d` / `live2d_widgets` 开关（默认关闭）如果打开，
   资源会去 `fastly.jsdelivr.net` 与 `fghrsh/live2d_api`（国内可能不通），
   且完整本地化要拖进几 MB 的模型文件；需要的话再单独处理。
-- `docs/`：部署指南等文档
+- `docs/`：部署指南、[升级与维护注意事项](docs/升级与维护注意事项.md)
 - `tools/`：docx→Markdown、图片转 WebP、后台登录中转 Worker、vendor 本地化脚本
 - `public/`、`resources/`、`.verify*/` 均为构建产物，已在 `.gitignore` 中忽略
