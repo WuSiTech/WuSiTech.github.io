@@ -1,15 +1,21 @@
-{{- /* 项目级 render-image 钩子
-     Goldmark 默认输出的 <img> 没有 class，而主题 CSS 对 .article-entry img 设了
-     opacity: 0，只有 .lazyloaded（由 lazysizes 加上）才会显示；同时默认输出不做
-     URL 处理。这里按主题自己的图片写法输出，并交给 lazysizes 懒加载。 */ -}}
+{{- /* 项目级 render-image 钩子（支持 GLightbox + lazysizes） */ -}}
 {{- $dest := .Destination -}}
 {{- if not (or (hasPrefix $dest "http://") (hasPrefix $dest "https://") (hasPrefix $dest "//") (hasPrefix $dest "data:")) -}}
   {{- $dest = $dest | relURL -}}
 {{- end -}}
-<img
-  class="lazyload"
-  data-src="{{ $dest }}"
-  data-sizes="auto"
-  alt="{{ .Text }}"
-  {{- with .Title }} title="{{ . }}"{{ end }}
-/>
+
+{{- /* 用 <a> 包裹图片，class 供 GLightbox 识别，href 指向原图 */ -}}
+<a
+  href="{{ $dest }}"
+  class="glightbox"
+  data-gallery="post-gallery"
+  {{- with .Title }} data-caption="{{ . }}"{{ end -}}
+>
+  <img
+    class="lazyload"
+    data-src="{{ $dest }}"
+    data-sizes="auto"
+    alt="{{ .Text }}"
+    {{- with .Title }} title="{{ . }}"{{ end }}
+  />
+</a>
