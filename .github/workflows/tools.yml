@@ -1,0 +1,80 @@
+name: Tools and config checks
+
+# 这个工作流不部署站点（部署是 hugo.yaml 的事），只做三件自检：
+#   1. Python 工具能否正常跑、mock 测试是否通过
+#   2. 后台登录中转 Worker 的 12 项自测
+#   3. Hugo 能否构建（含 data/config 改动是否合法）+ vendor 库有没有回退到外部 CDN
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/**'
+      - 'data/**'
+      - 'config/**'
+      - 'static/admin/**'
+      - 'static/resources/**'
+      - 'layouts/**'
+      - '.github/workflows/tools.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-tools:
+    name: Python 工具自测
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: 语法检查
+        run: python3 -m py_compile tools/docx2md.py tools/img2webp.py tools/localize_vendor.py tools/check_twikoo.py
+
+      - name: CLI 冒烟测试（--help）
+        run: |
+          python3 tools/docx2md.py --help > /dev/null
+          python3 tools/img2webp.py --help > /dev/null
+          python3 tools/localize_vendor.py --help > /dev/null
+          python3 tools/check_twikoo.py > /dev/null; test $? -eq 2   # 不带参数应打印用法并以 2 退出
+
+      - name: Twikoo 自检工具的 mock 测试（4 个场景）
+        run: python3 tools/test_check_twikoo.py
+
+      - name: vendor 库不得回退到外部 CDN
+        run: python3 tools/localize_vendor.py --dry-run --strict
+
+  worker:
+    name: 后台登录中转自测
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: 运行 Worker 自测（12 项：正常回调 + 各类攻击场景）
+        run: node tools/cms-oauth-worker/test.mjs
+
+  build:
+    name: Hugo 构建检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: 安装 Dart Sass（主题编译 SCSS 需要）
+        run: |
+          DART_SASS_VERSION=1.104.0
+          curl -sfL --output-dir "${RUNNER_TEMP}" -O "https://github.com/sass/dart-sass/releases/download/${DART_SASS_VERSION}/dart-sass-${DART_SASS_VERSION}-linux-x64.tar.gz"
+          mkdir -p "${HOME}/.local"
+          tar -C "${HOME}/.local" -xf "${RUNNER_TEMP}/dart-sass-${DART_SASS_VERSION}-linux-x64.tar.gz"
+
+      - name: 安装 Hugo Extended
+        run: |
+          HUGO_VERSION=0.166.0
+          curl -sfL --output-dir "${RUNNER_TEMP}" -O "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.tar.gz"
+          tar -C "${HOME}/.local" -xf "${RUNNER_TEMP}/hugo_extended_${HUGO_VERSION}_linux-amd64.tar.gz"
+          "${HOME}/.local/hugo" version
+
+      - name: 构建（只验证，不部署）
+        run: '"${HOME}/.local/hugo" --minify --baseURL https://wusitech.github.io/'
