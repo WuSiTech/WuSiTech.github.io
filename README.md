@@ -14,6 +14,16 @@ Hugo + [reimu](https://github.com/D-Sketon/hugo-theme-reimu) 主题的个人博�
 原理：Hugo 用 `baseURL` 生成 sitemap / robots.txt / `og:url` 的**绝对地址**，
 两个平台的构建各自传入自己的域名即可，源码不需要任何分叉。
 
+## 后台与评论
+
+- **写作后台**：https://wusitech.github.io/admin/ —— Sveltia CMS，用 GitHub 账号登录，
+  手机上也能写；保存即提交到 `main` 并自动构建部署，文章仍然是仓库里的 Markdown。
+- **评论**：Twikoo（前端已自托管在 `static/resources/`，不请求任何第三方 CDN）。
+- 两者的完整配置步骤（GitHub OAuth App、Cloudflare Worker、Netlify + MongoDB Atlas）见
+  [docs/后台与评论部署指南.md](docs/后台与评论部署指南.md)。
+- 站点配置（菜单、首页分类、主题参数）**不在后台内**，仍直接编辑
+  `config/_default/params.yml`（原因见部署指南）。
+
 ## 首次克隆（必须带上子模块）
 
 主题是 git submodule，**不拉子模块会构建失败**（报 `shortcode "friendsLink" not found`）：
@@ -99,4 +109,9 @@ Cloudflare Dashboard → Workers & Pages → 该项目 → Settings → Builds &
 - `layouts/_default/_markup/render-image.html`：文章图片渲染（懒加载 + 灯箱）
 - `layouts/robots.txt`：robots.txt 模板
 - `static/images/`、`static/avatar/`：图片资源
+- `static/admin/`：写作后台页面（Sveltia CMS，入口 `/admin/`）
+- `static/resources/`：主题 vendor 库的本地副本（twikoo 评论前端在这里）
+- `data/vendor.yml`：vendor 库走 CDN 还是本地（**整文件覆盖主题那份**，改动后注意同步）
+- `docs/`：部署指南等文档
+- `tools/`：docx→Markdown、图片转 WebP、后台登录中转 Worker
 - `public/`、`resources/`、`.verify*/` 均为构建产物，已在 `.gitignore` 中忽略

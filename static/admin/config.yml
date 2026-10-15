@@ -1,0 +1,141 @@
+# ==============================================================================
+# 后台配置（Sveltia CMS，兼容 Decap CMS / Netlify CMS 的 config.yml 格式）
+#
+# 入口： https://wusitech.github.io/admin/   （镜像： https://wstk.pages.dev/admin/ ）
+# 内容仍然以 Markdown 存在 Git 仓库里，后台保存 = 直接提交到 main 分支，
+# 提交后 GitHub Actions 自动构建部署，和手动改文件完全等价。
+#
+# ⚠️ 使用前必须做一次性配置（见 BEGINNER 步骤）：
+#    1. 建一个 GitHub OAuth App
+#    2. 把官方 sveltia-cms-auth 部署到 Cloudflare Workers（免费）
+#    3. 把下面 backend.base_url 换成你的 Worker 地址
+# ==============================================================================
+
+backend:
+  name: github
+  repo: WuSiTech/WuSiTech.github.io
+  branch: main
+  # ↓↓↓ 部署好 OAuth 中转（Cloudflare Worker）后替换成你的地址，例如：
+  #     https://sveltia-cms-auth.wusitech.workers.dev
+  base_url: https://REPLACE-ME.workers.dev
+
+# 本地调试：在电脑上跑 `npx decap-server` 后，用 hugo server 打开
+# http://localhost:1313/admin/ 即可免登录直接写入本地文件（线上不生效）。
+local_backend: true
+
+# 保存即提交（不做 PR 审核流）
+publish_mode: simple
+
+# 关掉 Decap 的实时预览（Hugo 短代码在图里显示不准确，容易误会）
+editor:
+  preview: false
+
+site_url: https://wusitech.github.io/
+display_url: https://wusitech.github.io/
+logo_url: https://wusitech.github.io/avatar/avatar.webp
+
+# 图片：上传进 static/images/uploads/，正文里用 /images/uploads/xxx.webp 引用
+# 提示：webp 压缩可以用仓库里的 tools/img2webp.py，比后台直传的 PNG 小很多
+media_folder: static/images/uploads
+public_folder: /images/uploads
+
+collections:
+  # ---------------------------------------------------------------- 文章
+  - name: posts
+    label: 文章
+    label_singular: 一篇文章
+    folder: content/posts
+    create: true
+    slug: "{{slug}}"
+    extension: md
+    format: toml                 # 文章的 front matter 用 +++ TOML
+    frontmatter_delimiter: "+++"
+    sortable_fields: [date, title]
+    summary: "{{title}}  ·  {{date}}"
+    fields:
+      - label: 标题
+        name: title
+        widget: string
+      - label: 发布日期
+        name: date
+        widget: datetime
+        date_format: "YYYY-MM-DD"
+        time_format: "HH:mm"
+        format: "YYYY-MM-DDTHH:mm:ssZ"
+        picker_utc: false
+      - label: 草稿
+        name: draft
+        widget: boolean
+        default: true
+        hint: 草稿不会出现在站点上；写好后再关掉
+      - label: 摘要
+        name: description
+        widget: text
+        required: false
+        hint: 首页卡片与搜索结果里显示的简介
+      - label: 分类
+        name: categories
+        widget: list
+        default: ["STM32"]
+        hint: 已存在的分类：STM32、生活、随笔（写新分类会自动生成分类页）
+      - label: 标签
+        name: tags
+        widget: list
+        default: []
+      - label: 首页缩略图（cover）
+        name: cover
+        widget: image
+        required: false
+        hint: 首页卡片/列表用，建议 1200×760 的 webp
+      - label: 文章页顶部大图（banner）
+        name: banner
+        widget: image
+        required: false
+        hint: 留空则用站点默认 banner
+      - label: 正文
+        name: body
+        widget: markdown
+
+  # ---------------------------------------------------------------- 固定页面
+  - name: pages
+    label: 页面
+    files:
+      - name: about
+        label: 关于页
+        file: content/about.md
+        format: yaml             # 页面的 front matter 用 --- YAML
+        frontmatter_delimiter: "---"
+        fields:
+          - { label: 标题, name: title, widget: string }
+          - { label: 简介, name: description, widget: string, required: false }
+          - label: 日期
+            name: date
+            widget: datetime
+            date_format: "YYYY-MM-DD"
+            time_format: "HH:mm"
+            format: "YYYY-MM-DDTHH:mm:ssZ"
+            picker_utc: false
+          - { label: 正文, name: body, widget: markdown }
+
+      - name: friend
+        label: 友情链接页
+        file: content/friend.md
+        format: yaml
+        frontmatter_delimiter: "---"
+        fields:
+          - { label: 标题, name: title, widget: string }
+          - { label: 简介, name: description, widget: string, required: false }
+          - label: 日期
+            name: date
+            widget: datetime
+            date_format: "YYYY-MM-DD"
+            time_format: "HH:mm"
+            format: "YYYY-MM-DDTHH:mm:ssZ"
+            picker_utc: false
+          - { label: 正文, name: body, widget: markdown }
+
+# ---------------------------------------------------------------- 说明
+# 站点级配置（config/_default/params.yml：菜单、首页分类、主题参数等）没有放进
+# 后台，因为 CMS 保存时会按表单字段重写整个文件，会丢掉未声明的配置项。
+# 这些内容请在 GitHub 网页上直接编辑：
+#   https://github.com/WuSiTech/WuSiTech.github.io/edit/main/config/_default/params.yml

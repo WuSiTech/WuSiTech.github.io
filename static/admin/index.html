@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>后台 · 吾思 梦阁</title>
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    html, body { margin: 0; height: 100%; background: #faf7f7; }
+    body {
+      display: flex; align-items: center; justify-content: center;
+      font: 14px/1.7 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: #8a7f80;
+    }
+    #boot { text-align: center; }
+    #boot .ring {
+      width: 28px; height: 28px; margin: 0 auto 12px;
+      border: 3px solid #f0dcdd; border-top-color: #e06c75;
+      border-radius: 50%; animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* 出错时显示提示（比如 config.yml 还没配好、或没连上 OAuth 中转）*/
+    #boot.error .ring { display: none; }
+    #boot .hint { display: none; margin-top: 10px; max-width: 30em; line-height: 1.8; }
+    #boot.error .hint { display: block; }
+    #boot code { background: #f3eaea; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div id="boot">
+    <div class="ring"></div>
+    <div>正在加载后台…</div>
+    <div class="hint">
+      后台没能启动。常见原因：<br />
+      1. 还没有部署 GitHub 登录中转（Cloudflare Worker），
+      请把 <code>static/admin/config.yml</code> 里的 <code>base_url</code> 换成你的 Worker 地址；<br />
+      2. 浏览器拦截了脚本，请关掉广告拦截插件再试；<br />
+      3. 详细步骤见仓库里的部署说明。
+    </div>
+  </div>
+
+  <!-- 自托管的 Sveltia CMS（不依赖 unpkg / jsdelivr，国内也能打开）
+       升级方式：重新下载 https://unpkg.com/@sveltia/cms@<版本>/dist/sveltia-cms.js 覆盖本文件 -->
+  <script src="/admin/sveltia-cms.js" type="module"></script>
+</body>
+</html>
