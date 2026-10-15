@@ -29,6 +29,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: 准备 Python 依赖
+        # img2webp.py 在导入阶段就需要 Pillow（缺了会直接退出），
+        # 用 venv 避免新版 Ubuntu runner 的 PEP 668「externally managed」限制
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet --upgrade pip
+          .venv/bin/pip install --quiet Pillow
+          echo "${PWD}/.venv/bin" >> "${GITHUB_PATH}"
+
       - name: 语法检查
         run: python3 -m py_compile tools/docx2md.py tools/img2webp.py tools/localize_vendor.py tools/check_twikoo.py
 
