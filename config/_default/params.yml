@@ -1,6 +1,7 @@
 ########################################
 # Basic Configuration
 ########################################
+fancybox = true
 
 # main menu navigation
 # for more icon information, please visit https://github.com/D-Sketon/hexo-theme-reimu/issues/30
@@ -40,8 +41,8 @@ dateFormat: "2006-01-02"
 timeFormat: "2006-01-02 15:04:05"
 
 author: WuSi
-email: 2739715775@qq.com
-description: "BAKA DA☆ZE!"
+email: 
+description: "REIMU DA☆ZE"
 # subtitle: "DA☆ZE"
 subtitle:
   typing:
@@ -596,7 +597,7 @@ top:
 
 # whether to display the notification when the article is outdated
 outdate:
-  enable: false
+  enable: true
   daysAgo: 180 # The number of days after which the article is considered outdated
   message:
     en: This article was last updated on {time}. Please note that the content may no longer be applicable.
