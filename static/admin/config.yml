@@ -161,7 +161,8 @@ collections:
         description: >-
           只改 config/_default/params.toml 这一个文件。保存会重写整个文件，
           所以这里看不到 params.yml 的内容是正常的（那里面有代码高亮配色和注入脚本，
-          刻意不交给后台管）。改菜单时注意：名称是 i18n 键，不是显示文字。
+          刻意不交给后台管）。改菜单时注意：名称是「站点文案」里的键名，不是显示文字
+          —— 要改栏目叫法，去「站点设置 → 站点文案」改那条键的值。
         fields:
           # ---------------- 个人信息
           - label: 作者名
@@ -204,13 +205,23 @@ collections:
             widget: list
             required: false
             summary: "{{fields.name}} → /{{fields.url}}"
-            hint: 上下顺序就是导航栏从左到右的顺序。要加新条目，必须先确认主题的 i18n 文件里已经有对应的键（themes/reimu/i18n/），否则导航文字会是空白
+            hint: >-
+              上下顺序就是导航栏从左到右的顺序。
+              名称必须先在「站点设置 → 站点文案」里有一条同名键，否则那一项在网页上会是空白。
+              新增栏目 = 先在「站点文案」加一条键值（键名英文，如 projects → 项目），
+              再回到这里加一条菜单，名称填 projects、链接填 /projects。
             fields:
-              - label: 名称
+              - label: 名称（文案键名）
                 name: name
-                widget: select
-                options: [home, archives, categories, tags, friend, about]
-                hint: "⚠️ 这是 i18n 键，不是显示文字！对应关系：home=首页、archives=归档、categories=分类、tags=标签、friend=友链、about=关于"
+                widget: string
+                hint: >-
+                  ⚠️ 这里填的是「站点文案」里的【键名】，不是网页上显示的文字。
+                  网页显示什么，由「站点设置 → 站点文案」里同名键的值决定：
+                  把 archives 的值从「归档」改成「文章归档」，导航上就显示「文章归档」，本项不用动。
+                  现在对应关系：home=首页、archives=归档、categories=分类、tags=标签、friend=友链、about=关于。
+                  加新栏目：先去「站点文案」点添加、新增一行（键名英文如 projects，值写显示文字如 项目），
+                  再回来加一条菜单，名称填 projects、链接填 /projects。
+                  ⚠️ 直接在这里填中文（例如「项目」）会显示成空白 —— 主题只按 i18n 键取文字，没有「查不到就显示键名」的回退。
               - label: 链接
                 name: url
                 widget: string
@@ -247,6 +258,39 @@ collections:
                     widget: image
                     required: false
                     hint: 留空用随机封面；建议和文章封面用同一张图
+
+      # -------------------------------------------------------------- 站点文案
+      # i18n/zh-CN.yml（项目级 i18n 表）：导航栏每个栏目显示的文字都来自这里。
+      # 主题模板用 {{ i18n .name }} 取文字，键不存在就是空白、没有回退 ——
+      # 所以「菜单」里出现的每个 name，这个文件里都必须有一条同名键。
+      #
+      # 为什么用 root: true 的 keyvalue 字段：
+      #   这个 YAML 文件整体就是一张「键 → 文字」表，字段声明成 root: true 后，
+      #   CMS 读写时都不会把它套在外层键里（本仓库自带的 sveltia-cms.js 里
+      #   CM()/HB()/I1() 对这一形态有专门处理，config schema 的 KeyValueField
+      #   也声明了 root）；这样站长才能自助「加一条键值」而不必去改 config.yml。
+      #   若哪天升级 CMS 后发现保存出来的文件被包了一层（例如 strings:），
+      #   说明该版本不再支持 root，需改回逐个键声明 string 字段。
+      - name: strings
+        label: 站点文案（导航栏文字）
+        file: i18n/zh-CN.yml
+        format: yaml
+        description: >-
+          导航栏文字表：键名（英文）→ 网页上真正显示的文字。
+          改一个值 = 给栏目改名；加一条键值 = 为「菜单」里准备新增的栏目提供文字。
+          菜单项名称必须在这里存在，否则那一项在网页上是空白。
+        fields:
+          - label: 文案表（键 → 显示文字）
+            name: strings
+            widget: keyvalue
+            root: true
+            key_label: 键名（英文，如 projects）
+            value_label: 显示文字（如 项目）
+            hint: >-
+              左列键名用英文小写（字母/数字/点号），右列写导航栏上真正显示的文字。
+              ⚠️ 现有的 home / archives / categories / tags / friend / about 六条不要删，
+              它们对应现在导航栏的六个栏目，删了对应的文字就是空白。
+              这里新增的每一条键，都要在「站点设置 → 菜单」里加一项、名称填同一个键名，才会出现在导航栏。
 
   # ---------------------------------------------------------------- 评论管理
   # 评论数据在 static/comments/posts/ 下（每篇文章一个 JSON 文件），由 Cloudflare
@@ -294,9 +338,12 @@ collections:
             default: false
 
 # ---------------------------------------------------------------- 说明
-# 1) 站点级配置分两处：
+# 1) 站点级配置分三处：
 #    - config/_default/params.toml（个人信息 / 菜单 / 首页分类卡片）→ 已放进后台的
 #      「站点设置」集合，可以直接在 /admin/ 里改。
+#    - i18n/zh-CN.yml（导航栏每个栏目显示的文字）→ 已放进后台的「站点文案」集合。
+#      菜单项的 name 是这里的键名；键在、文字才在。加栏目 = 先在这里加键值，
+#      再去「菜单」加一项引用同一个键名。
 #    - config/_default/params.yml（代码高亮配色、注入脚本、评论系统、搜索、
 #      动画等其余全部主题参数）→ 刻意没有放进后台，因为 CMS 保存时会按表单字段
 #      重写整个文件，会把未声明的配置项丢掉。要改这些请直接在 GitHub 网页上编辑：
