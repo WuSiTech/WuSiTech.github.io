@@ -384,7 +384,7 @@ comment:
     zh-TW: 說些什麼吧！
     ja: コメントを残す
     pt-BR: Deixe um comentário
-  default: waline # default comment system, when you enable multiple comment systems
+  default: twikoo # default comment system, when you enable multiple comment systems
 
 # valine comment system. https://valine.js.org
 valine:
@@ -424,10 +424,13 @@ waline:
   pageview: true
 
 # https://twikoo.js.org
+# 后端方案：Netlify（免费额度充足，官方文档标注"中国大陆访问速度不错"）
+#         + MongoDB Atlas 免费版存数据；部署步骤见 README 的「评论系统」一节。
+# 前端：static/resources/twikoo@2.0.15/（本地自托管，不走任何第三方 CDN）
 twikoo:
-  enable: false
-  envId: # 腾讯云环境填 envId；Vercel 环境填地址（https://xxx.vercel.app）
-  region:
+  enable: true # 已打开；但下面的 envId 为空时评论区不会渲染，所以现在线上不会有变化
+  envId: # ← 部署好 Netlify 后把云函数地址填这里，例如 https://xxx.netlify.app/.netlify/functions/twikoo
+  region: # ← Netlify / Vercel 部署留空；只有腾讯云 CloudBase 才需要（如 ap-shanghai）
 
 # https://github.com/gitalk/gitalk/blob/master/readme-cn.md
 gitalk:
@@ -640,12 +643,12 @@ share:
 
 # show categories card on home page
 home_categories:
-  enable: false
+  enable: true
+  # 只写"已经存在"的分类（分类由文章的 categories 自动生成）；
+  # 这里没列出的分类不会显示卡片，但分类页 /categories/ 依旧可以访问。
   content:
-    - categories: # string (single-layer category) or array (multi-layer category)
-      cover: # empty means random cover
-    - categories:
-      cover:
+    - categories: STM32
+      cover: "images/stm32/interrupt-path.webp"
 
 ########################################
 # Experimental features
