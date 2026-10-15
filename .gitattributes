@@ -3,3 +3,7 @@
 *.jpg binary
 *.woff binary
 *.woff2 binary
+
+# Windows 批处理文件必须是 CRLF，用 LF 保存时 cmd 可能解析异常
+*.bat text eol=crlf
+*.cmd text eol=crlf
