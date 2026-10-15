@@ -1,7 +1,7 @@
 
 
 backend:
-  name: turbo-github
+  name: github
   repo: WuSiTech/WuSiTech.github.io
   branch: main
   app_id: "Ov23lipjPqKoXHMFAGzN"
