@@ -50,6 +50,11 @@ LOC = re.compile(r"<loc>\s*([^<\s]+)\s*</loc>", re.IGNORECASE)
 # 判定从宽（至少命中 NAV_MIN_HIT 个），这样以后增删一个合法栏目不会误报。
 NAV_LINKS = ("/", "/archives", "/categories", "/tags", "/friend", "/about")
 NAV_MIN_HIT = 5
+# 只看主导航那一块：菜单（config 里的 [menu]，后台可改）就渲染在 <nav id="main-nav"> 里，
+# 写坏时整块消失。正文、侧栏、文章卡片里零散出现的同类链接不能证明「导航还在」
+# （比如首页的分类/标签小部件也指向 /categories、/tags），所以不拿它们凑数。
+NAV_BLOCK = re.compile(r"<nav\b([^>]*)>(.*?)</nav>", re.IGNORECASE | re.DOTALL)
+PRIMARY_NAV_HINT = re.compile(r"main-nav", re.IGNORECASE)
 
 
 def pick(match: re.Match) -> str:
@@ -90,6 +95,22 @@ def nav_path_of(url: str) -> str | None:
     if path != "/":
         path = path.rstrip("/")
     return path or "/"
+
+
+def nav_region(text: str) -> str:
+    """从首页 HTML 里取出「主导航」那一块的 HTML，导航断言只在这里面找链接。
+
+    优先 <nav id="main-nav">（主题的主导航，菜单渲染在这里）；主题换标记时退到第一个 <nav>；
+    整页都没有 <nav> 才退回整页 —— 那时只能按「页面里还有没有这些链接」判断，
+    宁可放过也不要因为不认识标记而误报。
+    """
+    blocks = NAV_BLOCK.findall(text)
+    for attrs, inner in blocks:
+        if PRIMARY_NAV_HINT.search(attrs):
+            return inner
+    if blocks:
+        return blocks[0][1]
+    return text
 
 
 def internal_target(url: str, page: Path, out_dir: Path) -> Path | None:
@@ -221,7 +242,7 @@ def main(argv=None) -> int:
     else:
         text = index_page.read_text(encoding="utf-8", errors="replace")
         found = set()
-        for match in ANCHOR_HREF.finditer(text):
+        for match in ANCHOR_HREF.finditer(nav_region(text)):
             path = nav_path_of(pick(match))
             if path:
                 found.add(path)
@@ -229,7 +250,7 @@ def main(argv=None) -> int:
         if len(hit) < NAV_MIN_HIT:
             miss = [link for link in NAV_LINKS if link not in found]
             nav_errors.append(
-                "首页 index.html 只命中 {}/{} 个导航链接（要求至少 {} 个）；"
+                "首页主导航只命中 {}/{} 个链接（要求至少 {} 个）；"
                 "命中：{}；缺失：{}".format(
                     len(hit),
                     len(NAV_LINKS),

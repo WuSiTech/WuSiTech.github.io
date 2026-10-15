@@ -327,6 +327,7 @@ git archive --format=zip -o comments-backup.zip HEAD static/comments
 | 现象 | 原因与处理 |
 | --- | --- |
 | 页面完全没有评论区 | ① 这个页面本来就是列表页/首页（`slug` 为空，脚本直接退出）② 主题自带的评论区已有内容，脚本会主动跳过（避免两套评论并存）③ `comments.js` 没被加载：确认 `config/_default/params.yml` 的 `injector.body_end` 里有那行 `<script src="/js/comments.js" defer></script>` |
+| 两个域名看到的评论不一致 / 换个域名评论就「没了」 | 列表固定从 `https://wstk.pages.dev` 跨域读（见第一节），正常情况下两个域名永远一致。真不一致时：① 检查 `https://wstk.pages.dev/comments/posts/<slug>.json` 的响应头有没有 `access-control-allow-origin: *`（没有就是 `static/_headers` 没生效，前端已自动回退读同域那份——那份可能较旧）② 强制刷新（Ctrl+F5），别让老缓存里的 JS 继续用同域地址 |
 | 提交报 403「来源不在白名单内」 | 你从别的域名（比如 `http://localhost:1313`）打开的页面。把该来源加进 `ALLOWED_ORIGINS` |
 | 提交报 502「GitHub ... 401 Bad credentials」 | 令牌失效/过期/权限不够。重新生成并更新 `GITHUB_TOKEN` |
 | 提交报 502「GitHub ... 403」 | 令牌权限不足（缺 Contents 或 Pull requests 写权限），或 API 配额用完 |
