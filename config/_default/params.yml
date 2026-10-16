@@ -689,18 +689,8 @@ injector:
          换工作流文件名或链接时，这里与 fetch_badges.py 里的地址表要一起改。
          详见 docs/构建状态挂件.md -->
     <link rel="stylesheet" href="/css/build-status.css" />
-    <div class="build-status" id="blog-status" role="group" aria-label="BLOG状态：本站两个 GitHub Actions 工作流的构建结论">
-      <span class="build-status__title">BLOG状态</span>
-      <a class="build-status__badge" href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml"
-         target="_blank" rel="noopener" title="Build and deploy：在 GitHub Actions 查看构建与部署结果">
-      </a>
-      <a class="build-status__badge" href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml"
-         target="_blank" rel="noopener" title="Tools and config checks：在 GitHub Actions 查看工具与配置自检结果">
-      </a>
-    </div>
     <!-- ===== BLOG状态：页面末尾（页脚之后）的正常排版元素，右对齐；不悬浮、不遮挡内容 ===== -->
     <style>
-      .build-status,.blog-badges,.gh-badges,#build-status,#blog-status{display:none!important}
       .bb-badges{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:26px auto 12px;padding:6px 12px;max-width:900px;box-sizing:border-box;flex-wrap:wrap}
       .bb-badges__title{color:#8a8a8a;font-size:12px;white-space:nowrap}
       .bb-badges img{height:20px;display:block}
@@ -708,8 +698,8 @@ injector:
       @media (max-width:600px){.bb-badges{justify-content:center;gap:4px;padding:6px 8px}}
       @media print{.bb-badges{display:none}}
     </style>
-    <div class="bb-badges" role="group" aria-label="BLOG状态：本站两个 GitHub Actions 工作流的构建结论">
-      <span class="bb-badges__title">BLOG状态</span>
+    <div class="build-status" role="group" aria-label="BLOG状态：本站两个 GitHub Actions 工作流的构建结论">
+      <span class="build-status__title">BLOG状态</span>
       <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml" target="_blank" rel="noopener" title="Build and deploy：查看 Actions"><img src="/badges/build-and-deploy.svg" alt="Build and deploy 状态" /></a>
       <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml" target="_blank" rel="noopener" title="Tools and config checks：查看 Actions"><img src="/badges/tools-and-config-checks.svg" alt="Tools and config checks 状态" /></a>
     </div>
