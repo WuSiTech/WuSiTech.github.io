@@ -1,23 +1,21 @@
 /* 站内本地搜索（零外部请求）—— 权威版本
  * 入口：固定右下角圆形按钮，位于主题「返回顶部」圆钮正上方（right:30px / bottom:90px）
- * 图标：static/images/search-icon.webp 用 CSS mask 上色为博丽灵梦红 #ff5252
+ * 图标：内嵌 SVG 放大镜（颜色写死为博丽灵梦红 #ff5252），不依赖任何图片文件与遮罩
  * 配色：亮色白底红图标；暗色黑底红图标
- * ⚠️ CSS 一律用双引号 JS 字符串：CSS 里的 content:'' 若写在单引号字符串里会把它截断（曾导致整个脚本语法错误、按钮不出现）
  */
 'use strict';
 
 (function () {
   var INDEX_URL = '/index.json';
+  var ICON = "url(data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%23ff5252%27%20stroke-width=%272.4%27%20stroke-linecap=%27round%27%3E%3Ccircle%20cx=%2710.5%27%20cy=%2710.5%27%20r=%276.6%27/%3E%3Cpath%20d=%27M15.6%2015.6L21%2021%27/%3E%3C/svg%3E)";
   var state = { loaded: false, items: [], open: false };
 
   var CSS = [
     ".ss-btn{position:fixed;right:30px;bottom:90px;z-index:990;width:44px;height:44px;border:none;border-radius:50%;",
     "background:#fff;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.22);transition:transform .15s ease,background .15s ease}",
     ".ss-btn:hover{transform:scale(1.06)}",
-    ".ss-btn::before{content:'';display:block;width:24px;height:24px;margin:10px auto 0;background:#ff5252;",
-    "-webkit-mask:url(/images/search-icon.webp) center/contain no-repeat;mask:url(/images/search-icon.webp) center/contain no-repeat}",
+    ".ss-btn::before{content:'';display:block;width:24px;height:24px;margin:10px auto 0;background:" + ICON + " center/contain no-repeat}",
     "html[data-theme=dark] .ss-btn{background:#000}",
-    "html[data-theme=dark] .ss-btn::before{background:#ff5252}",
     ".ss-mask{position:fixed;inset:0;z-index:995;background:rgba(0,0,0,.42);display:none}",
     ".ss-mask.ss-on{display:block}",
     ".ss-panel{position:fixed;z-index:996;left:50%;top:12vh;transform:translateX(-50%);width:min(680px,92vw);max-height:70vh;",
