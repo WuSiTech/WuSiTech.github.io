@@ -1,0 +1,43 @@
+{{- /*
+  /posts/ 栏目首页（站点级扩展，不改动 themes/ 下任何文件）。
+
+  背景：主题 reimu 只为归档栏目提供了 themes/reimu/layouts/archives/section.html，
+  缺少通用的 section 模板，所以 content/posts/ 这个栏目一直找不到布局
+  （构建告警 found no layout file for "html" for kind "section"），产物里也没有 posts/index.html。
+  这里按 Hugo 的布局查找顺序补上 layouts/posts/section.html；站点级模板优先级高于主题。
+
+  渲染方式与首页 themes/reimu/layouts/index.html 的文章列表保持一致：
+    - 复用 partials/post.html 输出文章卡片（封面、元信息、标题、摘要）；
+    - 复用 partials/pagination.html 输出翻页导航；
+    - 排序沿用 sort_order.archive（date-reverse，新文章在前）；
+    - 每页条数沿用 paginate.post（“首页与其它列表页”的配置，为空时用 Hugo 默认值）。
+  页面标题取自 content/posts/_index.md 的 title，由 partials/header.html 渲染成横幅上的 h1，
+  所以模板内不再重复输出标题。
+*/ -}}
+{{- define "main" -}}
+  {{- $sortConfig := .Site.Params.sort_order.archive -}}
+  {{- $posts := .RegularPages -}}
+  {{- if eq $sortConfig "weight" -}}
+    {{- $posts = $posts.ByWeight -}}
+  {{- else if eq $sortConfig "weight-reverse" -}}
+    {{- $posts = $posts.ByWeight.Reverse -}}
+  {{- else if eq $sortConfig "date" -}}
+    {{- $posts = $posts.ByDate -}}
+  {{- else if eq $sortConfig "date-reverse" -}}
+    {{- $posts = $posts.ByDate.Reverse -}}
+  {{- end -}}
+  {{- $pageSize := 0 -}}
+  {{- with .Site.Params.paginate.post -}}
+    {{- $pageSize = . -}}
+  {{- end -}}
+  {{- $paginator := "" -}}
+  {{- if gt $pageSize 0 -}}
+    {{- $paginator = .Paginate $posts $pageSize -}}
+  {{- else -}}
+    {{- $paginator = .Paginate $posts -}}
+  {{- end -}}
+  {{- range $index, $page := $paginator.Pages -}}
+    {{- partial "post.html" (dict "index" $index "ctx" . "page" $page) -}}
+  {{- end -}}
+  {{- partial "pagination.html" . -}}
+{{- end -}}
