@@ -252,6 +252,9 @@ def main() -> int:
             ("/images/a.png.bak", False, "带额外后缀 a.png.bak"),
             ("/images/a.png-old", False, "连字符后缀 a.png-old"),
             ("/images/a.pngx", False, "多一个字母 a.pngx"),
+            ("_a.png", False, "前导下划线 _a.png"),
+            ("x/a.png", True, "相对子目录 x/a.png"),
+            ("/a.png", True, "只有一层路径 /a.png"),
         ]
         for text, want, label in cases:
             name = "taichi.png" if "taichi" in text else "a.png"

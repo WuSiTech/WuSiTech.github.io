@@ -39,17 +39,21 @@ jobs:
           echo "${PWD}/.venv/bin" >> "${GITHUB_PATH}"
 
       - name: 语法检查
-        run: python3 -m py_compile tools/docx2md.py tools/img2webp.py tools/localize_vendor.py tools/check_twikoo.py
+        run: python3 -m py_compile tools/docx2md.py tools/img2webp.py tools/auto_webp.py tools/test_auto_webp.py tools/localize_vendor.py tools/check_twikoo.py
 
       - name: CLI 冒烟测试（--help）
         run: |
           python3 tools/docx2md.py --help > /dev/null
           python3 tools/img2webp.py --help > /dev/null
+          python3 tools/auto_webp.py --help > /dev/null
           python3 tools/localize_vendor.py --help > /dev/null
           python3 tools/check_twikoo.py > /dev/null || test $? -eq 2   # 不带参数应打印用法并以 2 退出
 
       - name: Twikoo 自检工具的 mock 测试（4 个场景）
         run: python3 tools/test_check_twikoo.py
+
+      - name: auto_webp 自测（转换 / 跳过 / 引用改写 / 删除原图的规则）
+        run: python3 tools/test_auto_webp.py
 
       - name: vendor 库不得回退到外部 CDN
         run: python3 tools/localize_vendor.py --dry-run --strict

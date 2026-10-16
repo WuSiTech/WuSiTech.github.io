@@ -204,10 +204,13 @@ def ref_regex(name: str) -> re.Pattern:
     # 前导边界用 lookbehind 打在【前缀的起点】上，保证 b-a.png / xa.png 这类
     # 「文件名只是更长标识符的一截」不会被误伤。
     pre = r"(?:\\?/(?:[^\s()\"'<>]*[/\\])?|(?<![^\s/\\'\"()\[\]{}=:;,|*])" + b + r")?"
+    # 末尾统一要求「文件名后面不是字母/数字/下划线/点/连字符」，
+    # 并且文件名前面【紧邻】的字符也不能是这些 —— 双保险，确保只命中完整文件名。
+    tail = r"(?<![\w.\-])" + esc + r"(?![\w.\-])"
     alts = [
-        r"(?P<markdown>\]\()" + pre + esc + r"(?=[)\s\"'#>?])",
-        r"(?P<html>[\"'\(])" + pre + esc + r"(?=[\"')\s#>?])",
-        pre + esc + r"(?![\w.\-])",
+        r"(?P<markdown>\]\()" + pre + tail + r"(?=[)\s\"'#>?])",
+        r"(?P<html>[\"'\(])" + pre + tail + r"(?=[\"')\s#>?])",
+        pre + tail,
     ]
     return re.compile("|".join(alts))
 
@@ -224,14 +227,11 @@ def _keep_prefix(match: re.Match, name: str) -> str:
 
 
 def _boundary_of(match: re.Match):
-    """返回 (要保留的前缀, 命中组名)；组名用于报告。"""
+    """返回 (命中组名, 用于报告)；没有命名组命中就是裸路径/配置值那一支。"""
     for key in _KEYS:
-        try:
-            if match.group(key) is not None:
-                return match.group(key), key
-        except IndexError:
-            continue
-    return "", "?"
+        if match.group(key) is not None:
+            return key
+    return ""
 
 
 def iter_ref_files(root: Path, dirs):
@@ -287,7 +287,7 @@ def rewrite_refs(root: Path, old_name: str, new_name: str, dirs=REF_DIRS):
             continue
         hit_total += len(found)
         for m in found:
-            prefix, kind = _boundary_of(m)
+            kind = _boundary_of(m)
             changes.append((p.relative_to(root).as_posix(),
                             text.count("\n", 0, m.start()) + 1, old_name, new_name, kind))
         # 前缀（路径 + 边界字符）必须原样保留，只换文件名
@@ -375,8 +375,8 @@ def apply_ref_rewrite(root: Path, args, res):
     res["rewritten"] = ok_total
     if hit_total == 0:
         print("      引用：没有找到对它的引用（新图未被引用过）")
-    kind_names = {"markdown": "markdown 引用", "html": "html/css 属性", "bare": "裸路径",
-                  "code": "路径/配置值", "dry": "预演"}
+    kind_names = {"markdown": "markdown 引用", "html": "html/css 属性",
+                  "": "裸路径 / 配置值", "dry": "预演"}
     for relpath, line, old, new, kind in changes:
         print(f"      引用改写 {relpath}:{line}  {old} → {new}"
               f"（{kind_names.get(kind, kind)}）")
