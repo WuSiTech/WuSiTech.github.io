@@ -39,4 +39,4 @@ enable = true
 
 [[home_categories.content]]
 categories = "STM32"
-cover = "https://www.amcoreglobal.com/upload/img/stm32f411ceu6_202603280608412788.png"
+cover = "/images/stm32/pinout.webp"
