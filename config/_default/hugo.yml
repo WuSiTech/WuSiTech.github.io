@@ -46,3 +46,7 @@ markup:
 #  data/build_status.yml + static/js/build-status.js）已整条删除，
 # 详见 docs/构建状态挂件.md。
 # ---------------------------------------------------------------------------
+
+# 站内搜索：首页额外输出 /index.json（供 static/js/search.js 使用，不请求任何外部资源）
+outputs:
+  home: [HTML, RSS, JSON]

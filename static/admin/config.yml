@@ -124,6 +124,14 @@ collections:
         widget: markdown
 
   # ---------------------------------------------------------------- 固定页面
+  # ⚠️ 这是 files 式集合：**只列出下面写死的这几个文件**，不会自动发现 content/ 下的新页面。
+  #    在 content/ 里新建页面（例如 content/download.md）之后，必须在这里照现有条目补一条
+  #    —— 于是站长加页面时要知道「新页面得登记进 static/admin/config.yml 的这个列表」，
+  #    否则后台「页面」菜单里看不到、也改不了那个文件。
+  #    照抄一条现有条目改四处：name（英文标识）、label（中文菜单名）、file（文件路径）、
+  #    fields（字段清单）。format 一律 yaml-frontmatter（本集合的页面都是 --- YAML --- 头）。
+  #    ⚠️ fields 必须与文件的 front matter 一一对应：Sveltia 保存时会按这里声明的字段
+  #    重写整个文件，文件里有、这里没声明的键会被静默丢掉。
   - name: pages
     label: 页面
     files:
@@ -146,6 +154,22 @@ collections:
       - name: friend
         label: 友情链接页
         file: content/friend.md
+        format: yaml-frontmatter
+        fields:
+          - { label: 标题, name: title, widget: string }
+          - { label: 简介, name: description, widget: string, required: false }
+          - label: 日期
+            name: date
+            widget: datetime
+            date_format: "YYYY-MM-DD"
+            time_format: "HH:mm:ss"
+            format: "YYYY-MM-DDTHH:mm:ssZ"
+            input_timezone: Asia/Shanghai
+          - { label: 正文, name: body, widget: markdown }
+
+      - name: download
+        label: 下载
+        file: content/download.md
         format: yaml-frontmatter
         fields:
           - { label: 标题, name: title, widget: string }

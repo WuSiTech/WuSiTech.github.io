@@ -679,6 +679,8 @@ injector:
     </script>
     <!-- 自建评论系统：读 static/comments/<slug>.json，提交到 Cloudflare Pages Function（详见 docs/评论系统（Git存储）.md） -->
     <script src="/js/comments.js" defer></script>
+      <!-- 站内本地搜索：索引 /index.json，零外部请求 -->
+      <script src="/js/search.js" defer></script>
     <!-- ===== 页底「BLOG状态」固定条（引用仓库里的本地徽章，不请求任何外部资源） =====
          两张徽章就是 README 顶部那两张 GitHub Actions 徽章（build-and-deploy / tools-and-config-checks）的镜像：
          SVG 自带 GitHub 算好的真实结论，本站不再查 API，也没有 /build-status.json 了。
