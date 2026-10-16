@@ -61,19 +61,6 @@ jobs:
       - name: auto_webp 自测（转换 / 跳过 / 引用改写 / 删除原图的规则）
         run: python3 tools/test_auto_webp.py
 
-      - name: 徽章镜像脚本自检（--help + 离线兜底：下不到也必须 exit 0 并保留仓库副本）
-        # 这个脚本在 CI 里跑在 hugo 之前，一旦它非零退出就会挡住部署，
-        # 所以这里断言：正常 --help 能跑通，且**离线时仍然 exit 0**。
-        run: |
-          # 指向保留地址（RFC 5737）模拟「没网」：脚本必须打 warning 后正常退出，
-          # 并且不能破坏仓库里已经提交的兜底 SVG
-          before=$(md5sum static/badges/build-and-deploy.svg | cut -d' ' -f1)
-            --token "" \
-            --proxy "http://192.0.2.1:9" \
-            --out-dir static/badges
-          after=$(md5sum static/badges/build-and-deploy.svg | cut -d' ' -f1)
-          test "${before}" = "${after}"
-
       - name: vendor 库不得回退到外部 CDN
         run: python3 tools/localize_vendor.py --dry-run --strict
 

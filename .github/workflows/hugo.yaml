@@ -71,18 +71,6 @@ jobs:
           tar -C "${HOME}/.local" -xf "${{ runner.temp }}/hugo_extended_${HUGO_VERSION}_linux-amd64.tar.gz"
           echo "${HOME}/.local" >> "${GITHUB_PATH}"
 
-      - name: Collect build status
-        # 把两个工作流的最近结论写进 data/build_status.yml，Hugo 会把它
-        # 渲染成 /build-status.json（右下角「构建状态」挂件）。
-        # 脚本内部全程兜底：拿不到状态就写 unknown，绝不会让这一步失败。
-        if: always()
-        run: |
-          python3 .github/scripts/write_build_status.py \
-            --repo "${GITHUB_REPOSITORY}" \
-            --run-id "${GITHUB_RUN_ID}" \
-            --token "${GITHUB_TOKEN}" \
-            --out data/build_status.yml
-
       - name: Build with Hugo
         run: |
           hugo --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
@@ -112,23 +100,3 @@ jobs:
       # 生成只含一个 build-status.json 的补丁 artifact 再发一次，把挂件里的状态纠正成
       # 「失败」；成功时这一步不会执行，走 build 阶段上传的完整 artifact。
       # 重发 artifact 不会清空站点：GitHub Pages 的 artifacts 是累加的。
-      - name: Correct build status if deploy failed
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 .github/scripts/write_build_status.py \
-            --repo "${GITHUB_REPOSITORY}" \
-            --run-id "${GITHUB_RUN_ID}" \
-            --token "${GH_TOKEN}" \
-            --out build-status-patch/build-status.json
-
-      - name: Upload build status patch
-        if: failure()
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ./build-status-patch
-
-      - name: Publish build status patch
-        if: failure()
-        uses: actions/deploy-pages@v4
