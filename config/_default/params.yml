@@ -703,6 +703,8 @@ injector:
       <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml" target="_blank" rel="noopener" title="Build and deploy：查看 Actions"><img src="/badges/build-and-deploy.svg" alt="Build and deploy 状态" /></a>
       <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml" target="_blank" rel="noopener" title="Tools and config checks：查看 Actions"><img src="/badges/tools-and-config-checks.svg" alt="Tools and config checks 状态" /></a>
     </div>
+    <!-- 把状态栏移到 <body> 直接子级：注入点在带 transform 的容器里，fixed 会以该容器为基准而失效 -->
+    <script>(function(){function move(){var nodes=document.querySelectorAll(".build-status");for(var i=0;i<nodes.length;i++){var n=nodes[i];if(n.parentNode!==document.body){document.body.appendChild(n);}}}if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",move);}else{move();}})();</script>
   sidebar_begin: # Inject code snippet right after <aside>
   sidebar_end: # Inject code snippet right before </aside>
 
