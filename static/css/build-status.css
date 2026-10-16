@@ -3,7 +3,7 @@
    ------------------------------------------------------------
    结构（见 config/_default/params.yml 的 injector.body_end）：
 
-     .build-status                 position: fixed; bottom: 0 的固定条
+     .build-status                 position: static; bottom: 0 的固定条
        .build-status__title        小字「BLOG状态」
        a.build-status__badge       跳对应 Actions 页的链接
          img                        /badges/*.svg（README 那两张徽章的镜像）
@@ -28,16 +28,16 @@
 
 body {
   /* 固定条高度（约 38px）+ 呼吸空间；底部固定条见 .build-status */
-  padding-bottom: 52px;
+  
 }
 
 .build-status {
-  position: fixed;
+  position: static;
   left: 0;
   right: 0;
-  bottom: 0;
+  
   /* 低于主题圆钮的 999：圆钮永远在上层（见文件头第 1 条） */
-  z-index: 20;
+  
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -129,7 +129,7 @@ body {
 @media screen and (max-width: 767px) {
   body {
     /* 窄屏条最高约 62px（小字一行 + 两张徽章各一行），留 70px */
-    padding-bottom: 70px;
+    
   }
 
   .build-status {
