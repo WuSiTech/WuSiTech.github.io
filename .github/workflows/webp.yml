@@ -5,37 +5,39 @@ name: Auto WebP
 # 转成同名 .webp、把仓库里对旧文件名的引用改成 .webp、删掉原图，然后自己提交。
 #
 # 后台 /admin/ 上传本来就会转码（见 static/admin/config.yml 的 media_libraries），
-# 这个工作流只处理「没有经过后台」的图片，以及批量修复存量图片。
+# 这个工作流只处理「没有经过后台」的图片。
+#
+# 手动运行（workflow_dispatch）可以一次性处理**存量图片**：
+#   Actions → Auto WebP → Run workflow → range 填 all（默认就是 all）
+#   range 也可以填任意 git 范围，例如 HEAD^..HEAD / origin/main..HEAD / <sha>..<sha>
+#   填 all 时按 tools/auto_webp.py 的 ALL_MODE_EXCLUDE 排除清单 + themes/ 引用守卫
+#   跳过主题自带素材（cursor/*.png、reimu.png、taichi*.png 等），绝不动主题。
 #
 # 关于自触发（重要）：
-#   1) 本工作流只监听 main 分支上 static/images/** 的变更；
-#   2) 机器人自己的提交信息里带 [skip ci]（GitHub 识别后不启动新的 workflow run），
-#      同时用 paths-ignore 把机器人会重写的 content/**、config/**、data/**、
-#      tools/**、docs/**、.github/workflows/webp.yml 排除掉 —— 双保险，
-#      不会出现「转码 → 提交 → 再触发转码」的死循环。
-#   3) 机器人提交只碰 static/images 下的图和上面的文本引用，
-#      不会触发 tools.yml（它的 paths 不含 static/images）。
+#   1) 本工作流只监听 main 分支上 static/images/** 的变更（paths 只留这一条）；
+#   2) 机器人自己的提交信息里带 [skip ci]，GitHub 会直接跳过这次 push 触发的所有
+#      workflow run（包括本工作流和 Build and deploy）——硬保证不会「转码 → 提交 →
+#      再转码」死循环，也不依赖脚本的幂等性。
+#   3) 代价：[skip ci] 会把站点部署（hugo.yaml）也一起跳过，所以下面用
+#      `gh workflow run` 显式补一次部署，否则站长这次图片改动要等下一次提交才上线。
+#   4) 不写 paths-ignore：GitHub 官方规定同一个事件不能同时用 paths 与 paths-ignore
+#      （要同时包含和排除就只能在 paths 里用 ! 前缀）。原来两个都写属于未定义行为，
+#      这里统一成只有 paths —— 反正兜底靠的是 [skip ci]，不是 paths-ignore。
 on:
   push:
     branches: [main]
     paths:
       - 'static/images/**'
-    paths-ignore:
-      - 'content/**'
-      - 'config/**'
-      - 'data/**'
-      - 'tools/**'
-      - 'docs/**'
-      - '.github/workflows/webp.yml'
   workflow_dispatch:
     inputs:
       range:
-        description: '手动运行时的 git 对比范围（留空 = 最近一次提交 HEAD^..HEAD）'
+        description: 'git 对比范围；填 all = 转换 static/images 下所有存量非 webp 位图（跳过主题素材）'
         required: false
-        default: 'HEAD^..HEAD'
+        default: 'all'
 
 permissions:
-  contents: write
+  contents: write # 需要 push 机器人自己的提交
+  actions: write # 需要 gh workflow run 补一次站点部署（[skip ci] 把 hugo.yaml 跳过了）
 
 concurrency:
   group: auto-webp
@@ -74,18 +76,22 @@ jobs:
       - name: 转换新增/修改的位图（写 webp、改写引用、删原图）
         env:
           # push 事件里 GITHUB_EVENT_BEFORE 是本次推送前的 commit SHA
+          # （新建分支时是全 0，auto_webp.py 会自己退回 HEAD^..HEAD / HEAD）
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
           RANGE="${{ github.event.inputs.range }}"
           if [ -n "${RANGE}" ]; then
+            echo "手动指定的范围：${RANGE}"
             python3 tools/auto_webp.py --apply --range "${RANGE}"
           else
             python3 tools/auto_webp.py --apply
           fi
 
       - name: 提交并推送（带 [skip ci]，避免自触发）
+        id: commit
         run: |
+          echo "committed=false" >> "${GITHUB_OUTPUT}"
           git add -A
           if git diff --cached --quiet; then
             echo "没有需要提交的变更（没有可转换的图，或转换后反而更大已经放弃）。"
@@ -93,7 +99,30 @@ jobs:
           fi
           git diff --cached --stat
           git commit -m "chore(images): 自动转 WebP 并改写引用 [skip ci]"
-          git push origin HEAD:main
+          # 可能有并发推送（比如站长正在后台保存）导致被拒；rebase 后最多重试 3 次
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "committed=true" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+            echo "推送失败（第 ${attempt} 次），可能有并发提交，rebase 后重试…"
+            git pull --rebase --autostash origin main || true
+            sleep 5
+          done
+          echo "::error::连续 3 次推送失败，请检查分支保护规则或手动 push。"
+          exit 1
+
+      - name: 补一次站点部署（[skip ci] 会把 hugo.yaml 一起跳过）
+        if: steps.commit.outputs.committed == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh workflow run hugo.yaml --ref main -R "${GITHUB_REPOSITORY}"; then
+            echo "已请求重新构建并部署（Actions → Build and deploy）。"
+          else
+            echo "::warning::自动触发部署失败，请到 Actions 手动运行 Build and deploy。"
+          fi
 
       - name: 汇总
         if: always()
@@ -101,6 +130,10 @@ jobs:
           {
             echo "### Auto WebP"
             echo '```'
-            git diff --stat HEAD^ HEAD | tail -40
+            if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+              git diff --stat HEAD^ HEAD | tail -40
+            else
+              echo "（没有上一个提交，跳过对比）"
+            fi
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"

@@ -125,6 +125,127 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def noisy_image(size, seed):
+    """造一张有梯度的图（纯色小图转 webp 有可能反而更大，梯度更接近真实照片）。"""
+    w, h = size
+    im = Image.new("RGB", (w, h))
+    px = im.load()
+    for y in range(h):
+        for x in range(w):
+            px[x, y] = ((x * 7 + seed) % 256, (y * 11 + seed * 3) % 256, (x * y + seed) % 256)
+    return im
+
+
+def setup_repo_all(root: Path) -> None:
+    """存量模式场景：static/images 里同时有「主题素材」「站长上传的图」「没人引用的图」。"""
+    root.mkdir(parents=True, exist_ok=True)
+    git(root, "init", "-q", "-b", "main")
+    git(root, "config", "user.name", "t")
+    git(root, "config", "user.email", "t@example.com")
+    git(root, "config", "commit.gpgsign", "false")
+
+    imgs = root / "static" / "images"
+    (imgs / "cursor").mkdir(parents=True, exist_ok=True)
+    (imgs / "shots").mkdir(parents=True, exist_ok=True)
+
+    # 主题自带素材：只靠 ALL_MODE_EXCLUDE 清单挡住（主题里没写引用）
+    Image.new("RGB", (24, 24), (180, 20, 20)).save(imgs / "taichi-fill.png", "PNG")
+    Image.new("RGB", (24, 24), (20, 20, 180)).save(imgs / "cursor" / "reimu-cursor-default.png", "PNG")
+    # 主题素材：主题 layouts 里明确引用了它（THEME_REF_GUARD 挡住）
+    noisy_image((64, 64), 5).save(imgs / "reimu.png", "PNG")
+
+    # 站长上传的照片：content 里被引用
+    noisy_image((160, 120), 1).save(imgs / "photo.jpg", "JPEG", quality=95)
+    noisy_image((120, 80), 2).save(imgs / "shots" / "old.png", "PNG")
+    # 没人引用的存量图：也该被转换（原图删掉）。用稍大的梯度图，
+    # 保证「PNG 无损」明显大于「webp q80」，不会落到「反而更大就放弃」的分支。
+    noisy_image((320, 240), 3).save(imgs / "unused.png", "PNG")
+    # 已经是 webp：不该出现在候选里
+    Image.new("RGB", (30, 30), (1, 200, 1)).save(imgs / "keep.webp", "WEBP", quality=80)
+
+    # 主题（git 子模块的替身）：只引用 reimu.png
+    write_text(root / "themes" / "reimu" / "layouts" / "baseof.html",
+               '<img class="reimu-bg" src="{{ "images/reimu.png" | relURL }}"/>\n')
+    # 站长的文章
+    write_text(root / "content" / "posts" / "a.md",
+               "---\ncover: /images/photo.jpg\n---\n\n"
+               "![](/images/shots/old.png)\n"
+               "主题图别动：/images/reimu.png\n")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "init")
+
+
+def snapshot(root: Path) -> dict:
+    return {str(p.relative_to(root)): p.read_bytes()
+            for p in root.rglob("*") if p.is_file() and ".git" not in p.parts}
+
+
+def test_range_resolution(tmp: Path) -> None:
+    """CI 里到底怎么算出「本次变更的图片清单」：GITHUB_EVENT_BEFORE/SHA、HEAD^、首个提交。"""
+    root = tmp / "range-repo"
+    root.mkdir(parents=True, exist_ok=True)
+    git(root, "init", "-q", "-b", "main")
+    git(root, "config", "user.name", "t")
+    git(root, "config", "user.email", "t@example.com")
+    git(root, "config", "commit.gpgsign", "false")
+    write_text(root / "README.md", "v1\n")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "c1")
+    first = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
+                           capture_output=True, text=True).stdout.strip()
+
+    # 只有一个提交：HEAD^ 不存在 → 必须优雅退回 HEAD，不能抛异常
+    os.environ.pop("GITHUB_EVENT_BEFORE", None)
+    os.environ.pop("GITHUB_SHA", None)
+    rng = auto_webp.resolve_range(root, None)
+    check(rng == "HEAD", "首次提交（没有父提交）时退回 HEAD 而不是崩掉", f"rng={rng!r}")
+    changed, added = auto_webp.files_from_git(root, rng)   # 不抛异常即可
+    check(changed == [] and added == set(), "只有一个提交时 diff 为空（没什么可转）")
+
+    # push 事件：新建分支时 GITHUB_EVENT_BEFORE 是全 0 → 退回 HEAD^..HEAD / HEAD
+    os.environ["GITHUB_EVENT_BEFORE"] = "0" * 40
+    os.environ["GITHUB_SHA"] = first
+    rng = auto_webp.resolve_range(root, None)
+    check(rng == "HEAD", "before 全 0（新建分支）时退回 HEAD", f"rng={rng!r}")
+
+    write_text(root / "README.md", "v2\n")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "c2")
+    second = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
+                            capture_output=True, text=True).stdout.strip()
+
+    rng = auto_webp.resolve_range(root, None)
+    check(rng == "HEAD^..HEAD", "有父提交且没有 env 时用 HEAD^..HEAD", f"rng={rng!r}")
+
+    os.environ["GITHUB_EVENT_BEFORE"] = first
+    os.environ["GITHUB_SHA"] = second
+    rng = auto_webp.resolve_range(root, None)
+    check(rng == f"{first}..{second}", "push 事件用 GITHUB_EVENT_BEFORE..GITHUB_SHA", f"rng={rng!r}")
+    changed, added = auto_webp.files_from_git(root, rng)
+    check(changed == ["README.md"], "该范围能拿到本次变更的文件清单", f"{changed}")
+
+    os.environ["GITHUB_EVENT_BEFORE"] = "deadbeef" * 5   # 不存在的 SHA
+    rng = auto_webp.resolve_range(root, None)
+    check(rng == "HEAD^..HEAD", "before 指向不存在的提交时退回 HEAD^..HEAD", f"rng={rng!r}")
+
+    # 手动触发：--range 直接生效，all 走存量模式
+    rng = auto_webp.resolve_range(root, "origin/main..HEAD")
+    check(rng == "origin/main..HEAD", "显式 --range 原样使用", f"rng={rng!r}")
+    for k in ("GITHUB_EVENT_BEFORE", "GITHUB_SHA"):
+        os.environ.pop(k, None)
+
+    # 手动触发 --range all：不该去碰 git，直接扫全量
+    imgs = root / "static" / "images"
+    imgs.mkdir(parents=True, exist_ok=True)
+    noisy_image((200, 150), 9).save(imgs / "manual.jpg", "JPEG", quality=95)
+    rc = auto_webp.main(["--root", str(root), "--range", "all"])
+    check(rc == 0, "手动 --range all 预演成功（不看 git diff）", f"rc={rc}")
+    rc = auto_webp.main(["--root", str(root), "--range", "all", "--apply"])
+    check(rc == 0, "手动 --range all --apply 成功", f"rc={rc}")
+    check((imgs / "manual.webp").is_file() and not (imgs / "manual.jpg").exists(),
+          "存量图片被转换且原图删除（新文件从未提交过也能处理）")
+
+
 def main() -> int:
     for _s in (sys.stdout, sys.stderr):
         try:
@@ -266,6 +387,73 @@ def main() -> int:
               "human() 体积格式化", f"{auto_webp.human(512)} / {auto_webp.human(2048)}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+    print("\n=== 场景 5：存量模式 --all / --range all（含主题素材保护）===")
+    tmp2 = Path(tempfile.mkdtemp(prefix="autowebp-all-"))
+    root2 = tmp2 / "repo"
+    try:
+        setup_repo_all(root2)
+        imgs = root2 / "static" / "images"
+        post = root2 / "content" / "posts" / "a.md"
+
+        # 5a) 候选清单：排除清单里的图不该被列进来
+        cands = auto_webp.iter_all_files(root2, auto_webp.DEFAULT_PATTERNS)
+        check("static/images/photo.jpg" in cands, "候选包含站长上传的 photo.jpg", f"{cands}")
+        check("static/images/shots/old.png" in cands, "候选包含子目录里的 shots/old.png")
+        check("static/images/unused.png" in cands, "候选包含没人引用的 unused.png")
+        check("static/images/taichi-fill.png" not in cands,
+              "候选不含显式排除清单里的 taichi-fill.png（taichi*.png）")
+        check("static/images/cursor/reimu-cursor-default.png" not in cands,
+              "候选不含显式排除清单里的 cursor/*.png")
+        check("static/images/keep.webp" not in cands, "候选不含已经是 webp 的文件")
+        check(auto_webp.theme_refs(root2, "reimu.png"),
+              "theme_refs() 能发现 themes/ 对 reimu.png 的引用",
+              f"{auto_webp.theme_refs(root2, 'reimu.png')}")
+        check(auto_webp.theme_refs(root2, "photo.jpg") == [],
+              "theme_refs() 对主题没引用的图返回空")
+
+        # 5b) 预演（--range all 与 --all 等价）：一个字都不写
+        before = snapshot(root2)
+        rc = auto_webp.main(["--root", str(root2), "--range", "all"])
+        check(rc == 0, "--range all 预演退出码 0", f"rc={rc}")
+        check(snapshot(root2) == before, "--range all 预演不改动任何文件")
+
+        # 5c) 真正落盘
+        rc = auto_webp.main(["--root", str(root2), "--all", "--apply"])
+        check(rc == 0, "--all --apply 退出码 0", f"rc={rc}")
+
+        check((imgs / "photo.webp").is_file() and not (imgs / "photo.jpg").exists(),
+              "photo.jpg → photo.webp，原图已删")
+        check((imgs / "shots" / "old.webp").is_file() and not (imgs / "shots" / "old.png").exists(),
+              "子目录 shots/old.png → shots/old.webp，原图已删")
+        check((imgs / "unused.webp").is_file() and not (imgs / "unused.png").exists(),
+              "没人引用的 unused.png 也被转换并删原图")
+        check((imgs / "reimu.png").is_file() and not (imgs / "reimu.webp").exists(),
+              "被 themes/ 引用的 reimu.png 被守卫跳过（原图保留、不产生 webp）")
+        check((imgs / "taichi-fill.png").is_file() and not (imgs / "taichi-fill.webp").exists(),
+              "显式排除清单里的 taichi-fill.png 保持原样")
+        check((imgs / "cursor" / "reimu-cursor-default.png").is_file()
+              and not (imgs / "cursor" / "reimu-cursor-default.webp").exists(),
+              "显式排除清单里的 cursor/*.png 保持原样")
+        check((imgs / "keep.webp").is_file(), "已经是 webp 的文件没被动过")
+
+        body = read(post)
+        check("/images/photo.webp" in body, "content 里 photo.jpg 引用被改写")
+        check("/images/shots/old.webp" in body, "content 里 shots/old.png 引用被改写")
+        check("/images/reimu.png" in body, "被守卫跳过的 reimu.png 引用保持不变")
+        check("/images/photo.jpg" not in body and "/images/shots/old.png" not in body,
+              "content 里没有残留旧引用")
+        check("images/reimu.png" in read(root2 / "themes" / "reimu" / "layouts" / "baseof.html"),
+              "themes/（子模块）里的引用一个字没改")
+    finally:
+        shutil.rmtree(tmp2, ignore_errors=True)
+
+    print("\n=== 场景 6：CI 里怎么算「本次变更的图片清单」（range 解析 / 首个提交 / HEAD^）===")
+    tmp3 = Path(tempfile.mkdtemp(prefix="autowebp-range-"))
+    try:
+        test_range_resolution(tmp3)
+    finally:
+        shutil.rmtree(tmp3, ignore_errors=True)
 
     passed = sum(1 for ok, _l, _d in _results if ok)
     total = len(_results)

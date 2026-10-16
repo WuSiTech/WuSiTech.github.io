@@ -57,6 +57,53 @@ public_folder: /images
 #「输入 URL」（外部位置）保留：它由字段的 choose_url 控制（默认 true），
 # 不影响站点默认行为，站长偶尔需要贴外链。
 media_libraries:
+  # 默认媒体库（本站的主图库 = 仓库里的 static/images）
+  default:
+    config:
+      # 上传时自动转码：jpg/png/heic/avif → webp，顺带做有损压缩。
+      # 依据（本仓库自带的 static/admin/sveltia-cms.js，Sveltia 0.241.0 里内置的配置 schema）：
+      #   ImageTransformations:{type:`object`,additionalProperties:!1,properties:{
+      #     svg:{$ref:`#/definitions/VectorImageTransformationOptions`},   // {optimize:boolean}
+      #     raster_image:{…RasterImageTransformationOptions…},
+      #     avif:…, gif:…, heic:…, jpeg:…, png:…, webp:…}}                // 都指向同一个定义
+      #   RasterImageTransformationOptions:{type:`object`,properties:{
+      #     format:{type:`string`,const:`webp`},quality:{type:`number`},
+      #     width:{type:`number`},height:{type:`number`}},additionalProperties:!1}
+      #   挂载点：DefaultMediaLibraryConfig{…,transformations:{$ref:`#/definitions/ImageTransformations`}}
+      #           SharedMediaLibraryOptions{…,transformations:{…}}
+      #           → 即 media_library.config.transformations 或 media_libraries.<名字>.config.transformations
+      #   校验器 dit()/uit()/lit()：键只能是 raster_image、svg 或某个位图格式名；
+      #           quality 必须是 0-100 的整数；width/height 必须是正整数。
+      # 运行时（同文件内 RSe()/DF()/TF()/yF()/dSe()）：
+      #   取配置 s = 该源格式的键 ?? 声明格式的键 ?? raster_image，缺省
+      #   {format:`webp`, quality:85}；DF() 用 fit:`scale-down` 缩放，
+      #   ASe() 里「原图不大于目标框就原样返回」——只缩不放；
+      #   dSe() 另外跳过动图 gif / 动图 webp / 交错 png，避免毁掉动画。
+      #   webp 源文件再转一次 webp 是白费力气（体积通常还更大），所以 webp: false 明确关掉。
+      # 效果：站长在 /admin/ 里传一张 jpg/png/heic，落盘时就是同名 .webp、质量 80。
+      #   不写 width/height：不限制尺寸、绝不放大（要限制再按上面 schema 加正整数）。
+      # 兜底：绕过后台（直接在 GitHub 上传、或用别的工具提交）的图片由
+      #   .github/workflows/webp.yml + tools/auto_webp.py 在 push 后自动转换。
+      transformations:
+        raster_image:
+          format: webp
+          quality: 80
+        jpeg:
+          format: webp
+          quality: 80
+        png:
+          format: webp
+          quality: 80
+        heic:
+          format: webp
+          quality: 80
+        avif:
+          format: webp
+          quality: 80
+        gif:
+          format: webp
+          quality: 80
+        webp: false # 已经是 webp 的别再转一遍（体积通常反而更大）
   stock_assets: false
 
 collections:

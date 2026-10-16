@@ -27,6 +27,17 @@ push 到 main 时本脚本把 static/images/ 下这些新图转成同名 .webp�
     python tools/auto_webp.py --apply --range origin/main..HEAD
     python tools/auto_webp.py --apply --files static/images/a.jpg static/images/b.png
     python tools/auto_webp.py --apply --target-kb 200 --max-dim 2560
+    python tools/auto_webp.py --all --apply              # 存量图片：扫 static/images/** 全量
+    python tools/auto_webp.py --apply --range all        # 同上（--range all 等价于 --all）
+
+存量模式（--all / --range all）
+-------------------------------
+不看 git diff，直接把 static/images/** 下所有「还不是 webp 的位图」列成候选。
+两重保护，确保主题素材绝不被碰：
+  1) ALL_MODE_EXCLUDE：显式排除清单（主题鼠标指针 / 404 背景 / 太极图标）；
+  2) 主题引用守卫 THEME_REF_GUARD：任何被 themes/** 里文本引用到的图片一律跳过。
+     themes/ 是 git 子模块、且被 PRUNE_DIRS 排除在「引用改写」之外，所以转换 + 删原图
+     一定会把主题里的引用改断 —— 宁可不转，也不动。
 
 退出码：0 正常（含「跳过」、含「转成 webp 反而更大所以放弃」）；
         默认情况下单张失败也返回 0（失败的那张原图一定还在，不会丢东西），
@@ -68,6 +79,25 @@ SKIP_REASON = {
 }
 # 只处理这些目录下的文件（push 触发的范围）
 DEFAULT_PATTERNS = ["static/images/**"]
+
+# ---- 存量模式（--all）专用：显式排除清单 -------------------------------------
+# themes/reimu 是 git 子模块，主题用这些图当「鼠标指针 / 404 背景 / 太极图标」，
+# 它们的引用写在 themes/** 里，本脚本不会（也不该）去改子模块，所以一旦转换 + 删原图，
+# 主题里的引用就断了。清单里的东西一律不动，连「转成 webp 更小」也不转。
+# （下面 THEME_REF_GUARD 是更彻底的第二道守卫：凡被 themes/** 引用到的图都跳过，
+#   所以这份清单即使漏了某一项，也不会真的改坏主题；清单的作用是「快 + 可读」。）
+ALL_MODE_EXCLUDE = [
+    "static/images/cursor/*.png",  # 主题鼠标指针：themes/reimu/assets/css/*.scss 里 $cursor-*
+    "static/images/reimu.png",     # 主题 404 / 首页背景：themes/reimu/layouts/**/*.html 里 images/reimu.png
+    "static/images/taichi*.png",   # 主题赞助图标默认图：themes/reimu/assets/css/main.scss 里 ../images/taichi.png
+]
+# 主题目录（在 PRUNE_DIRS 里，不能被改写引用 —— 只用来做「引用守卫」扫描）
+THEME_DIR = "themes"
+# 存量模式下不必列出来的格式：webp 已经是目标格式，svg 是矢量（会被明确跳过，但刷屏）
+ALL_MODE_QUIET_EXTS = {".webp", ".svg"}
+# 被主题引用而跳过的原因说明（THEME_REF_GUARD 命中时用）
+THEME_SKIP_NOTE = (f"被 {THEME_DIR}/ 里的主题文件引用（子模块，本脚本不改写它的引用），"
+                   f"跳过以免主题断图")
 # 引用改写时要扫描的目录（仓库相对路径）+ 允许改写的文本扩展名
 REF_DIRS = ["content", "config", "data", "static"]
 REF_EXTS = {".md", ".markdown", ".mdx", ".html", ".htm", ".toml", ".yaml", ".yml",
@@ -125,6 +155,47 @@ def glob_to_regex(pattern: str) -> re.Pattern:
 def in_scope(rel: str, patterns) -> bool:
     rel = rel.replace("\\", "/")
     return any(p.match(rel) for p in patterns)
+
+
+def base_dir_of(pattern: str) -> str:
+    """glob 里第一个通配符之前的部分就是这次扫描的根目录（static/images/** → static/images）。"""
+    cut = len(pattern)
+    for i, ch in enumerate(pattern):
+        if ch in "*?[":
+            cut = i
+            break
+    return pattern[:cut].rstrip("/")
+
+
+def iter_all_files(root: Path, glob_patterns):
+    """存量模式：把 glob_patterns 覆盖到的目录整个走一遍，产出仓库相对路径（升序）。
+
+    只产出「看起来是位图」的文件；已经是 webp / svg 的（ALL_MODE_QUIET_EXTS）
+    以及 ALL_MODE_EXCLUDE 命中的直接不列出来，免得报告被几十行「跳过」刷屏。
+    参数收的是 glob 字符串（不是编译好的正则），方便直接拿 DEFAULT_PATTERNS 调用。
+    """
+    patterns = [glob_to_regex(p) for p in glob_patterns]
+    excl = [glob_to_regex(p) for p in ALL_MODE_EXCLUDE]
+    out, seen = [], set()
+    for pattern in glob_patterns:
+        base = base_dir_of(pattern)
+        base_abs = root / base if base else root
+        if not base_abs.is_dir():
+            print(f"[!] --all：{base or '.'} 不是目录，跳过")
+            continue
+        for cur, subdirs, names in os.walk(base_abs):
+            subdirs[:] = [s for s in subdirs if s not in PRUNE_DIRS]
+            for nm in names:
+                p = Path(cur) / nm
+                ext = p.suffix.lower()
+                if ext not in BITMAP_EXTS or ext in ALL_MODE_QUIET_EXTS:
+                    continue
+                rel = p.relative_to(root).as_posix()
+                if rel in seen or not in_scope(rel, patterns) or in_scope(rel, excl):
+                    continue
+                seen.add(rel)
+                out.append(rel)
+    return sorted(out)
 
 
 def run_git(args, root: Path):
@@ -234,18 +305,20 @@ def _boundary_of(match: re.Match):
     return ""
 
 
-def iter_ref_files(root: Path, dirs):
+def iter_ref_files(root: Path, dirs, prune_dirs=None):
     """遍历可改写的文本文件，产出 (路径, 文本)。
 
     跳过 .git/public/resources/themes 等目录、二进制文件、图片（扩展名不在 REF_EXTS）
     和超过 4MB 的大文件。用 read_bytes 一次读完，避免 Windows 上文件句柄被 hold 住。
+    prune_dirs 用来临时换一套剪枝集合（主题引用守卫要反过来「只扫 themes/」）。
     """
+    prune = PRUNE_DIRS if prune_dirs is None else prune_dirs
     for d in dirs:
         base = root / d
         if not base.is_dir():
             continue
         for cur, subdirs, names in os.walk(base):
-            subdirs[:] = [s for s in subdirs if s not in PRUNE_DIRS]
+            subdirs[:] = [s for s in subdirs if s not in prune]
             for nm in names:
                 p = Path(cur) / nm
                 if p.suffix.lower() not in REF_EXTS:
@@ -263,6 +336,21 @@ def iter_ref_files(root: Path, dirs):
                 except UnicodeDecodeError:
                     continue
                 yield p, text
+
+
+def theme_refs(root: Path, name: str):
+    """扫 themes/** 里是否引用了 name（文件名或「目录/文件名」尾巴）。
+
+    返回 [(相对路径, 次数)]。themes/ 是 git 子模块，被 PRUNE_DIRS 排除在引用改写之外，
+    所以「被主题引用」= 转换 + 删原图一定断图 → 调用方据此跳过这张图。
+    """
+    rx = ref_regex(name)
+    hits = []
+    for p, text in iter_ref_files(root, [THEME_DIR], prune_dirs=PRUNE_DIRS - {THEME_DIR}):
+        n = len(list(rx.finditer(text)))
+        if n:
+            hits.append((p.relative_to(root).as_posix(), n))
+    return hits
 
 
 def count_refs(root: Path, name: str, dirs=REF_DIRS):
@@ -396,6 +484,12 @@ def process(args):
     patterns = [glob_to_regex(p) for p in (args.patterns or DEFAULT_PATTERNS)]
     scanned, added = [], set()
 
+    # --range all（或 --all）＝ 存量模式：不看 git diff，扫全量非 webp 位图
+    range_all = bool(args.range) and args.range.strip().lower() in ("all", "--all", "全部")
+    all_mode = bool(args.all) or range_all
+    if all_mode and args.files:
+        sys.exit("--all / --range all 与 --files 不能同时用（一个是全量扫描，一个是点名文件）")
+
     if args.files:
         # --files 里既可能是仓库相对路径，也可能是用户随手给的本地相对路径
         for f in args.files:
@@ -412,6 +506,16 @@ def process(args):
                     break
             else:
                 print(f"[!] 命令行给的路径不存在：{f}")
+    elif all_mode:
+        print("存量模式（--all）：不比对 git diff，扫描下列目录下所有还不是 webp 的位图：")
+        for p in (args.patterns or DEFAULT_PATTERNS):
+            print(f"  · {p}")
+        print("显式排除（主题素材，一律不动）：")
+        for p in ALL_MODE_EXCLUDE:
+            print(f"  · {p}")
+        print(f"外加守卫：任何被 {THEME_DIR}/ 内文本引用到的图片都会跳过（{THEME_SKIP_NOTE}）。")
+        scanned = iter_all_files(root, args.patterns or DEFAULT_PATTERNS)
+        added = set(scanned)
     else:
         rng = resolve_range(root, args.range)
         if not rng:
@@ -431,7 +535,10 @@ def process(args):
             continue
         todo.append(rel)
 
-    print(f"变更中落在 {[p.pattern for p in patterns]} 下的文件：{len(todo)} 个")
+    if all_mode:
+        print(f"存量候选（{ [p.pattern for p in patterns] } 下）：{len(todo)} 个")
+    else:
+        print(f"变更中落在 {[p.pattern for p in patterns]} 下的文件：{len(todo)} 个")
     results = []
     for rel in todo:
         src = root / rel
@@ -444,6 +551,15 @@ def process(args):
             continue
         if ext not in BITMAP_EXTS:
             note = f"不在处理范围（只处理 {' '.join(sorted(BITMAP_EXTS))}）"
+            print(f"      跳过：{note}")
+            results.append({"src": rel, "status": "skip", "note": note,
+                            "before": src.stat().st_size, "after": 0})
+            continue
+        # 主题引用守卫：themes/** 里的引用不会被改写，所以被主题引用的图绝不能转 + 删。
+        trefs = theme_refs(root, src.name)
+        if trefs:
+            note = (f"{THEME_SKIP_NOTE}；命中："
+                    + "、".join(f"{f}（{n} 处）" for f, n in trefs))
             print(f"      跳过：{note}")
             results.append({"src": rel, "status": "skip", "note": note,
                             "before": src.stat().st_size, "after": 0})
@@ -564,9 +680,13 @@ def build_parser():
                "  python tools/auto_webp.py --files static/images/new.jpg --apply\n")
     p.add_argument("--root", default=".", help="仓库根目录（默认当前目录）")
     p.add_argument("--range", default=None,
-                   help="git 范围，如 HEAD^..HEAD / origin/main..HEAD（默认读 GITHUB_EVENT_BEFORE 或 HEAD^..HEAD）")
+                   help="git 范围，如 HEAD^..HEAD / origin/main..HEAD；写 all 表示存量模式"
+                        "（默认读 GITHUB_EVENT_BEFORE 或 HEAD^..HEAD）")
     p.add_argument("--files", nargs="*", default=None,
                    help="直接指定文件（跳过 git diff，测试/修复存量图用）")
+    p.add_argument("--all", action="store_true",
+                   help="存量模式：扫 patterns 覆盖的目录下所有非 webp 位图（不看 git diff）；"
+                        "等价于 --range all。会自动跳过主题素材，见源码 ALL_MODE_EXCLUDE")
     p.add_argument("--patterns", nargs="*", default=None,
                    help=f"只处理匹配这些 glob 的文件（默认 {' '.join(DEFAULT_PATTERNS)}）")
     p.add_argument("--apply", action="store_true",
