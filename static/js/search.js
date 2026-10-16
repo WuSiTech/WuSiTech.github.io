@@ -14,7 +14,7 @@
     ".ss-btn{position:fixed;right:30px;bottom:90px;z-index:990;width:44px;height:44px;border:none;border-radius:50%;",
     "background:#fff;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.22);transition:transform .15s ease,background .15s ease}",
     ".ss-btn:hover{transform:scale(1.06)}",
-    ".ss-btn::before{content:'';display:block;width:24px;height:24px;margin:10px auto 0;background:" + ICON + " center/contain no-repeat}",
+    ".ss-btn::before{content:'';display:block;width:24px;height:24px;margin:6px auto 0;background:" + ICON + " center/contain no-repeat}",
     "html[data-theme=dark] .ss-btn{background:#000}",
     ".ss-mask{position:fixed;inset:0;z-index:995;background:rgba(0,0,0,.42);display:none}",
     ".ss-mask.ss-on{display:block}",
