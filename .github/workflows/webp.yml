@@ -1,0 +1,106 @@
+name: Auto WebP
+
+# 兜底工作流：站长绕过后台（直接在 GitHub 网页上传、或用别的工具提交）往
+# static/images/ 里塞了 jpg/png/heic 时，这里自动把本次提交里新增/修改的位图
+# 转成同名 .webp、把仓库里对旧文件名的引用改成 .webp、删掉原图，然后自己提交。
+#
+# 后台 /admin/ 上传本来就会转码（见 static/admin/config.yml 的 media_libraries），
+# 这个工作流只处理「没有经过后台」的图片，以及批量修复存量图片。
+#
+# 关于自触发（重要）：
+#   1) 本工作流只监听 main 分支上 static/images/** 的变更；
+#   2) 机器人自己的提交信息里带 [skip ci]（GitHub 识别后不启动新的 workflow run），
+#      同时用 paths-ignore 把机器人会重写的 content/**、config/**、data/**、
+#      tools/**、docs/**、.github/workflows/webp.yml 排除掉 —— 双保险，
+#      不会出现「转码 → 提交 → 再触发转码」的死循环。
+#   3) 机器人提交只碰 static/images 下的图和上面的文本引用，
+#      不会触发 tools.yml（它的 paths 不含 static/images）。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'static/images/**'
+    paths-ignore:
+      - 'content/**'
+      - 'config/**'
+      - 'data/**'
+      - 'tools/**'
+      - 'docs/**'
+      - '.github/workflows/webp.yml'
+  workflow_dispatch:
+    inputs:
+      range:
+        description: '手动运行时的 git 对比范围（留空 = 最近一次提交 HEAD^..HEAD）'
+        required: false
+        default: 'HEAD^..HEAD'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-webp
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  webp:
+    name: 位图转 WebP 并改写引用
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout（需要完整历史才能算 diff，也需要能 push）
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: 准备 Python 依赖
+        # 和 tools.yml 一样用 venv 绕开新版 Ubuntu runner 的 PEP 668 限制
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet --upgrade pip
+          .venv/bin/pip install --quiet Pillow
+          echo "${PWD}/.venv/bin" >> "${GITHUB_PATH}"
+
+      - name: 让 git 原样输出中文/非 ASCII 路径
+        run: git config --global core.quotepath false
+
+      - name: 配置提交身份（github-actions[bot]）
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: 转换新增/修改的位图（写 webp、改写引用、删原图）
+        env:
+          # push 事件里 GITHUB_EVENT_BEFORE 是本次推送前的 commit SHA
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          RANGE="${{ github.event.inputs.range }}"
+          if [ -n "${RANGE}" ]; then
+            python3 tools/auto_webp.py --apply --range "${RANGE}"
+          else
+            python3 tools/auto_webp.py --apply
+          fi
+
+      - name: 提交并推送（带 [skip ci]，避免自触发）
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "没有需要提交的变更（没有可转换的图，或转换后反而更大已经放弃）。"
+            exit 0
+          fi
+          git diff --cached --stat
+          git commit -m "chore(images): 自动转 WebP 并改写引用 [skip ci]"
+          git push origin HEAD:main
+
+      - name: 汇总
+        if: always()
+        run: |
+          {
+            echo "### Auto WebP"
+            echo '```'
+            git diff --stat HEAD^ HEAD | tail -40
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
