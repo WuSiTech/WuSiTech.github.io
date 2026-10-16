@@ -20,6 +20,8 @@ Thumbs.db
 desktop.ini
 
 # ============ Python ============
+# 本地虚拟环境：不进版本库（曾在某次操作中误提交，已移除跟踪）
+.venv/
 __pycache__/
 *.py[cod]
 
