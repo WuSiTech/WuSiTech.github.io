@@ -36,7 +36,7 @@
     ".ss-empty{padding:18px;font-size:14px;opacity:.6}",
     "html[data-theme=dark] .ss-panel{background:#2b2b2b;color:#d8d8d8}",
     "html[data-theme=dark] .ss-input{border-bottom-color:rgba(255,255,255,.14)}",
-    "@media print{.ss-btn,.ss-nav-btn,.ss-mask,.ss-panel{display:none!important}}"
+    "@media print{.ss-btn,.ss-nav-btn,.ss-mask,.ss-panel{display:none!important}}", ".site-search{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45)}.reimu-popup{position:absolute;left:50%;top:10vh;transform:translateX(-50%);width:min(680px,92vw);max-height:72vh;display:flex;flex-direction:column;background:var(--color-wrap,#fff);color:var(--grey-7,#333);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.3);overflow:hidden}.reimu-search{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,.08);position:relative;z-index:2}.reimu-search-input-icon{width:18px;height:18px;flex:0 0 18px;opacity:.6}#reimu-search-input{flex:1}#reimu-search-input input{width:100%;border:0;outline:0;background:transparent;font-size:16px;color:inherit;padding:2px 0}.popup-btn-close{position:absolute;right:12px;top:12px;width:26px;height:26px;border-radius:50%;background:#ff5252;color:#fff;font-size:16px;line-height:26px;text-align:center;cursor:pointer;z-index:3}.popup-btn-close:before{content:"\\00d7"}.reimu-results{position:relative;z-index:2;overflow-y:auto;padding:6px 0 10px}.reimu-bg{position:absolute;right:0;bottom:0;max-height:86%;opacity:.28;pointer-events:none;z-index:1}.reimu-hit{padding:10px 16px;cursor:pointer;border-left:3px solid transparent}.reimu-hit:hover{background:rgba(224,108,117,.12);border-left-color:#ff5252}.reimu-hit-title{font-size:15px;font-weight:600;margin-bottom:2px}.reimu-hit-sum{font-size:12.5px;opacity:.7;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}html[data-theme=dark] .reimu-popup{background:#2b2b2b;color:#d8d8d8}@media print{.site-search{display:none!important}}"
   ].join('');
 
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
@@ -131,9 +131,9 @@
       meta.textContent = top.length ? ('命中 ' + scored.length + ' 篇，显示前 ' + top.length + ' 篇') : '';
       if (!top.length) { list.appendChild(el('li', 'ss-empty', '没有找到匹配的文章，换个关键词试试。')); return; }
       top.forEach(function (x) {
-        var li = el('li', 'ss-item');
-        li.appendChild(el('div', 'ss-title', x.it.title));
-        if (x.it.summary) li.appendChild(el('div', 'ss-sum', x.it.summary));
+        var li = el('li', 'reimu-hit');
+        li.appendChild(el('div', 'reimu-hit-title', x.it.title));
+        if (x.it.summary) li.appendChild(el('div', 'reimu-hit-sum', x.it.summary));
         li.addEventListener('click', function () { location.href = x.it.url; });
         list.appendChild(li);
       });
