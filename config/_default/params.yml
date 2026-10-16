@@ -680,29 +680,45 @@ injector:
     </script>
     <!-- 自建评论系统：读 static/comments/<slug>.json，提交到 Cloudflare Pages Function（详见 docs/评论系统（Git存储）.md） -->
     <script src="/js/comments.js" defer></script>
-    <!-- ===== 页底「BLOG状态」固定条（引用仓库里的本地徽章，不请求任何外部资源） =====
-         徽章就是 README 顶部那两张 GitHub Actions 徽章（build-and-deploy /
-         tools-and-config-checks）的镜像，由 .github/scripts/fetch_badges.py
-         在 CI 构建前原样下载到 static/badges/；仓库里也提交了一份兜底副本，
-         所以页面只引用 /badges/*.svg 这两个站内文件，SVG 自带 GitHub 算好的真实结论，
-         本站不再查 API，也没有 /build-status.json 了。
-         换工作流文件名或链接时，这里与 fetch_badges.py 里的地址表要一起改。 -->
+    <!-- ===== 页底「BLOG状态」徽章（本地自绘，不请求任何外部资源） =====
+         位置：**页脚之后的正常文档流**，右对齐、随页面滚到底部可见，
+         不再是悬浮在内容中间的浮层；也不遮挡主题右下角的「回到顶部」圆钮
+         （短窗口下由 static/css/build-status.css 里的媒体查询把徽章收窄让位）。
+         形状照 README.md 顶部那两枚 GitHub Actions 徽章：深色小圆角方块
+         （工作流名，白字）+ 右侧彩色状态块（通过绿 / 失败红 / 未知灰 / 进行中黄），
+         方块和颜色都是本站自己画的，**不引用 github.com 的徽章图片**。
+         状态数据由 Hugo 构建时生成到 /build-status.json
+         （模板 layouts/_default/single.buildstatus.json，配置 config/_default/hugo.yml，
+          触发页 content/buildstatus.md），下面这段是纯静态外壳，
+         由 /js/build-status.js 把 JSON 里的文案/配色/hover 提示填进来；
+         读不到数据（本地构建、API 挂了）就保留这里的「未知」占位，
+         采集失败的原因由脚本写进 data/build_status.yml 的 note / error，会在 hover 里显示。
+         改工作流名字或链接时，这里和那个模板里的名字表要一起改。 -->
     <link rel="stylesheet" href="/css/build-status.css" />
-    <!-- 直接引用 GitHub 官方徽章图片（站长要求：就是 README 里那两个，允许外链、国内可能拉不出来） -->
-    <style>#build-status{display:none!important}</style>
-    <div class="blog-badges" role="group" aria-label="站点构建状态">
-      <span class="blog-badges__title">BLOG状态</span>
-      <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml" target="_blank" rel="noopener" title="Build and deploy：查看 Actions"><img src="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml/badge.svg?branch=main" alt="Build and deploy 状态" /></a>
-      <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml" target="_blank" rel="noopener" title="Tools and config checks：查看 Actions"><img src="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml/badge.svg?branch=main" alt="Tools and config checks 状态" /></a>
+    <div class="build-status" id="build-status" data-variant="unknown" role="group" aria-label="站点构建状态">
+      <span class="build-status__title">BLOG状态</span>
+      <div class="build-status__items">
+        <a class="build-status__pill" data-variant="unknown" data-item-key="build_and_deploy"
+           href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml"
+           target="_blank" rel="noopener" title="Build and deploy：查看 Actions">
+          <span class="build-status__label">Build and deploy</span>
+          <span class="build-status__value"><span class="build-status__value-text">未知</span></span>
+        </a>
+        <a class="build-status__pill" data-variant="unknown" data-item-key="tools_and_config_checks"
+           href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml"
+           target="_blank" rel="noopener" title="Tools and config checks：查看 Actions">
+          <span class="build-status__label">Tools and config checks</span>
+          <span class="build-status__value"><span class="build-status__value-text">未知</span></span>
+        </a>
+        <a class="build-status__pill" data-variant="unknown" data-item-key="overall"
+           href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml"
+           target="_blank" rel="noopener" title="整体状态：查看 Actions">
+          <span class="build-status__label">整体状态</span>
+          <span class="build-status__value"><span class="build-status__value-text">未知</span></span>
+        </a>
+      </div>
     </div>
-    <style>
-      .blog-badges{position:fixed;right:12px;bottom:10px;z-index:40;display:flex;align-items:center;gap:6px;padding:4px 8px;background:rgba(36,41,46,.85);border-radius:6px;font-size:12px;line-height:1}
-      .blog-badges__title{color:#c9d1d9;font-size:11px;opacity:.9;white-space:nowrap}
-      .blog-badges img{height:20px;display:block}
-      .blog-badges a{display:block}
-      @media (max-width:600px){.blog-badges{bottom:6px;right:6px;transform:scale(.9);transform-origin:bottom right}}
-      @media print{.blog-badges{display:none}}
-    </style>
+    <script src="/js/build-status.js" defer></script>
   sidebar_begin: # Inject code snippet right after <aside>
   sidebar_end: # Inject code snippet right before </aside>
 

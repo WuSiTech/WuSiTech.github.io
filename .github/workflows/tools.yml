@@ -1,7 +1,7 @@
 name: Tools and config checks
 
 # 这个工作流不部署站点（部署是 hugo.yaml 的事），只做四件自检：
-#   1. Python 工具能否正常跑、mock 测试是否通过（含「构建状态」写状态脚本）
+#   1. Python 工具能否正常跑、mock 测试是否通过（含徽章镜像脚本的语法/用法自检）
 #   2. 后台登录中转 Worker 的 12 项自测
 #   3. Hugo 能否构建（含 data/config 改动是否合法）+ vendor 库有没有回退到外部 CDN
 #   4. 构建产物里断链 / 外部资源 / sitemap / 首页导航检查
@@ -14,10 +14,10 @@ on:
       - 'data/**'
       - 'config/**'
       - 'static/admin/**'
+      - 'static/badges/**'
       - 'static/resources/**'
       - 'static/css/**'
       - 'static/js/**'
-      - 'content/buildstatus.md'
       - 'layouts/**'
       - '.github/scripts/**'
       - '.github/workflows/tools.yml'
@@ -47,8 +47,8 @@ jobs:
         run: |
           python3 -m py_compile tools/docx2md.py tools/img2webp.py tools/auto_webp.py \
             tools/test_auto_webp.py tools/localize_vendor.py tools/check_twikoo.py \
-            tools/check_build_status.py \
-            .github/scripts/write_build_status.py .github/scripts/test_write_build_status.py
+            tools/test_check_twikoo.py tools/rename_image.py tools/test_rename_image.py \
+            .github/scripts/fetch_badges.py
 
       - name: CLI 冒烟测试（--help）
         run: |
@@ -64,8 +64,20 @@ jobs:
       - name: auto_webp 自测（转换 / 跳过 / 引用改写 / 删除原图的规则）
         run: python3 tools/test_auto_webp.py
 
-      - name: 「构建状态」写状态脚本自测（正常 / 降级 / 产物格式，全部 mock）
-        run: python3 .github/scripts/test_write_build_status.py
+      - name: 徽章镜像脚本自检（--help + 离线兜底：下不到也必须 exit 0 并保留仓库副本）
+        # 这个脚本在 CI 里跑在 hugo 之前，一旦它非零退出就会挡住部署，
+        # 所以这里断言：正常 --help 能跑通，且**离线时仍然 exit 0**。
+        run: |
+          python3 .github/scripts/fetch_badges.py --help > /dev/null
+          # 指向保留地址（RFC 5737）模拟「没网」：脚本必须打 warning 后正常退出，
+          # 并且不能破坏仓库里已经提交的兜底 SVG
+          before=$(md5sum static/badges/build-and-deploy.svg | cut -d' ' -f1)
+          python3 .github/scripts/fetch_badges.py \
+            --token "" \
+            --proxy "http://192.0.2.1:9" \
+            --out-dir static/badges
+          after=$(md5sum static/badges/build-and-deploy.svg | cut -d' ' -f1)
+          test "${before}" = "${after}"
 
       - name: vendor 库不得回退到外部 CDN
         run: python3 tools/localize_vendor.py --dry-run --strict
@@ -104,9 +116,7 @@ jobs:
       - name: 构建（只验证，不部署）
         run: '"${HOME}/.local/hugo" --minify --baseURL https://wusitech.github.io/'
 
-      - name: 「构建状态」数据文件与挂件注入检查
         # 挂件状态是构建期写进 /build-status.json 的，这一步防止模板被改坏后静默消失
-        run: python3 tools/check_build_status.py --dir public
 
       - name: 校验构建产物（断链 / 外部资源 / sitemap）
         run: python3 tools/check_site.py --dir public
