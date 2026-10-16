@@ -92,6 +92,8 @@
     btn.type = 'button';
     btn.title = '站内搜索';
     btn.setAttribute('aria-label', '站内搜索');
+    function ensureButton() { var n = document.getElementById('sub-nav'); if (!n) return; if (!n.querySelector('.ss-nav-icon')) { btn.className = 'nav-icon ss-nav-icon'; n.appendChild(btn); } }
+    btn.classList.add('ss-nav-icon');
     (nav || document.body).appendChild(btn);
 
     // 复用主题自带搜索弹窗的结构与类名（样式来自主题 search.scss，含 reimu-bg 背景图）
@@ -148,5 +150,10 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.open) close(); });
   }
 
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', build); } else { build(); }
+  function boot() {
+    build();
+    try { document.addEventListener('pjax:complete', function () { var n = document.getElementById('sub-nav'); if (n && !n.querySelector('.ss-nav-icon')) { var b = document.querySelector('.ss-mask, .site-search'); build(); } }); } catch (e) {}
+    try { new MutationObserver(function () { var n = document.getElementById('sub-nav'); if (n && !n.querySelector('.ss-nav-icon')) { var btns = document.querySelectorAll('.site-search'); if (!btns.length) build(); } }).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
 })();
