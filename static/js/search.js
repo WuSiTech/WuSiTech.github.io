@@ -17,7 +17,7 @@
   var state = { loaded: false, items: [], open: false };
 
   var CSS = [
-    '.ss-btn{position:fixed;right:18px;bottom:18px;z-index:990;width:44px;height:44px;border:none;border-radius:50%;',
+    '.ss-btn{position:fixed;left:18px;bottom:18px;z-index:990;width:44px;height:44px;border:none;border-radius:50%;',
     'background:rgba(224,108,117,.92);color:#fff;font-size:18px;line-height:44px;text-align:center;cursor:pointer;',
     'box-shadow:0 2px 10px rgba(0,0,0,.22);transition:transform .15s ease}',
     '.ss-btn:hover{transform:scale(1.06)}',
