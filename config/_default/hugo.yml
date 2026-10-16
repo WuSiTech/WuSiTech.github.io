@@ -38,27 +38,11 @@ markup:
     noClasses: false
 
 # ---------------------------------------------------------------------------
-# 输出格式：右下角「构建状态」挂件的数据文件（/build-status.json）
-#
-# 为什么需要：injector（config/_default/params.yml）里的内容是**纯文本**，
-# Hugo 不会把里面的 {{ ... }} 当模板执行，所以状态数据没法从 injector 里
-# 直接渲染；改成构建时把 data/build_status.yml 渲染成一个静态 JSON，
-# 再由 static/js/build-status.js 读取并填进挂件外壳（同源请求，无外部依赖）。
-#
-# 模板：layouts/_default/single.buildstatus.json
-# 触发：content/buildstatus.md 的 front matter `outputs: [buildstatus]`
-# 详见 docs/构建状态挂件.md
+# 页底「BLOG状态」固定条不需要任何输出格式 / 构建期数据：
+# 它引用的两张徽章是 static/badges/*.svg（README 顶部那两张 GitHub Actions
+# 徽章的镜像，由 .github/scripts/fetch_badges.py 在 CI 构建前下载，仓库里也提交了
+# 兜底副本），状态本身就写在 SVG 里。以前的 buildstatus JSON 输出格式
+# （content/buildstatus.md + layouts/_default/single.buildstatus.json +
+#  data/build_status.yml + static/js/build-status.js）已整条删除，
+# 详见 docs/构建状态挂件.md。
 # ---------------------------------------------------------------------------
-
-# application/json 是 Hugo 内置媒体类型，这里显式写一遍是为了让配置文件自解释
-mediaTypes:
-  application/json:
-    suffixes:
-      - json
-
-outputFormats:
-  buildstatus:
-    mediaType: application/json
-    baseName: build-status
-    isPlainText: true      # 纯文本模板，不要套 baseof.html
-    notAlternative: true   # 不要出现在 <link rel="alternate"> 里

@@ -56,7 +56,7 @@ hugo --minify --baseURL https://wstk.pages.dev/     # 想本地预览 Cloudflare
 `hugo --minify --baseURL "<Pages URL>"` → 上传 artifact → 部署。
 sitemap 与 robots.txt 自动使用 `https://wusitech.github.io/`。
 
-**构建状态**看顶部那枚徽章：
+**构建状态**看顶部这两枚徽章，页面最底部那条「BLOG状态」显示的也是同一张图：
 
 - `passing`：最近一次 `main` 构建并部署成功；
 - `failing`：点徽章进 [Actions 日志](https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml)
@@ -64,7 +64,9 @@ sitemap 与 robots.txt 自动使用 `https://wusitech.github.io/`。
 
 徽章对应的地址是
 `https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml/badge.svg?branch=main`，
-工作流改名或换文件后记得一起改。
+工作流改名或换文件后，README、`config/_default/params.yml` 与
+`.github/scripts/fetch_badges.py` 三处要一起改（页底固定条引用的是这张图的
+本地镜像 `static/badges/*.svg`，明细见 [docs/构建状态挂件.md](docs/构建状态挂件.md)）。
 
 ### Cloudflare Pages
 

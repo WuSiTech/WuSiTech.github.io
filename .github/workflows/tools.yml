@@ -45,7 +45,8 @@ jobs:
 
       - name: 语法检查
         run: |
-          # 自动收集仓库里所有 Python 文件（避免清单里残留已删除的脚本）           python3 -m py_compile $(git ls-files "tools/*.py" ".github/scripts/*.py")
+          # 自动收集仓库里所有 Python 文件（避免清单里残留已删除的脚本）
+          python3 -m py_compile $(git ls-files "tools/*.py" ".github/scripts/*.py")
 
       - name: CLI 冒烟测试（--help）
         run: |

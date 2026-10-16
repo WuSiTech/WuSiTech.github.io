@@ -710,8 +710,8 @@ injector:
     </style>
     <div class="bb-badges" role="group" aria-label="BLOG状态：本站两个 GitHub Actions 工作流的构建结论">
       <span class="bb-badges__title">BLOG状态</span>
-      <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml" target="_blank" rel="noopener" title="Build and deploy：查看 Actions"><img src="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml/badge.svg?branch=main" alt="Build and deploy 状态" /></a>
-      <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml" target="_blank" rel="noopener" title="Tools and config checks：查看 Actions"><img src="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml/badge.svg?branch=main" alt="Tools and config checks 状态" /></a>
+      <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml" target="_blank" rel="noopener" title="Build and deploy：查看 Actions"><img src="/badges/build-and-deploy.svg" alt="Build and deploy 状态" /></a>
+      <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml" target="_blank" rel="noopener" title="Tools and config checks：查看 Actions"><img src="/badges/tools-and-config-checks.svg" alt="Tools and config checks 状态" /></a>
     </div>
   sidebar_begin: # Inject code snippet right after <aside>
   sidebar_end: # Inject code snippet right before </aside>

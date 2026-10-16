@@ -9,7 +9,6 @@ permissions:
   contents: read
   pages: write
   id-token: write
-  actions: read # 读本仓库的 workflow run 状态（右下角「构建状态」挂件用）
 
 concurrency:
   group: pages
@@ -71,6 +70,20 @@ jobs:
           tar -C "${HOME}/.local" -xf "${{ runner.temp }}/hugo_extended_${HUGO_VERSION}_linux-amd64.tar.gz"
           echo "${HOME}/.local" >> "${GITHUB_PATH}"
 
+      - name: Mirror workflow badges
+        # 页底「BLOG状态」固定条引用的是 static/badges/*.svg（README 顶部那两张
+        # GitHub Actions 徽章的镜像）。这里在 hugo 之前把最新的徽章拉下来覆盖，
+        # 让本地图片和 README 上的徽章保持同一个结论。
+        # 脚本内部全程兜底：拿不到就保留仓库里已提交的那份并打 warning，
+        # 永远 exit 0，再加上 continue-on-error，绝不会卡住构建。
+        if: always()
+        continue-on-error: true
+        run: |
+          mkdir -p static/badges
+          python3 .github/scripts/fetch_badges.py \
+            --token "${GITHUB_TOKEN}" \
+            --out-dir static/badges
+
       - name: Build with Hugo
         run: |
           hugo --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
@@ -96,7 +109,6 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      # 部署结果只有到这一步才知道。如果这次部署失败，就用同一个 run id 重查一次结论，
-      # 生成只含一个 build-status.json 的补丁 artifact 再发一次，把挂件里的状态纠正成
-      # 「失败」；成功时这一步不会执行，走 build 阶段上传的完整 artifact。
-      # 重发 artifact 不会清空站点：GitHub Pages 的 artifacts 是累加的。
+      # 部署失败时「补发 build-status.json」的机制已随该文件一起删除：
+      # 现在页底状态来自 GitHub 官方徽章 SVG 本身（static/badges/*.svg），
+      # 工作流失败时徽章下一次读取就会变成 failing，不需要补发 artifact。

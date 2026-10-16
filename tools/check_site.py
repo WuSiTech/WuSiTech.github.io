@@ -30,8 +30,6 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 SELF_HOSTS = {"wusitech.github.io", "wstk.pages.dev", "localhost", "127.0.0.1"}
-# 站长要求直接引用 GitHub 官方徽章图片，故放行 github.com 的资源请求（国内可能加载不出来）
-ALLOWED_EXTERNAL_HOSTS = {"github.com"}
 
 # 第三方资源目录：static/resources/ 与 static/vendor/ 是整包放进来的库，
 # 里面可能自带测试页（如 live2d 的 test.html）或引用自己没带的字体文件，
@@ -151,7 +149,7 @@ def main(argv=None) -> int:
         print(f"[X] 找不到目录 {out_dir}（先 hugo 构建）", file=sys.stderr)
         return 2
 
-    allowed_hosts = set(SELF_HOSTS) | set(ALLOWED_EXTERNAL_HOSTS) | {h.lower() for h in args.allow}
+    allowed_hosts = set(SELF_HOSTS) | {h.lower() for h in args.allow}
 
     def is_site_file(path: Path) -> bool:
         rel = path.relative_to(out_dir)
