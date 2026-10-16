@@ -58,7 +58,7 @@ banner: "images/banner.webp"
 
 # If you want to use the srcset attribute, please enable it
 banner_srcset:
-  enable: false
+  enable: true
   srcset:
     - src: "images/banner-600w.webp"
       media: "(max-width: 479px)"
@@ -282,7 +282,7 @@ clipboard:
 
 math:
   katex:
-    enable: true
+    enable: false
   mathjax:
     enable: false
     options: # see https://docs.mathjax.org/en/latest/web/configuration.html
@@ -689,7 +689,6 @@ injector:
          窄屏收成左下角小条，同样避开圆钮；打印隐藏。
          换工作流文件名或链接时，这里与 fetch_badges.py 里的地址表要一起改。
          详见 docs/构建状态挂件.md -->
-    <link rel="stylesheet" href="/css/build-status.css" />
     <!-- ===== BLOG状态：页面末尾（页脚之后）的正常排版元素，右对齐；不悬浮、不遮挡内容 ===== -->
     <style>
     </style>
