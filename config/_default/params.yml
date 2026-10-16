@@ -653,10 +653,12 @@ injector:
   body_end: |
     <!-- Fancybox 灯箱所需资源已本地化到 static/vendor/，不再依赖 cdn.jsdelivr.net（国内经常超时） -->
     <link rel="stylesheet" href="/vendor/fancybox/fancybox-3.5.7.min.css" />
+    <script src="/vendor/jquery/jquery-3.7.1.min.js"></script>
     <script src="/vendor/fancybox/fancybox-3.5.7.min.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', function () {
         if (window.jQuery && jQuery.fn.fancybox) {
+          jQuery('[data-fancybox="gallery"]').fancybox({
             buttons: ["zoom", "close"]
           });
         }
@@ -716,5 +718,3 @@ live2d:
   position: left # left or right
 
 # Experiment
-      <!-- 轻量灯箱：替代 jQuery + fancybox（自建，零依赖，用法不变：data-fancybox="gallery"） -->
-      <script src="/js/lightbox.js?v=1" defer></script>
