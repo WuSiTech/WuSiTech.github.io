@@ -224,13 +224,13 @@
     background-color: rgba(87, 96, 106, 0.72);
   }
 
-  /* 收起状态：只留下那颗小圆点 */
+  /* 窄屏才收起：收起时藏掉小标题和胶囊，只留下小圆点按钮 */
   .build-status:not([data-expanded="true"]) .build-status__head,
   .build-status:not([data-expanded="true"]) .build-status__items {
     display: none;
   }
 
-  /* 展开状态：胶囊从右边缘往左排，但不顶出屏幕 */
+  /* 展开态：胶囊从右边缘往左排，但不顶出屏幕 */
   .build-status[data-expanded="true"] {
     max-width: calc(100vw - 28px);
   }
@@ -243,6 +243,11 @@
 
   .build-status[data-expanded="true"] .build-status__pill {
     max-width: calc(100vw - 28px);
+  }
+
+  /* JS 没跑起来（<noscript> 里补的样式把状态标成展开）时，小圆点没有意义，藏掉 */
+  .build-status[data-expanded="true"] .build-status__toggle {
+    display: none;
   }
 }
 

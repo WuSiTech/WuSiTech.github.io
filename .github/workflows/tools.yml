@@ -1,9 +1,10 @@
 name: Tools and config checks
 
-# 这个工作流不部署站点（部署是 hugo.yaml 的事），只做三件自检：
-#   1. Python 工具能否正常跑、mock 测试是否通过
+# 这个工作流不部署站点（部署是 hugo.yaml 的事），只做四件自检：
+#   1. Python 工具能否正常跑、mock 测试是否通过（含「构建状态」写状态脚本）
 #   2. 后台登录中转 Worker 的 12 项自测
 #   3. Hugo 能否构建（含 data/config 改动是否合法）+ vendor 库有没有回退到外部 CDN
+#   4. 构建产物里断链 / 外部资源 / sitemap / 首页导航检查
 
 on:
   push:
@@ -14,7 +15,11 @@ on:
       - 'config/**'
       - 'static/admin/**'
       - 'static/resources/**'
+      - 'static/css/**'
+      - 'static/js/**'
+      - 'content/buildstatus.md'
       - 'layouts/**'
+      - '.github/scripts/**'
       - '.github/workflows/tools.yml'
   pull_request:
   workflow_dispatch:
@@ -39,7 +44,11 @@ jobs:
           echo "${PWD}/.venv/bin" >> "${GITHUB_PATH}"
 
       - name: 语法检查
-        run: python3 -m py_compile tools/docx2md.py tools/img2webp.py tools/auto_webp.py tools/test_auto_webp.py tools/localize_vendor.py tools/check_twikoo.py
+        run: |
+          python3 -m py_compile tools/docx2md.py tools/img2webp.py tools/auto_webp.py \
+            tools/test_auto_webp.py tools/localize_vendor.py tools/check_twikoo.py \
+            tools/check_build_status.py \
+            .github/scripts/write_build_status.py .github/scripts/test_write_build_status.py
 
       - name: CLI 冒烟测试（--help）
         run: |
@@ -54,6 +63,9 @@ jobs:
 
       - name: auto_webp 自测（转换 / 跳过 / 引用改写 / 删除原图的规则）
         run: python3 tools/test_auto_webp.py
+
+      - name: 「构建状态」写状态脚本自测（正常 / 降级 / 产物格式，全部 mock）
+        run: python3 .github/scripts/test_write_build_status.py
 
       - name: vendor 库不得回退到外部 CDN
         run: python3 tools/localize_vendor.py --dry-run --strict
@@ -91,6 +103,10 @@ jobs:
 
       - name: 构建（只验证，不部署）
         run: '"${HOME}/.local/hugo" --minify --baseURL https://wusitech.github.io/'
+
+      - name: 「构建状态」数据文件与挂件注入检查
+        # 挂件状态是构建期写进 /build-status.json 的，这一步防止模板被改坏后静默消失
+        run: python3 tools/check_build_status.py --dir public
 
       - name: 校验构建产物（断链 / 外部资源 / sitemap）
         run: python3 tools/check_site.py --dir public
