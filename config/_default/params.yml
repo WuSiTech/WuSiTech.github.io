@@ -127,7 +127,6 @@ sidebar:
 
 widgets:
   - category
-  - tag
   - tagcloud
   - recent_posts
 
