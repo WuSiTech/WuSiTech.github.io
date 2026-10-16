@@ -139,8 +139,8 @@
       });
     }
 
-    function open() { state.open = true; site.style.display = 'block'; loadIndex(function () { render(); input.focus(); }); }
-    function close() { state.open = false; site.style.display = 'none'; }
+    function open() { state.open = true; site.style.setProperty('display', 'block', 'important'); site.style.setProperty('visibility', 'visible', 'important'); site.style.setProperty('opacity', '1', 'important'); state.open = true; loadIndex(function () { render(); input.focus(); }); }
+    function close() { state.open = false; site.style.setProperty('display', 'none', 'important'); }
 
     btn.addEventListener('click', function (e) { e.preventDefault(); if (state.open) { close(); } else { open(); } });
     site.addEventListener('click', function (e) { if (e.target === site || (e.target.classList && e.target.classList.contains('popup-btn-close'))) close(); });
