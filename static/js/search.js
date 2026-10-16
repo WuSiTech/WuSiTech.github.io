@@ -68,7 +68,9 @@
     var nav = document.getElementById('sub-nav');
     var btn;
     if (nav) {
-      btn = el('button', 'ss-nav-btn');
+      var proto = nav.querySelector('button') || nav.querySelector('a');
+      btn = el('button', proto ? proto.className : 'ss-nav-btn');
+      if (proto && proto.getAttribute('style')) btn.setAttribute('style', proto.getAttribute('style'));
       btn.innerHTML = MAG;
     } else {
       btn = el('button', 'ss-btn', '');
