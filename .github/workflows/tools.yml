@@ -45,10 +45,7 @@ jobs:
 
       - name: 语法检查
         run: |
-          python3 -m py_compile tools/docx2md.py tools/img2webp.py tools/auto_webp.py \
-            tools/test_auto_webp.py tools/localize_vendor.py tools/check_twikoo.py \
-            tools/test_check_twikoo.py tools/rename_image.py tools/test_rename_image.py \
-            .github/scripts/fetch_badges.py
+          # 自动收集仓库里所有 Python 文件（避免清单里残留已删除的脚本）           python3 -m py_compile $(git ls-files "tools/*.py" ".github/scripts/*.py")
 
       - name: CLI 冒烟测试（--help）
         run: |
