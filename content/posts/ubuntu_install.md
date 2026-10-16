@@ -1,10 +1,10 @@
 +++
 title = "Ubuntu下载及安装"
-date = "2026-07-26T19:30:00+08:00"
+date = "2026-07-22T19:30:00+08:00"
 draft = false
 description = "详细阐释了如何进行Ubuntu安装"
 categories = [ "Ubuntu" ]
-tags = [ "Ubuntu", "系统" ,"Linux"]
+tags = [ "Ubuntu", "系统", "Linux" ]
 cover = "/images/OIP2.webp"
 banner = "images/banner.webp"
 +++
