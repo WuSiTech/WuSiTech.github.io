@@ -94,16 +94,30 @@
     btn.setAttribute('aria-label', '站内搜索');
     (nav || document.body).appendChild(btn);
 
-    var mask = el('div', 'ss-mask');
+    // 复用主题自带搜索弹窗的结构与类名（样式来自主题 search.scss，含 reimu-bg 背景图）
+    var site = el('div', 'site-search');
+    site.id = 'ss-site-search';
+    site.innerHTML = '<div class="reimu-popup popup"><div class="reimu-search"><div class="reimu-search-input-icon"></div><div id="reimu-search-input"></div><div class="popup-btn-close"></div></div><div class="reimu-results"><div id="reimu-stats"></div><div id="reimu-hits"></div></div><img class="reimu-bg" src="/images/reimu.png" alt="" /></div>';
+    site.style.display = 'none';
+    site.style.position = 'fixed';
+    site.style.inset = '0';
+    site.style.zIndex = '999';
+    document.body.appendChild(site);
+    var mask = site;
     var panel = el('div', 'ss-panel');
-    var input = el('input', 'ss-input');
+    var input = el('input');
+    input.type = 'search';
+    input.placeholder = '搜索…';
+    input.setAttribute('aria-label', '站内搜索');
     input.type = 'search';
     input.placeholder = '输入关键词搜索本站文章…（Esc 关闭）';
-    var list = el('ul', 'ss-list');
-    var meta = el('div', 'ss-meta', '');
-    panel.appendChild(input); panel.appendChild(list); panel.appendChild(meta);
-    mask.appendChild(panel);
-    document.body.appendChild(mask);
+    var list = el('ul');
+    list.style.cssText = 'list-style:none;margin:0;padding:0';
+    var meta = el('div');
+    meta.style.cssText = 'padding:8px 16px;font-size:12px;opacity:.6';
+    document.getElementById('reimu-search-input').appendChild(input);
+    var hits = document.getElementById('reimu-hits');
+    hits.appendChild(meta); hits.appendChild(list);
 
     function render() {
       var q = input.value.trim().toLowerCase();
@@ -125,11 +139,11 @@
       });
     }
 
-    function open() { state.open = true; mask.classList.add('ss-on'); loadIndex(function () { render(); input.focus(); }); }
-    function close() { state.open = false; mask.classList.remove('ss-on'); }
+    function open() { state.open = true; site.style.display = 'block'; loadIndex(function () { render(); input.focus(); }); }
+    function close() { state.open = false; site.style.display = 'none'; }
 
     btn.addEventListener('click', function (e) { e.preventDefault(); if (state.open) { close(); } else { open(); } });
-    mask.addEventListener('click', function (e) { if (e.target === mask) close(); });
+    site.addEventListener('click', function (e) { if (e.target === site || (e.target.classList && e.target.classList.contains('popup-btn-close'))) close(); });
     input.addEventListener('input', render);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.open) close(); });
   }
