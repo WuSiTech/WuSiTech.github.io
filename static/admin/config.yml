@@ -33,10 +33,31 @@ site_url: https://wusitech.github.io/
 display_url: https://wusitech.github.io/
 logo_url: https://wusitech.github.io/avatar/avatar.webp
 
-# 图片：上传进 static/images/uploads/，正文里用 /images/uploads/xxx.webp 引用
+# 图片库：指向站点图片的家目录 static/images（不是某个 uploads 子目录）。
+#   - 后台「选择图片 → 全局资源」里能直接看到 static/images 下的全部图片和子目录
+#     （banner.webp、stm32/… 等），可以挑现成的图当封面或正文插图，不必先上传。
+#   - 新上传的图片会落在 static/images/ 根目录（想归档就自己在后台「新建文件夹」，
+#     例如 stm32），插入后路径自动写成 /images/xxx.webp，与站内现有用法一致。
+#   - 站点里其它目录的图片（例如 static/avatar/avatar.webp）不在这里显示，属正常。
 # 提示：webp 压缩可以用仓库里的 tools/img2webp.py，比后台直传的 PNG 小很多
-media_folder: static/images/uploads
-public_folder: /images/uploads
+media_folder: static/images
+public_folder: /images
+
+# 关掉后台媒体对话框里的外链图库（Pexels / Pixabay / Unsplash / Lorem Picsum）。
+# 本站硬性约束：运行时不得依赖被墙/外部资源（tools/check_site.py 会拦外部资源），
+# 这些图库要联网拉境外 API，必须全关。
+# 依据（static/admin/sveltia-cms.js 里内置的配置 schema，Sveltia 0.241.0）：
+#   StockAssetProviderName:{type:`string`,enum:[`pexels`,`picsum`,`pixabay`,`unsplash`]}
+#   MediaLibraries:{type:`object`,properties:{…,
+#     stock_assets:{anyOf:[{type:`boolean`,const:!1},{$ref:`#/definitions/StockMediaLibrary`}]}},
+#     additionalProperties:!1}
+# 运行时：IZ=({fieldConfig:e}={})=>{let t=eF({libraryName:`stock_assets`,…});
+#         if(t===!1)return{providers:[]}; …}
+# 即 stock_assets: false 会让提供者列表为空，「外链图库」分组整块不渲染。
+#「输入 URL」（外部位置）保留：它由字段的 choose_url 控制（默认 true），
+# 不影响站点默认行为，站长偶尔需要贴外链。
+media_libraries:
+  stock_assets: false
 
 collections:
   # ---------------------------------------------------------------- 文章
