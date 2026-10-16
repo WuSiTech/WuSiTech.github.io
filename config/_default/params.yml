@@ -640,7 +640,6 @@ injector:
         color: var(--highlight-foreground);
       }
       /* 隐藏顶部导航右侧的 RSS 按钮（订阅源 /index.xml 仍然保留可用） */
-      #nav-rss-link {
         display: none;
       }
     </style>
