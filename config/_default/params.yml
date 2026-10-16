@@ -683,7 +683,7 @@ injector:
     <!-- ===== 页底「BLOG状态」固定条（引用仓库里的本地徽章，不请求任何外部资源） =====
          两张徽章就是 README 顶部那两张 GitHub Actions 徽章（build-and-deploy / tools-and-config-checks）的镜像：
          SVG 自带 GitHub 算好的真实结论，本站不再查 API，也没有 /build-status.json 了。
-         位置：position:fixed + bottom:0 的固定条（样式见 static/css/build-status.css），
+         位置：页脚内的一段静态徽章（样式内联在 layouts/partials/footer.html），
          桌面通栏、内容靠左，右侧给主题右下角的「回到顶部」圆钮留位；
          窄屏收成左下角小条，同样避开圆钮；打印隐藏。
          换工作流文件名或链接时，这里与 fetch_badges.py 里的地址表要一起改。
