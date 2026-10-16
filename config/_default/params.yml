@@ -691,20 +691,8 @@ injector:
     <link rel="stylesheet" href="/css/build-status.css" />
     <!-- ===== BLOG状态：页面末尾（页脚之后）的正常排版元素，右对齐；不悬浮、不遮挡内容 ===== -->
     <style>
-      .bb-badges{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:26px auto 12px;padding:6px 12px;max-width:900px;box-sizing:border-box;flex-wrap:wrap}
-      .bb-badges__title{color:#8a8a8a;font-size:12px;white-space:nowrap}
-      .bb-badges img{height:20px;display:block}
-      .bb-badges a{display:block;line-height:0}
-      @media (max-width:600px){.bb-badges{justify-content:center;gap:4px;padding:6px 8px}}
-      @media print{.bb-badges{display:none}}
     </style>
-    <div class="build-status" role="group" aria-label="BLOG状态：本站两个 GitHub Actions 工作流的构建结论">
-      <span class="build-status__title">BLOG状态</span>
-      <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml" target="_blank" rel="noopener" title="Build and deploy：查看 Actions"><img src="/badges/build-and-deploy.svg" alt="Build and deploy 状态" /></a>
-      <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml" target="_blank" rel="noopener" title="Tools and config checks：查看 Actions"><img src="/badges/tools-and-config-checks.svg" alt="Tools and config checks 状态" /></a>
     </div>
-    <!-- 把状态栏移到 <body> 直接子级：注入点在带 transform 的容器里，fixed 会以该容器为基准而失效 -->
-    <script>(function(){function move(){var nodes=document.querySelectorAll(".build-status");for(var i=0;i<nodes.length;i++){var n=nodes[i];if(n.parentNode!==document.body){document.body.appendChild(n);}}}if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",move);}else{move();}})();</script>
   sidebar_begin: # Inject code snippet right after <aside>
   sidebar_end: # Inject code snippet right before </aside>
 
