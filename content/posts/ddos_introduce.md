@@ -1,6 +1,6 @@
 +++
 title = "DDoS 通俗绍介"
-date = "2024-07-27T19:30:00+08:00"
+date = "2026-07-27T19:30:00+08:00"
 draft = false
 description = "较为通俗的介绍的DDOS攻击"
 categories = [ "网络" ]
