@@ -719,6 +719,21 @@ injector:
       </div>
     </div>
     <script src="/js/build-status.js" defer></script>
+    <!-- ===== 右下角「BLOG状态」：直接引用 GitHub 官方徽章图片（站长指定方案） ===== -->
+    <style>
+      #build-status,#blog-status,.build-status,.blog-badges{display:none!important}
+      .gh-badges{position:fixed;right:12px;bottom:90px;z-index:998;display:flex;align-items:center;gap:6px;padding:4px 8px;background:rgba(36,41,46,.9);border-radius:6px;font-size:12px;line-height:1}
+      .gh-badges__title{color:#c9d1d9;font-size:11px;opacity:.9;white-space:nowrap}
+      .gh-badges img{height:20px;display:block}
+      .gh-badges a{display:block}
+      @media (max-width:600px){.gh-badges{bottom:84px;right:6px;transform:scale(.9);transform-origin:bottom right}}
+      @media print{.gh-badges{display:none}}
+    </style>
+    <div class="gh-badges" role="group" aria-label="BLOG状态：本站两个 GitHub Actions 工作流的构建结论">
+      <span class="gh-badges__title">BLOG状态</span>
+      <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml" target="_blank" rel="noopener" title="Build and deploy：查看 Actions"><img src="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml/badge.svg?branch=main" alt="Build and deploy 状态" /></a>
+      <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml" target="_blank" rel="noopener" title="Tools and config checks：查看 Actions"><img src="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml/badge.svg?branch=main" alt="Tools and config checks 状态" /></a>
+    </div>
   sidebar_begin: # Inject code snippet right after <aside>
   sidebar_end: # Inject code snippet right before </aside>
 
