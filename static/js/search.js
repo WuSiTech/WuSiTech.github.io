@@ -1,20 +1,24 @@
-/* 站内本地搜索（零外部请求）—— 权威版本
- * 入口：固定右下角圆形按钮，位于主题「返回顶部」圆钮正上方（right:30px / bottom:90px）
- * 图标：内嵌 SVG 放大镜（颜色写死为博丽灵梦红 #ff5252），不依赖任何图片文件与遮罩
- * 配色：亮色白底红图标；暗色黑底红图标
+/* 站内本地搜索（零外部请求）
+ * 入口：优先插进主题头部导航右侧（#sub-nav，与暗色模式按钮并排，样式沿用主题图标按钮）；
+ *       主题结构变化、找不到 #sub-nav 时，退回右下角固定圆钮（位于「返回顶部」圆钮上方）。
+ * 图标：内嵌 SVG 放大镜，颜色用 currentColor（头部继承主题链接色；圆钮里显式为博丽灵梦红）。
  */
 'use strict';
 
 (function () {
   var INDEX_URL = '/index.json';
-  var ICON = "url(data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%23ff5252%27%20stroke-width=%272.4%27%20stroke-linecap=%27round%27%3E%3Ccircle%20cx=%2710.5%27%20cy=%2710.5%27%20r=%276.6%27/%3E%3Cpath%20d=%27M15.6%2015.6L21%2021%27/%3E%3C/svg%3E)";
+  var MAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><circle cx="10.5" cy="10.5" r="6.6"/><path d="M15.6 15.6L21 21"/></svg>';
+  var CIRCLE_ICON = "url(data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%23ff5252%27%20stroke-width=%272.4%27%20stroke-linecap=%27round%27%3E%3Ccircle%20cx=%2710.5%27%20cy=%2710.5%27%20r=%276.6%27/%3E%3Cpath%20d=%27M15.6%2015.6L21%2021%27/%3E%3C/svg%3E)";
   var state = { loaded: false, items: [], open: false };
 
   var CSS = [
+    ".ss-nav-btn{background:none;border:0;margin:0;padding:20px 15px;line-height:0;cursor:pointer;color:inherit;opacity:.85}",
+    ".ss-nav-btn:hover{opacity:1;transform:scale(1.1)}",
+    ".ss-nav-btn svg{display:block}",
     ".ss-btn{position:fixed;right:30px;bottom:90px;z-index:990;width:44px;height:44px;border:none;border-radius:50%;",
-    "background:#fff;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.22);transition:transform .15s ease,background .15s ease}",
+    "background:#fff;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.22);transition:transform .15s ease}",
     ".ss-btn:hover{transform:scale(1.06)}",
-    ".ss-btn::before{content:'';display:block;width:24px;height:24px;margin:6px auto 0;background:" + ICON + " center/contain no-repeat}",
+    ".ss-btn::before{content:'';display:block;width:24px;height:24px;margin:6px auto 0;background:" + CIRCLE_ICON + " center/contain no-repeat}",
     "html[data-theme=dark] .ss-btn{background:#000}",
     ".ss-mask{position:fixed;inset:0;z-index:995;background:rgba(0,0,0,.42);display:none}",
     ".ss-mask.ss-on{display:block}",
@@ -31,39 +35,23 @@
     ".ss-empty{padding:18px;font-size:14px;opacity:.6}",
     "html[data-theme=dark] .ss-panel{background:#2b2b2b;color:#d8d8d8}",
     "html[data-theme=dark] .ss-input{border-bottom-color:rgba(255,255,255,.14)}",
-    "@media print{.ss-btn,.ss-mask,.ss-panel{display:none!important}}"
+    "@media print{.ss-btn,.ss-nav-btn,.ss-mask,.ss-panel{display:none!important}}"
   ].join('');
 
-  function el(tag, cls, text) {
-    var n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  }
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
 
   function loadIndex(cb) {
     if (state.loaded) return cb();
     fetch(INDEX_URL, { cache: 'no-cache' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (data) {
-        state.items = Array.isArray(data) ? data.filter(function (x) { return x && x.url && x.title; }) : [];
-        state.loaded = true; cb();
-      })
-      .catch(function (e) {
-        state.items = []; state.loaded = true;
-        if (window.console) console.warn('[search] index load failed: ' + e.message);
-        cb();
-      });
+      .then(function (d) { state.items = Array.isArray(d) ? d.filter(function (x) { return x && x.url && x.title; }) : []; state.loaded = true; cb(); })
+      .catch(function (e) { state.items = []; state.loaded = true; if (window.console) console.warn('[search] index load failed: ' + e.message); cb(); });
   }
 
   function score(item, terms) {
-    var t = (item.title || '').toLowerCase();
-    var s = (item.summary || '').toLowerCase();
-    var g = (item.tags || []).join(' ').toLowerCase();
-    var total = 0;
+    var t = (item.title || '').toLowerCase(), s = (item.summary || '').toLowerCase(), g = (item.tags || []).join(' ').toLowerCase(), total = 0;
     for (var i = 0; i < terms.length; i++) {
-      var w = terms[i];
-      if (!w) continue;
+      var w = terms[i]; if (!w) continue;
       var hit = 0;
       if (t.indexOf(w) >= 0) hit += 60;
       if (g.indexOf(w) >= 0) hit += 25;
@@ -77,11 +65,18 @@
   function build() {
     var style = el('style'); style.textContent = CSS; document.head.appendChild(style);
 
-    var btn = el('button', 'ss-btn', '');
+    var nav = document.getElementById('sub-nav');
+    var btn;
+    if (nav) {
+      btn = el('button', 'ss-nav-btn');
+      btn.innerHTML = MAG;
+    } else {
+      btn = el('button', 'ss-btn', '');
+    }
     btn.type = 'button';
     btn.title = '站内搜索';
     btn.setAttribute('aria-label', '站内搜索');
-    document.body.appendChild(btn);
+    (nav || document.body).appendChild(btn);
 
     var mask = el('div', 'ss-mask');
     var panel = el('div', 'ss-panel');
@@ -100,10 +95,7 @@
       list.textContent = '';
       if (!terms.length) { meta.textContent = '共 ' + state.items.length + ' 篇文章'; return; }
       var scored = [];
-      for (var i = 0; i < state.items.length; i++) {
-        var sc = score(state.items[i], terms);
-        if (sc > 0) scored.push({ s: sc, it: state.items[i] });
-      }
+      for (var i = 0; i < state.items.length; i++) { var sc = score(state.items[i], terms); if (sc > 0) scored.push({ s: sc, it: state.items[i] }); }
       scored.sort(function (a, b) { return b.s - a.s; });
       var top = scored.slice(0, 30);
       meta.textContent = top.length ? ('命中 ' + scored.length + ' 篇，显示前 ' + top.length + ' 篇') : '';
