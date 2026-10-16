@@ -11,7 +11,7 @@ banner = "images/banner.webp"
 
 参考：[https://www.bilibili.com/video/BV1th411z7sn](https://www.bilibili.com/video/BV1th411z7sn)
 
-# 中断是什么？有什么用？
+## 中断是什么？有什么用？
 
 > 中断的主要作用是让CPU在运行程序时能及时响应外部或内部的突发事件，从而提高系统效率、保证系统可靠性并满足实时处理需求。 中断使CPU暂停当前任务，转去执行中断服务程序，处理完后再返回原任务继续执行。
 
@@ -31,7 +31,7 @@ banner = "images/banner.webp"
 
 我认为，中断可以代替一部分轮询，提高运行的效率。~~（这不就是特殊的回调吗ᗜˬᗜ）~~
 
-# STM32的中断链路是什么？
+## STM32的中断链路是什么？
 
 ![中断链路](/images/interrupt-path.jpg)
 
@@ -50,9 +50,9 @@ NVIC是一个外设，用于管理和传递中断，还可以设置优先级（�
 
 在STM32中实现中断，本质上就是打通这三个“关卡”。
 
-# 如何实现？（标准库）
+## 如何实现？（标准库）
 
-##### 先理清一下步骤。
+### 先理清一下步骤。
 
 时钟使能->设置GPIO引脚->设置SYSCFG->设置EXTI->设置NVIC->写中断函数（这一步随便，我倾向于最后写）
 
@@ -134,7 +134,7 @@ int main(void)
 
 下面有几个点要详细展开：
 
-##### 一.SYSCFG的配置
+### 一.SYSCFG的配置
 
 ```c
 SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOx, EXTI_PinSource);
@@ -227,7 +227,7 @@ SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, EXTI_PinSource1);
 
 实际结果：`EXTICR` 对应的 4 个位先被写成 `0000`，紧接着被覆盖写成 `0001`。最终 EXTI Line 1 只连接到了 PB1，PA1 彻底断开连接**。**
 
-##### 二.EXTI的配置（详见官方文档，实在懒得写了QAQ）
+### 二.EXTI的配置（详见官方文档，实在懒得写了QAQ）
 
 ```c
     EXTI_InitTypeDef EXTI_Struct;
@@ -253,7 +253,7 @@ typedef enum
 }EXTITrigger_TypeDef;
 ```
 
-##### 三.NVIC的配置：
+### 三.NVIC的配置：
 
 ```c
     NVIC_InitTypeDef NVIC_Struct;
@@ -309,11 +309,13 @@ list, please refer to stm32f4xx.h file) */
 > 情景 4：B 正在运行，A 触发了
 > B 的抢占(2) 低于 A 的抢占(1)，A 立刻打断 B（中断嵌套），A 执行完后，继续执行 B。
 
-##### 四.中断函数
+### 四.中断函数
 
 这个函数的类型必须是void，且名称要严格遵循向量表的要求。（命名void EXTIx_IRQHandler(void)和EXTIx的分组命名方式一样（EXTI0-4,EXTI9_5,EXTI15_10,还有PVD（特殊的外设中断，不是“EXTI_PVD”,就是PVD）等等），不过后面加了一个_IRQHandler。）~~（也是肥肠通透啊）~~
 
-最后就完成了。在操作中发现，如果KEIL的编译器使用O3优化，必须要加一行
+### 五.其他问题
+
+在操作中发现，如果KEIL的编译器使用O3优化，必须要加一行
 
 ```c
 if (EXTI_GetITStatus(EXTI_Line0) != RESET)
