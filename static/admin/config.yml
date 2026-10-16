@@ -184,21 +184,6 @@ collections:
           - { label: 正文, name: body, widget: markdown }
 
 
-      - name: download
-        label: 下载页
-        file: content/download.md
-        format: yaml-frontmatter
-        fields:
-          - { label: 标题, name: title, widget: string }
-          - { label: 简介, name: description, widget: string, required: false }
-          - label: 日期
-            name: date
-            widget: datetime
-            date_format: "YYYY-MM-DD"
-            time_format: "HH:mm:ss"
-            format: "YYYY-MM-DDTHH:mm:ssZ"
-            input_timezone: Asia/Shanghai
-          - { label: 正文, name: body, widget: markdown }
   # ---------------------------------------------------------------- 站点设置
   # 只管理 config/_default/params.toml 这一个文件：个人信息 / 菜单 / 首页分类卡片。
   #
