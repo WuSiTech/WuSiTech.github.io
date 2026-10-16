@@ -703,21 +703,6 @@ injector:
       @media (max-width:600px){.blog-badges{bottom:6px;right:6px;transform:scale(.9);transform-origin:bottom right}}
       @media print{.blog-badges{display:none}}
     </style>
-    <div class="build-status" id="blog-status" role="group" aria-label="BLOG状态：本站两个 GitHub Actions 工作流的构建结论">
-      <span class="build-status__title">BLOG状态</span>
-      <a class="build-status__badge"
-         href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml"
-         target="_blank" rel="noopener"
-         title="Build and deploy：在 GitHub Actions 查看构建与部署结果">
-        <img src="/badges/build-and-deploy.svg" alt="Build and deploy 状态" width="169" height="20" />
-      </a>
-      <a class="build-status__badge"
-         href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml"
-         target="_blank" rel="noopener"
-         title="Tools and config checks：在 GitHub Actions 查看工具与配置自检结果">
-        <img src="/badges/tools-and-config-checks.svg" alt="Tools and config checks 状态" width="209" height="20" />
-      </a>
-    </div>
   sidebar_begin: # Inject code snippet right after <aside>
   sidebar_end: # Inject code snippet right before </aside>
 
