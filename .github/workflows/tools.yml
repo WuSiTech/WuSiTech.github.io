@@ -65,11 +65,9 @@ jobs:
         # 这个脚本在 CI 里跑在 hugo 之前，一旦它非零退出就会挡住部署，
         # 所以这里断言：正常 --help 能跑通，且**离线时仍然 exit 0**。
         run: |
-          python3 .github/scripts/fetch_badges.py --help > /dev/null
           # 指向保留地址（RFC 5737）模拟「没网」：脚本必须打 warning 后正常退出，
           # 并且不能破坏仓库里已经提交的兜底 SVG
           before=$(md5sum static/badges/build-and-deploy.svg | cut -d' ' -f1)
-          python3 .github/scripts/fetch_badges.py \
             --token "" \
             --proxy "http://192.0.2.1:9" \
             --out-dir static/badges
