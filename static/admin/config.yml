@@ -84,26 +84,6 @@ media_libraries:
       #   不写 width/height：不限制尺寸、绝不放大（要限制再按上面 schema 加正整数）。
       # 兜底：绕过后台（直接在 GitHub 上传、或用别的工具提交）的图片由
       #   .github/workflows/webp.yml + tools/auto_webp.py 在 push 后自动转换。
-      transformations:
-        raster_image:
-          format: webp
-          quality: 80
-        jpeg:
-          format: webp
-          quality: 80
-        png:
-          format: webp
-          quality: 80
-        heic:
-          format: webp
-          quality: 80
-        avif:
-          format: webp
-          quality: 80
-        gif:
-          format: webp
-          quality: 80
-        webp: false # 已经是 webp 的别再转一遍（体积通常反而更大）
   stock_assets: false
 
 collections:
