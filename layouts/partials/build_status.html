@@ -1,0 +1,126 @@
+{{- /* ------------------------------------------------------------------
+  右下角固定的「构建状态」挂件（模仿 GitHub 徽章的深色胶囊）。
+
+  它是怎么被用上的
+  ----------------
+  config/_default/params.yml 的 injector.body_end 里写的是**纯文本**，
+  Hugo 不会把那段当模板执行（写 `{{ partial ... }}` 只会原样出现在 HTML 里），
+  所以那边放的是一段手写的静态外壳（含两个胶囊的文案与 Actions 链接），
+  这里负责把构建期算出来的状态（配色变体 / 细节 / 采集时间）序列化成
+  内联 JSON（<script type="application/json" id="build-status-data">），
+  由 static/js/build-status.js 填进外壳。
+
+  两侧的对应关系（改外壳时看这里）：
+    外壳 data-item-key="build_and_deploy" / "tools_and_config_checks" / "overall"
+    ↔ JSON 里的 states[].key；外壳里 <span class="build-status__value-text">
+    的占位文案会被 states[].label 覆盖，data-variant 会被 states[].variant 覆盖。
+  改状态含义（颜色/文案）只需要改这个文件；改工作流名字或链接要同时改
+  params.yml 里的外壳（见 docs/构建状态挂件.md 的「怎么改」）。
+
+  状态来源：仓库里的 data/build_status.yml
+    - 本地构建 / 没跑 CI：读仓库提交的默认值，两个胶囊显示灰色「未知」；
+    - CI 构建：.github/workflows/hugo.yaml 在 hugo 之前用它自己的脚本覆盖写入
+      这个文件（不提交），所以线上显示的是当次运行 + 另一个工作流的真实结论。
+
+  降级：数据文件缺失、字段为空、时间解析失败都会退成「未知」/空时间，
+  不报错、不阻塞构建；运行时也不做任何网络请求。
+------------------------------------------------------------------ */ -}}
+
+{{- define "_partials/build_status_item.html" -}}
+  {{- $name := .name | default "" -}}
+  {{- $status := .status | default "unknown" | lower -}}
+  {{- $checked := .checked | default "" -}}
+
+  {{- $variant := "unknown" -}}
+  {{- $label := "未知" -}}
+  {{- $desc := "状态未知" -}}
+  {{- if eq $status "success" -}}
+    {{- $variant = "success" -}}{{- $label = "通过" -}}{{- $desc = "通过" -}}
+  {{- else if eq $status "failure" -}}
+    {{- $variant = "failure" -}}{{- $label = "失败" -}}{{- $desc = "失败" -}}
+  {{- else if eq $status "cancelled" -}}
+    {{- $variant = "failure" -}}{{- $label = "已取消" -}}{{- $desc = "已取消" -}}
+  {{- else if eq $status "timed_out" -}}
+    {{- $variant = "failure" -}}{{- $label = "超时" -}}{{- $desc = "运行超时" -}}
+  {{- else if eq $status "action_required" -}}
+    {{- $variant = "failure" -}}{{- $label = "需处理" -}}{{- $desc = "需要人工处理" -}}
+  {{- else if eq $status "running" -}}
+    {{- $variant = "running" -}}{{- $label = "进行中" -}}{{- $desc = "正在运行" -}}
+  {{- else if eq $status "in_progress" -}}
+    {{- $variant = "running" -}}{{- $label = "进行中" -}}{{- $desc = "正在运行" -}}
+  {{- else if eq $status "queued" -}}
+    {{- $variant = "running" -}}{{- $label = "排队中" -}}{{- $desc = "正在排队" -}}
+  {{- else if eq $status "skipped" -}}
+    {{- $variant = "unknown" -}}{{- $label = "已跳过" -}}{{- $desc = "已跳过" -}}
+  {{- else if eq $status "unknown" -}}
+    {{- $variant = "unknown" -}}{{- $label = "未知" -}}{{- $desc = "拿不到状态（未部署 / API 不可用 / 无权限）" -}}
+  {{- else -}}
+    {{- $variant = "unknown" -}}{{- $label = $status -}}{{- $desc = $status -}}
+  {{- end -}}
+
+  {{- $title := "" -}}
+  {{- if $checked -}}
+    {{- $title = printf "%s：%s，%s（点击查看 Actions）" $name $desc $checked -}}
+  {{- else -}}
+    {{- $title = printf "%s：%s（点击查看 Actions）" $name $desc -}}
+  {{- end -}}
+
+  {{- return (dict "variant" $variant "label" $label "desc" $desc "title" $title "name" $name) -}}
+{{- end -}}
+
+{{- $data := index hugo.Data "build_status" -}}
+
+{{- /* 采集时间：data 里是带时区的 ISO 8601 字符串，转成站点时区显示 */ -}}
+{{- $rawCheckedAt := "" -}}
+{{- with $data -}}{{- with .checked_at -}}{{- $rawCheckedAt = printf "%v" . -}}{{- end -}}{{- end -}}
+{{- $checkedAt := "" -}}
+{{- if $rawCheckedAt -}}
+  {{- with time.AsTime $rawCheckedAt -}}
+    {{- $checkedAt = time.Format ":date_long" . -}}
+  {{- end -}}
+  {{- if not $checkedAt -}}{{- $checkedAt = $rawCheckedAt -}}{{- end -}}
+{{- end -}}
+
+{{- $overall := "unknown" -}}
+{{- with $data -}}{{- with .status -}}{{- $overall = printf "%v" . | lower -}}{{- end -}}{{- end -}}
+
+{{- /* 两个胶囊：Build and deploy（本次构建）+ Tools and config checks（另一个工作流） */ -}}
+{{- $defaultNames := dict
+      "build_and_deploy" "Build and deploy"
+      "tools_and_config_checks" "Tools and config checks" -}}
+
+{{- $states := slice -}}
+{{- range $key := (slice "build_and_deploy" "tools_and_config_checks") -}}
+  {{- $item := dict -}}
+  {{- with $data -}}{{- with index .workflows $key -}}{{- $item = . -}}{{- end -}}{{- end -}}
+  {{- $name := index $defaultNames $key -}}
+  {{- with $item -}}{{- with .name -}}{{- $name = printf "%v" . -}}{{- end -}}{{- end -}}
+  {{- $status := "unknown" -}}
+  {{- with $item -}}{{- with .status -}}{{- $status = printf "%v" . | lower -}}{{- end -}}{{- end -}}
+  {{- $info := partial "_partials/build_status_item.html" (dict
+        "name" $name "status" $status "checked" $checkedAt) -}}
+  {{- $states = $states | append (dict
+        "key" $key "name" $name "label" $info.label "variant" $info.variant "title" $info.title) -}}
+{{- end -}}
+
+{{- $overallInfo := partial "_partials/build_status_item.html" (dict
+      "name" "整体状态" "status" $overall "checked" $checkedAt) -}}
+{{- $overallTitle := "" -}}
+{{- if $checkedAt -}}
+  {{- $overallTitle = printf "整体状态：%s，%s。点开胶囊可查看对应的 Actions 页面。" $overallInfo.desc $checkedAt -}}
+{{- else -}}
+  {{- $overallTitle = "整体状态：未知（本地产物没有 CI 状态，线上部署后才会显示真实结论）" -}}
+{{- end -}}
+{{- $states = $states | append (dict
+      "key" "overall" "name" $overallInfo.name "label" $overallInfo.label
+      "variant" $overallInfo.variant "title" $overallTitle) -}}
+
+{{- $cfg := dict
+      "checkedAt" $checkedAt
+      "overall" $overallInfo.variant
+      "overallLabel" $overallInfo.label
+      "overallTitle" $overallTitle
+      "states" $states -}}
+{{- /* 把 JSON 里的 < 转义掉，避免数据异常时提前闭合 <script> */ -}}
+{{- $json := $cfg | jsonify | replaceRE "<" "\\u003c" -}}
+<script type="application/json" id="build-status-data">{{ $json }}</script>

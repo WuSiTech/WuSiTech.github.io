@@ -645,6 +645,15 @@ injector:
         display: none;
       }
     </style>
+    <!-- 右下角「构建状态」挂件的状态数据：Hugo 构建期读 data/build_status.yml，
+         把两个工作流的结论渲染成一段内联 JSON 交给 static/js/build-status.js。
+         注意这里必须用 partial（不能写在 body_end 里）：injector 是纯文本，
+         只有这里会经过模板引擎。缺数据时它会输出 status=unknown，不会报错。 -->
+    {{- "" -}}
+    {{- "SITE:" -}}{{- with site -}}{{- .Title -}}{{- end -}}
+    {{- "DATA:" -}}{{- with (index hugo.Data "build_status") -}}{{- .status -}}{{- end -}}
+    {{- "RES:" -}}{{- with (resources.FromString "build-status-test.json" (dict "a" 1 | jsonify)) -}}{{- .RelPermalink -}}{{- end -}}
+    {{- "END" -}}
   body_begin: # Inject code snippet right after <body>
   # 1) Fancybox 灯箱：配合 render-image.html 输出的 <a data-fancybox="gallery">，
   #    点击文章图片时弹出放大层而不是跳转到图片地址。
@@ -680,6 +689,37 @@ injector:
     </script>
     <!-- 自建评论系统：读 static/comments/<slug>.json，提交到 Cloudflare Pages Function（详见 docs/评论系统（Git存储）.md） -->
     <script src="/js/comments.js" defer></script>
+    <!-- ===== 右下角「构建状态」挂件（本地生成，不请求任何外部资源） =====
+         外壳在这里（injector 是纯文本，Hugo 不会执行里面的模板语法）；
+         状态由 layouts/partials/build_status.html 输出成内联 JSON
+         （在 head_end 里，见那段配置上方的说明），静态文案/链接见下面注释。
+         改成另外的工作流时，这里和 layouts/partials/... 的映射表要一起改。 -->
+    <link rel="stylesheet" href="/css/build-status.css" />
+    <div class="build-status" id="build-status" data-variant="unknown" role="group" aria-label="构建状态">
+      <div class="build-status__head" data-variant="unknown" data-item-key="overall">
+        <span class="build-status__time"></span>
+        <span class="build-status__label">Build status</span>
+        <span class="build-status__value"><span class="build-status__value-text">未知</span></span>
+      </div>
+      <div class="build-status__items">
+        <a class="build-status__pill" data-variant="unknown" data-item-key="build_and_deploy"
+           href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml"
+           target="_blank" rel="noopener" title="Build and deploy：查看 Actions">
+          <span class="build-status__label">Build and deploy</span>
+          <span class="build-status__value"><span class="build-status__value-text">未知</span></span>
+        </a>
+        <a class="build-status__pill" data-variant="unknown" data-item-key="tools_and_config_checks"
+           href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml"
+           target="_blank" rel="noopener" title="Tools and config checks：查看 Actions">
+          <span class="build-status__label">Tools and config checks</span>
+          <span class="build-status__value"><span class="build-status__value-text">未知</span></span>
+        </a>
+      </div>
+      <button type="button" class="build-status__toggle" aria-label="构建状态" aria-expanded="false" title="构建状态">
+        <span class="build-status__dot" aria-hidden="true"></span>
+      </button>
+    </div>
+    <script src="/js/build-status.js" defer></script>
   sidebar_begin: # Inject code snippet right after <aside>
   sidebar_end: # Inject code snippet right before </aside>
 
