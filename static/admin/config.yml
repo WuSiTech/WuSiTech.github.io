@@ -349,6 +349,29 @@ collections:
   #   - 删除：直接移除这条
   #   - 博主回复：新增一条评论，昵称写你自己，「博主身份」打开
   # 注意：字段必须与 Function 写入的完全一致，否则保存时会把字段丢掉。
+  # ---------------------------------------------------------------- 友链
+  # data/friends.yml 的根就是一个数组（YAML 列表），所以这里只声明【一个】root 字段：
+  #   - root: true 让后台把文件根直接当成列表编辑，不会额外套一层 friends:
+  #   - 该机制要求该集合的 fields 里**有且只有一个**字段（多一个就会失效）
+  - name: friends
+    label: 友链
+    files:
+      - name: friends
+        label: 友链列表
+        file: data/friends.yml
+        format: yaml
+        fields:
+          - label: 友链
+            name: friends
+            widget: list
+            root: true
+            summary: "{{fields.name}} — {{fields.url}}"
+            fields:
+              - { label: 站点名, name: name, widget: string }
+              - { label: 链接, name: url, widget: string }
+              - { label: 简介, name: desc, widget: string, required: false }
+              - { label: 头像, name: image, widget: string, required: false, hint: 图片 URL 或 /images/xxx.webp }
+
   - name: comments
     label: 评论
     label_singular: 评论文件
