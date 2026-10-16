@@ -3,13 +3,13 @@
  *
  * 原理：
  *   1. 构建时由 layouts/index.json 生成 /index.json（标题、链接、摘要、标签、日期）；
- *   2. 本脚本把搜索入口插进主题 header 的右上角（#sub-nav，和主题自己用 JS 追加的
+
  *      暗色模式按钮并排），点击打开覆盖层；
  *   3. 输入关键词后，在本地索引里做加权匹配（标题 > 标签 > 摘要），实时显示结果；
  *   4. 结果点击跳转文章；Esc 或点遮罩关闭。
  *
  * 不请求任何外部资源（索引是同域静态文件），符合本站「运行时不请求外部资源」约束。
- * 注意：脚本自己建 DOM。入口优先插 #sub-nav（主题改版删掉它时才退回右下角圆钮），
+
  *      面板配色用主题 CSS 变量，深色模式自动跟随。
  * -------------------------------------------------------------------------- */
 'use strict';
@@ -19,13 +19,13 @@
   var state = { loaded: false, items: [], open: false };
 
   var CSS = [
-    // 入口：插进主题 header 的 #sub-nav（右上角，与主题的暗色模式按钮并排）
+
     '.ss-nav-btn{background:none;border:0;margin:0;padding:20px 15px;line-height:0;cursor:pointer;',
     'color:var(--red-0,#e06c75);opacity:.8;transition:transform .2s,opacity .2s;display:inline-block;vertical-align:middle}',
     '.ss-nav-btn:hover{opacity:1;transform:scale(1.1)}',
     'html[data-theme="dark"] .ss-nav-btn{color:var(--red-2,#e06c75)}',
     '.ss-nav-btn svg{width:15px;height:15px;display:block;fill:currentColor}',
-    // 兜底：主题若没有 #sub-nav，才用左下角圆钮（右下角会与主题「回到顶部」重叠）
+
     '.ss-btn{position:fixed;right:30px;bottom:90px;z-index:990;width:44px;height:44px;border:none;border-radius:50%;background:#fff;',
     'cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.22);',
     'box-shadow:0 2px 10px rgba(0,0,0,.22);transition:transform .15s ease}',
@@ -100,10 +100,10 @@
   function build() {
     var style = el('style'); style.textContent = CSS; document.head.appendChild(style);
 
-    // 入口优先放进主题 header 的 #sub-nav（右上角，与主题的暗色模式按钮并排）；
-    // 主题结构变了（没有 #sub-nav）才退回右下角固定圆钮，功能不受影响。
-    var nav = document.getElementById('sub-nav');
-    var btn = nav ? el('button', 'ss-nav-btn') : el('button', 'ss-btn', '🔍');
+
+
+
+    var btn = nav ? el('button', 'ss-nav-btn') : el('button', 'ss-btn', '');
     if (nav) {
       btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
         '<path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/></svg>';
