@@ -110,7 +110,8 @@
   align-items: center;
   gap: 5px;
   padding: 3px 8px;
-  background-color: rgba(36, 41, 47, 0.8);
+  /* 不透明度足够高：挂件浮在正文/侧栏上面，太透会把下面的红字透出来 */
+  background-color: rgba(36, 41, 47, 0.94);
   color: #fff;
   font-weight: 600;
   cursor: default;
@@ -176,7 +177,7 @@
 }
 
 [data-theme="dark"] .build-status__head {
-  background-color: rgba(87, 96, 106, 0.88);
+  background-color: rgba(87, 96, 106, 0.95);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
@@ -214,7 +215,7 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background-color: rgba(36, 41, 47, 0.6);
+    background-color: rgba(36, 41, 47, 0.72);
     box-shadow: 0 1px 4px rgba(27, 31, 35, 0.3);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;

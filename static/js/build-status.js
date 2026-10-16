@@ -58,14 +58,12 @@
   }
 
   function statusUrl(root) {
-    // 允许模板/手工指定（例如站点以后挪到子目录时），否则按当前页面路径推算，
-    // 这样 GitHub Pages（根路径）和 Cloudflare Pages（预览域名）都能取到。
+    // data-status-url 可以显式指定（外壳里默认没写）；否则用站点根路径的绝对地址。
+    // ⚠️ 不要用「当前页面路径去掉最后一段」来推算：产物是 /posts/xxx/index.html，
+    // 直接打开本地文件或某些静态服务器时地址栏可能没有结尾斜杠（/posts/xxx），
+    // 那样就会拼成 /posts/build-status.json 而取不到数据。
     var explicit = root.getAttribute("data-status-url");
-    if (explicit) {
-      return explicit;
-    }
-    var path = window.location.pathname.replace(/[^/]*$/, "");
-    return path + "build-status.json";
+    return explicit || "/build-status.json";
   }
 
   function loadConfig(root) {
