@@ -1,9 +1,4 @@
-# 友情链接数据，供 content/friend.md 中的 {{< friendsLink >}} 短代码读取
-# 添加好友时按下面的格式追加即可（image 建议使用图片 URL 或 static/ 下的路径）
-#
-# - name: 示例站
-#   url: https://example.com
-#   desc: 一个示例站点
-#   image: https://example.com/avatar.png
-
-[]
+- name: D-SKETON
+  url: d-sketon.github.io
+  desc: d-sketon's blog（总之是软工大佬）
+  image: https://d-sketon.github.io/avatar/avatar.webp
