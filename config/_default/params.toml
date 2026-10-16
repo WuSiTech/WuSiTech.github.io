@@ -10,11 +10,6 @@ url = "/"
 icon = ""
 
 [[menu]]
-name = "archives"
-url = "archives"
-icon = ""
-
-[[menu]]
 name = "categories"
 url = "categories"
 icon = ""
