@@ -7,6 +7,7 @@
 
 (function () {
   var INDEX_URL = '/index.json';
+  var MAG_INNER = '<circle cx="10.5" cy="10.5" r="6.6"/><path d="M15.6 15.6L21 21"/>';
   var MAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><circle cx="10.5" cy="10.5" r="6.6"/><path d="M15.6 15.6L21 21"/></svg>';
   var CIRCLE_ICON = "url(data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%23ff5252%27%20stroke-width=%272.4%27%20stroke-linecap=%27round%27%3E%3Ccircle%20cx=%2710.5%27%20cy=%2710.5%27%20r=%276.6%27/%3E%3Cpath%20d=%27M15.6%2015.6L21%2021%27/%3E%3C/svg%3E)";
   var state = { loaded: false, items: [], open: false };
@@ -68,10 +69,23 @@
     var nav = document.getElementById('sub-nav');
     var btn;
     if (nav) {
+      // 深拷贝旁边那个按钮（暗色模式切换），保证标签、属性、内部结构与样式完全一致；
+      // 只把里面的图标换成放大镜，并去掉 id/href 避免冲突与跳转。
       var proto = nav.querySelector('button') || nav.querySelector('a');
-      btn = el('button', proto ? proto.className : 'ss-nav-btn');
-      if (proto && proto.getAttribute('style')) btn.setAttribute('style', proto.getAttribute('style'));
-      btn.innerHTML = MAG;
+      if (proto) {
+        btn = proto.cloneNode(true);
+        btn.removeAttribute('id');
+        btn.removeAttribute('href');
+        btn.removeAttribute('aria-label');
+        var inner = btn.querySelector('svg, i, img');
+        if (inner) {
+          if (inner.tagName.toLowerCase() === 'svg') { inner.innerHTML = MAG_INNER; }
+          else { inner.className = inner.className; btn.innerHTML = MAG; }
+        } else { btn.innerHTML = MAG; }
+        if (btn.tagName.toLowerCase() === 'a') btn.setAttribute('href', 'javascript:void(0)');
+      } else {
+        btn = el('button', 'ss-nav-btn'); btn.innerHTML = MAG;
+      }
     } else {
       btn = el('button', 'ss-btn', '');
     }
@@ -114,7 +128,7 @@
     function open() { state.open = true; mask.classList.add('ss-on'); loadIndex(function () { render(); input.focus(); }); }
     function close() { state.open = false; mask.classList.remove('ss-on'); }
 
-    btn.addEventListener('click', function () { if (state.open) { close(); } else { open(); } });
+    btn.addEventListener('click', function (e) { e.preventDefault(); if (state.open) { close(); } else { open(); } });
     mask.addEventListener('click', function (e) { if (e.target === mask) close(); });
     input.addEventListener('input', render);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.open) close(); });
