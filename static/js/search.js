@@ -111,7 +111,7 @@
     btn.type = 'button';
     btn.title = '搜索（本站内）';
     btn.setAttribute('aria-label', '站内搜索');
-    (nav || document.body).appendChild(btn);
+    document.body.appendChild(btn);
 
     var mask = el('div', 'ss-mask');
     var panel = el('div', 'ss-panel');
