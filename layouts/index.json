@@ -1,2 +1,18 @@
+{{- /* 站内本地搜索索引：/index.json（见 docs/站内搜索（本地索引）.md）
+       范围：mainSections（content/posts）下的所有文章；想连固定页一起搜，把下面的 where 去掉。
+       排除某一篇：在它的 front matter 里写 no_search: true（或 TOML 的 no_search = true）。
+       字段：title / url / summary / tags / date，由 static/js/search.js 在浏览器里本地过滤。 */ -}}
 {{- $pages := where .Site.RegularPages "Type" "in" .Site.Params.mainSections -}}
-[{{- range $i, $p := $pages -}}{{- if $i }},{{ end }}{{ dict "title" $p.Title "url" $p.RelPermalink "summary" ($p.Summary | plainify | truncate 160) "tags" ($p.Params.tags | default (slice)) "date" ($p.Date.Format "2006-01-02") | jsonify }}{{- end -}}]
+{{- $items := slice -}}
+{{- range $pages -}}
+  {{- if not .Params.no_search -}}
+    {{- $items = $items | append (dict
+      "title" .Title
+      "url" .RelPermalink
+      "summary" (.Summary | plainify | truncate 160)
+      "tags" (.Params.tags | default (slice))
+      "date" (.Date.Format "2006-01-02")
+    ) -}}
+  {{- end -}}
+{{- end -}}
+{{- $items | jsonify -}}
