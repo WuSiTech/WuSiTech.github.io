@@ -35,12 +35,11 @@ timeFormat: "2006-01-02 15:04:05"
 # subtitle: "DA☆ZE"
 subtitle:
   typing:
-    enable: false
+    enable: true                # 首页副标题：打字 → 停顿 → 退格 循环（主题自带 Typed.js）
     strings:
-      # - Sentence 1
-      # - Sentence 2
-      # - Sentence 3
-      # - Sentence 4
+      - "BAKA DA☆ZE!"
+      - "DAZE~"
+      - "思集成之大道，考计科之行踪"
     typeSpeed: 100              # 打字速度（毫秒/字符）
     backSpeed: 50               # 删除速度（毫秒/字符）
     backDelay: 2000             # 打完一句话后，等待时间
@@ -710,16 +709,51 @@ injector:
           color: #ddd !important;
         }
         html[data-theme="dark"] #footer a, html[data-theme="dark"] .footer a, html[data-theme="dark"] footer a { color: #ff8b8b !important; }
+
+        /* ===== 页脚整块固定在视口底部常驻（用户要求"底部固定"） =====
+           宽度用 --wusi-page-width：固定元素默认相对视口，含不含滚动条会和内容区差几像素；
+           wusi-bg.js 用 documentElement.clientWidth 写这个变量，保证和内容区一样宽。
+           底部一层「到透明」的渐变，滚动上去的内容在面板缝隙里不会穿帮。 */
+        #wusi-footer-fixed {
+          position: fixed;
+          left: 0;
+          bottom: 0;
+          width: var(--wusi-page-width, 100%);
+          z-index: 150;
+          padding: 0 0 8px;
+          box-sizing: border-box;
+          background: linear-gradient(to top, var(--color-background) 55%, rgba(238,238,238,0));
+          pointer-events: none; /* 只有面板本身接收鼠标，缝隙和渐变区不挡内容 */
+        }
+        #wusi-footer-fixed > * { pointer-events: auto; }
+        /* 固定栏里的页脚紧凑一点（虚线间距、内边距收小），别占太多视口高度 */
+        #wusi-footer-fixed #footer {
+          margin: 0 auto 6px;
+          padding: 8px 16px;
+        }
+        #wusi-footer-fixed .footer-line {
+          margin: 4px 0 10px;
+        }
+        html[data-theme="dark"] #wusi-footer-fixed {
+          background: linear-gradient(to top, #21252b 55%, rgba(33,37,43,0));
+        }
+        /* 固定后页脚脱离文档流，用等高占位把页面最后的内容顶上来（高度由 JS 量出来写入） */
+        #wusi-footer-spacer { height: var(--wusi-footer-h, 180px); }
+        /* 回到顶部按钮原来贴右下角，现在会被固定页脚挡住，往上让出页脚高度 */
+        .sidebar-top { bottom: calc(var(--wusi-footer-h, 0px) + 14px) !important; }
       </style>
       <style id="wusi-header-readable">
-        /* 头部标题/副标题：和页底一样用半透明面板 + 主题色文字，保证压在任何背景上都看得清 */
+        /* 头部标题/副标题不再加半透明面板（用户要求"不用框"）：
+           文字颜色按背景图明暗自动切换 —— wusi-bg.js 用 canvas 采样标题区域的平均亮度，
+           给 <html> 加 wusi-hero-dark（背景偏黑 → 白字）或 wusi-hero-light（背景偏亮 → 黑字）。
+           采样完成前先按白字 + 深色阴影显示。 */
         #header-title {
-          background: rgba(255,255,255,.72) !important;
-          backdrop-filter: blur(3px);
-          border-radius: 12px;
+          background: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          border-radius: 0 !important;
           /* 真正居中：主题是 position:absolute + width:95%，只写 margin:0 auto 对绝对定位
-             元素不生效（会贴左边、中心偏左 30~70px）。用 left/top 50% + translate 拉回来，
-             横向纵向都对齐视口中心；fade-in-blur 动画只动 opacity/filter，不冲突。 */
+             元素不生效；用 left/top 50% + translate 拉回来（fade-in-blur 只动 opacity/filter）。 */
           left: 50% !important;
           top: 50% !important;
           right: auto !important;
@@ -727,29 +761,37 @@ injector:
              padding），所以 100% - 32px；宽屏时 #content 上限 1350px，减两侧 16px = 1318px。
              ⚠️ 改 layout.max_width 时要同步改这个 1318。 */
           width: calc(100% - 32px) !important;
+          max-width: 1318px;
           margin: 0 !important;
-          padding: 14px 22px !important;
+          padding: 0 !important;
           transform: translate(-50%, -50%);
           display: block;
-          /* ⚠️ 这里加了左右 padding，不改成 border-box 的话实际宽度会多出 44px，
-             窄屏（手机）会超出视口、出现横向滚动条。 */
           box-sizing: border-box;
-          max-width: 1318px;
         }
-        #header-title h1, #header-title #logo h1, #header-title a, #subtitle-wrap, #subtitle, #subtitle a {
-          color: #333 !important;
-          text-shadow: none !important;
+        /* 默认（还没采样到亮度 / 采样失败）：白字 + 深色阴影 */
+        #header-title h1, #header-title #logo h1, #header-title a,
+        #subtitle-wrap, #subtitle, #subtitle a {
+          color: #fff !important;
+          text-shadow: 0 0 .5rem rgba(0, 0, 0, .85), 0 1px 4px rgba(0, 0, 0, .9) !important;
+          transition: color .3s ease;
         }
-        html[data-theme="dark"] #header-title { background: rgba(30,33,38,.78) !important; }
-        /* ⚠️ 必须带上 #logo 那一级：上面浅色规则里有 #header-title #logo h1（两个 id），
-           优先级比 html[data-theme="dark"] #header-title h1（一个 id）高，
-           不写全的话暗色下 h1 仍然是深灰 #333，压在深色面板上看不清。 */
-        html[data-theme="dark"] #header-title #logo h1,
-        html[data-theme="dark"] #header-title h1, html[data-theme="dark"] #header-title a,
-        html[data-theme="dark"] #subtitle-wrap, html[data-theme="dark"] #subtitle, html[data-theme="dark"] #subtitle a { color: #ddd !important; }
-        /* 文章页的时间/字数那一行也放在同一块面板里 */
-        #header .post-meta, #header .post-info { color: #333 !important; }
-        html[data-theme="dark"] #header .post-meta, html[data-theme="dark"] #header .post-info { color: #ddd !important; }
+        /* 背景偏黑 → 白字（阴影加强；必须带上 #logo 那一级，否则被上面的规则按优先级压住） */
+        html.wusi-hero-dark #header-title h1, html.wusi-hero-dark #header-title #logo h1,
+        html.wusi-hero-dark #header-title a, html.wusi-hero-dark #subtitle-wrap,
+        html.wusi-hero-dark #subtitle, html.wusi-hero-dark #subtitle a {
+          color: #fff !important;
+          text-shadow: 0 0 .5rem rgba(0, 0, 0, .9), 0 1px 4px rgba(0, 0, 0, .95), 0 0 2px rgba(0, 0, 0, .8) !important;
+        }
+        /* 背景偏亮 → 黑字 + 浅色阴影 */
+        html.wusi-hero-light #header-title h1, html.wusi-hero-light #header-title #logo h1,
+        html.wusi-hero-light #header-title a, html.wusi-hero-light #subtitle-wrap,
+        html.wusi-hero-light #subtitle, html.wusi-hero-light #subtitle a {
+          color: #222 !important;
+          text-shadow: 0 1px 6px rgba(255, 255, 255, .95), 0 0 2px rgba(255, 255, 255, .95) !important;
+        }
+        /* Typed.js 的打字光标跟着文字颜色走 */
+        html.wusi-hero-light .typed-cursor { color: #222 !important; }
+        html.wusi-hero-dark .typed-cursor { color: #fff !important; }
 
         /* 768~959px 这段没有侧栏，主内容是 #main 的 padding:0 20px（左右共 40px），
            上面按桌面写的 32px 会差 4px，这里单独对齐成 40px —— 手机（≤767）是 16px*2，

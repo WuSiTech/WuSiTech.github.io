@@ -61,8 +61,23 @@ html[data-theme="dark"] #wusi-bg::after {
   background: rgba(10, 12, 16, 0.45);
 }
 
-/* 主题把 banner 画在 #header 里的 <img> 上（可能被 <picture> 包着），
-   默认这张图会随页面滚动、并且带一层白色渐变遮罩。
+/* 打印时不要固定底栏（屏幕上的固定页脚/占位都是给浏览用的） */
+@media print {
+  #wusi-footer-fixed {
+    position: static;
+  }
+  #wusi-footer-spacer {
+    display: none;
+  }
+}
+
+/* 鼠标悬停顶部大图区域时，JS 会逐帧改 #content 的 opacity（1 → 0.1 → 0 淡出，移出恢复）。
+   这里给 .2s 过渡，移出时快速恢复，不至于生硬。 */
+#content {
+  transition: opacity 0.2s ease;
+}
+
+/* 主题把 banner 画在 #header 里的 <img> 上（可能被 <picture> 包着），   默认这张图会随页面滚动、并且带一层白色渐变遮罩。
    普通页面：整屏背景由 #wusi-bg 承担，这张图要藏起来，否则会和背景层叠在一起；
    有 banner 的页面（文章页，html 上有 wusi-page-banner 类）：把这张图本身变成
    整屏固定背景，一图两用 —— 不用再额外下载一遍同一张图。 */

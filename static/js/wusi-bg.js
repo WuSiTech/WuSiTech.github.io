@@ -41,6 +41,13 @@
   } catch (e) {
     mode = "";
   }
+  // 调试用：?bgimg=<url> 强制指定一张背景图（验证头部文字颜色/回退等用）
+  var forceImage = "";
+  try {
+    forceImage = new URLSearchParams(location.search).get("bgimg") || "";
+  } catch (e) {
+    forceImage = "";
+  }
 
   // 调试/自动化验证用状态对象：settled 变成 true 表示"最终背景已经定下来了"
   var state = { settled: false, source: null, image: null, mode: mode || "auto" };
@@ -133,6 +140,12 @@
     state.image = url || null;
     state.settled = true;
     document.documentElement.classList.add("wusi-bg-ready");
+    // 广播给同文件的「头部标题自适应颜色」模块去采样亮度
+    try {
+      document.dispatchEvent(
+        new CustomEvent("wusi:bg-settled", { detail: { source: source, url: url || null } })
+      );
+    } catch (e) {}
   }
 
   // 本地兜底：随机取一张本地图池的图，加载成功就铺上
@@ -267,6 +280,11 @@
   }
 
   function start() {
+    if (forceImage) {
+      ensureHost();
+      tryMain(forceImage, showFallback);
+      return;
+    }
     if (banner && mode !== "local" && mode !== "remote" && mode !== "fail") {
       usePageBanner();
       return;
@@ -293,4 +311,184 @@
   }
 
   start();
+})();
+
+/* ==========================================================================
+   页脚固定底栏：量页脚实际高度写入 --wusi-footer-h（占位高度 + 回到顶部按钮让位），
+   同时用 documentElement.clientWidth 写 --wusi-page-width，保证固定页脚和内容区一样宽
+   ========================================================================== */
+(function () {
+  "use strict";
+  var root = document.documentElement;
+  var dock = document.getElementById("wusi-footer-fixed");
+  if (!dock) {
+    return;
+  }
+  function sync() {
+    var h = Math.ceil(dock.getBoundingClientRect().height);
+    root.style.setProperty("--wusi-footer-h", h + "px");
+    root.style.setProperty("--wusi-page-width", (root.clientWidth || window.innerWidth) + "px");
+  }
+  sync();
+  window.addEventListener("resize", sync);
+  window.addEventListener("load", sync);
+  if (window.ResizeObserver) {
+    try {
+      new ResizeObserver(sync).observe(dock);
+    } catch (e) {}
+  }
+})();
+
+/* ==========================================================================
+   鼠标悬停顶部大图区域 → 内容渐渐淡出，方便欣赏背景（行为与 cialloking 一致）：
+   进入 #header 后 #content 在 3 秒内 1 → 0.1 → 0 淡出；移出立即恢复（CSS 里有 .2s 过渡）。
+   ========================================================================== */
+(function () {
+  "use strict";
+  // 只在有"真正的鼠标"的设备上做悬停淡出：触屏设备 tap 会误触发 mouseenter 且没有 mouseleave
+  var canHover =
+    !window.matchMedia || window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  if (!canHover) {
+    return;
+  }
+  var header = document.getElementById("header");
+  var content = document.getElementById("content");
+  if (!header || !content) {
+    return;
+  }
+  var DURATION1 = 1000; // 1 → 0.1 用时
+  var DURATION2 = 2000; // 0.1 → 0 用时
+  var START = 1;
+  var MID = 0.1;
+  var END = 0;
+  var raf = null;
+  var startTime = 0;
+  function step(now) {
+    var elapsed = now - startTime;
+    var opacity;
+    if (elapsed < DURATION1) {
+      opacity = START + (MID - START) * (elapsed / DURATION1);
+    } else if (elapsed < DURATION1 + DURATION2) {
+      opacity = MID + (END - MID) * ((elapsed - DURATION1) / DURATION2);
+    } else {
+      opacity = END;
+    }
+    content.style.opacity = opacity;
+    if (elapsed < DURATION1 + DURATION2) {
+      raf = requestAnimationFrame(step);
+    }
+  }
+  function fadeOut() {
+    if (raf) {
+      cancelAnimationFrame(raf);
+    }
+    content.style.opacity = START;
+    startTime = performance.now();
+    raf = requestAnimationFrame(step);
+  }
+  function restore() {
+    if (raf) {
+      cancelAnimationFrame(raf);
+    }
+    content.style.opacity = "1";
+  }
+  header.addEventListener("mouseenter", fadeOut);
+  header.addEventListener("mouseleave", restore);
+})();
+
+/* ==========================================================================
+   头部标题自适应文字颜色：用 canvas 采样「标题后面那块背景」的平均亮度，
+   背景偏黑 → html.wusi-hero-dark（白字），偏亮 → html.wusi-hero-light（黑字）。
+   · 远端图源带 Access-Control-Allow-Origin: *，加 crossOrigin 后能读像素；
+   · 读不到（没给 CORS / 图加载失败）就保持默认的「白字 + 深阴影」，不报错；
+   · 图片按 background-size: cover 映射到视口，采样区域 = 标题文字大致所在的位置。
+   ========================================================================== */
+(function () {
+  "use strict";
+  var THRESHOLD = 0.55;
+  var timer = null;
+  function currentUrl() {
+    var st = window.__wusiBg || {};
+    if (document.documentElement.classList.contains("wusi-page-banner")) {
+      var img = document.querySelector("#header img");
+      if (img && img.getAttribute("src")) {
+        return img.src;
+      }
+    }
+    return st.image || null;
+  }
+  function setTheme(lum) {
+    var html = document.documentElement;
+    var light = lum > THRESHOLD;
+    html.classList.toggle("wusi-hero-light", light);
+    html.classList.toggle("wusi-hero-dark", !light);
+    window.__wusiHeroLum = Math.round(lum * 100) / 100;
+  }
+  function sample(url) {
+    if (!url) {
+      return;
+    }
+    var img = new Image();
+    var sameOrigin = url.indexOf("//") === -1 || url.indexOf(location.origin) === 0;
+    if (!sameOrigin) {
+      img.crossOrigin = "anonymous";
+    }
+    img.onload = function () {
+      try {
+        var vw = document.documentElement.clientWidth || window.innerWidth;
+        var vh = document.documentElement.clientHeight || window.innerHeight;
+        var header = document.getElementById("header");
+        var heroH = header ? header.getBoundingClientRect().height : Math.min(vh, 400);
+        // 标题大致区域（视口坐标）：中间 50% 宽、header 垂直中段
+        var rx = vw * 0.25;
+        var ry = heroH * 0.28;
+        var rw = vw * 0.5;
+        var rh = heroH * 0.44;
+        var iw = img.naturalWidth;
+        var ih = img.naturalHeight;
+        if (!iw || !ih) {
+          return;
+        }
+        // cover 映射：图片按 max(vw/iw, vh/ih) 缩放后居中，再换算成图片坐标
+        var scale = Math.max(vw / iw, vh / ih);
+        var ox = (vw - iw * scale) / 2;
+        var oy = (vh - ih * scale) / 2;
+        var sx = (rx - ox) / scale;
+        var sy = (ry - oy) / scale;
+        var sw = rw / scale;
+        var sh = rh / scale;
+        sx = Math.max(0, Math.min(sx, iw - 1));
+        sy = Math.max(0, Math.min(sy, ih - 1));
+        sw = Math.max(1, Math.min(sw, iw - sx));
+        sh = Math.max(1, Math.min(sh, ih - sy));
+        var canvas = document.createElement("canvas");
+        canvas.width = 32;
+        canvas.height = 16;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+        var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        var sum = 0;
+        var count = 0;
+        for (var i = 0; i < data.length; i += 4) {
+          sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+          count++;
+        }
+        setTheme(sum / count / 255);
+      } catch (e) {
+        // 跨域读不到像素（没有 CORS 头）：保持默认白字 + 阴影，不报错
+      }
+    };
+    img.src = url;
+  }
+  function update() {
+    sample(currentUrl());
+  }
+  document.addEventListener("wusi:bg-settled", update);
+  window.addEventListener("load", function () {
+    setTimeout(update, 200);
+  });
+  window.addEventListener("resize", function () {
+    clearTimeout(timer);
+    timer = setTimeout(update, 300);
+  });
 })();
