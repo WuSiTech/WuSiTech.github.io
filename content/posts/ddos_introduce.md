@@ -5,7 +5,7 @@ draft = false
 description = "较为通俗的介绍的DDOS攻击"
 categories = [ "网络" ]
 tags = [ "攻击", "DDOS", "Linux" ]
-cover = ""
+cover = "/images/pool/covers/covers-02.webp"
 banner = ""
 +++
 
