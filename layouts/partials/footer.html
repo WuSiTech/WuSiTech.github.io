@@ -158,6 +158,18 @@
   probe.setAttribute('src', r); // 用 setAttribute，避免被站内引用检查误判为 HTML src 属性
 })();
 </script>
+{{- /* 非文章页隐藏主题的固定 banner，让随机背景露出来；文章页保留 banner 作为整屏背景 */ -}}
+<script>
+(function () {
+  var p = location.pathname;
+  var isPost = p.indexOf('/posts/') === 0;
+  if (isPost) { return; }
+  var st = document.createElement('style');
+  st.id = 'hideBannerOnList';
+  st.textContent = '#header img{display:none !important}#header{min-height:22vh !important}#header{background:transparent !important}';
+  document.head.appendChild(st);
+})();
+</script>
 <!-- random-bg-block -->
 <div id="wusi-domain-tip" style="text-align:center;font-size:12.5px;line-height:1.9;opacity:.75;margin:14px 0 6px">
   想获取最新内容，请访问 <a href="https://wusitech.github.io/" style="text-decoration:underline">wusitech.github.io</a>；

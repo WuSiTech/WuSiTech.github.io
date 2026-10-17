@@ -688,12 +688,23 @@ injector:
         body { background-color: transparent !important; }
         .article-entry, .post-wrap, article { background: var(--color-wrap) !important; }
       </style>
-      <style id="wusi-article-banner">
-        /* 文章头图改为整屏固定背景：去掉主题的白色渐变遮罩，上面加一层暗色渐变保证标题可读 */
-        #header img { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important;
-          object-fit: cover !important; z-index: -2 !important; -webkit-mask-image: none !important; mask-image: none !important; opacity: .9 !important; }
-        #header { background: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.55)) !important; }
-        #header::after, #header .banner-mask { background: linear-gradient(to bottom, rgba(0,0,0,.2), rgba(0,0,0,.5)) !important; }
+      <style id="wusi-bg-fix2">
+        /* 去掉头部的黑色遮罩，改用轻量文字阴影保证可读 */
+        #header { background: transparent !important; }
+        #header::after, #header .banner-mask { background: none !important; }
+        #header .post-title, #header .post-meta, #header h1, #header h2, #header .post-description {
+          text-shadow: 0 1px 6px rgba(255,255,255,.9), 0 0 2px rgba(255,255,255,.9); }
+        /* 文章标题与摘要区域半透明，让背景透出 */
+        #header .post-info, #header .post-wrap, #header .banner-info { background: rgba(255,255,255,.55) !important;
+          border-radius: 10px; padding: 10px 14px; backdrop-filter: blur(2px); }
+        html[data-theme="dark"] #header .post-info, html[data-theme="dark"] #header .post-wrap, html[data-theme="dark"] #header .banner-info {
+          background: rgba(30,33,38,.6) !important; }
+        /* 文章正文卡片更透一点 */
+        .article-entry { background: rgba(255,255,255,.72) !important; }
+        html[data-theme="dark"] .article-entry { background: rgba(30,33,38,.78) !important; }
+        /* 鼠标悬停在页面（背景）上时，内容再透一点，方便欣赏背景；移开恢复 */
+        .article-entry, .post-wrap, .widget-wrap, .post-info { transition: opacity .35s ease, background-color .35s ease; }
+        body:hover .article-entry, body:hover .post-wrap, body:hover .widget-wrap { opacity: .82; }
       </style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
