@@ -1,0 +1,4 @@
+# 远端随机背景图源（来自 cialloking.com 的 /images/bg/），由脚本生成；
+# 本地图池在 static/images/pool/bg/（10 张），远端加载失败时回落到它。
+remote_backgrounds:
+
