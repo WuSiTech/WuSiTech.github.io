@@ -692,7 +692,16 @@ injector:
           border-radius: 10px;
           padding: 12px 16px;
           margin: 10px auto;
-          max-width: 900px;
+        }
+        /* 宽度和主内容对齐（页脚、页底域名提示；文章卡片里的 <footer> 不参与）：
+           主内容左右各留 16px —— 桌面是 #main/#sidebar 的 margin:0 16px，
+           手机是 #main 的 padding:0 16px，所以用 100% - 32px；
+           宽屏时 #content 有 layout.max_width（1350px）上限，减两侧 16px 就是 1318px。
+           ⚠️ 改 config/_default/params.yml 的 layout.max_width 时要同步改这里的 1318。 */
+        #footer, #wusi-domain-tip {
+          width: calc(100% - 32px);
+          max-width: 1318px;
+          box-sizing: border-box;
         }
         #footer a, .footer a, footer a { color: #c0392b !important; }
         html[data-theme="dark"] #footer, html[data-theme="dark"] .footer, html[data-theme="dark"] footer,
@@ -714,15 +723,18 @@ injector:
           left: 50% !important;
           top: 50% !important;
           right: auto !important;
-          width: 95% !important;
+          /* 宽度和主内容对齐：主内容左右各留 16px（桌面 #main/#sidebar 的 margin、手机 #main 的
+             padding），所以 100% - 32px；宽屏时 #content 上限 1350px，减两侧 16px = 1318px。
+             ⚠️ 改 layout.max_width 时要同步改这个 1318。 */
+          width: calc(100% - 32px) !important;
           margin: 0 !important;
           padding: 14px 22px !important;
           transform: translate(-50%, -50%);
           display: block;
-          /* ⚠️ 主题给的是 width:95%；这里加了左右 padding，不改成 border-box 的话
-             实际宽度 = 95% + 44px，窄屏（手机）会超出视口、出现横向滚动条。 */
+          /* ⚠️ 这里加了左右 padding，不改成 border-box 的话实际宽度会多出 44px，
+             窄屏（手机）会超出视口、出现横向滚动条。 */
           box-sizing: border-box;
-          max-width: 100%;
+          max-width: 1318px;
         }
         #header-title h1, #header-title #logo h1, #header-title a, #subtitle-wrap, #subtitle, #subtitle a {
           color: #333 !important;
@@ -738,6 +750,13 @@ injector:
         /* 文章页的时间/字数那一行也放在同一块面板里 */
         #header .post-meta, #header .post-info { color: #333 !important; }
         html[data-theme="dark"] #header .post-meta, html[data-theme="dark"] #header .post-info { color: #ddd !important; }
+
+        /* 768~959px 这段没有侧栏，主内容是 #main 的 padding:0 20px（左右共 40px），
+           上面按桌面写的 32px 会差 4px，这里单独对齐成 40px —— 手机（≤767）是 16px*2，
+           宽屏（≥960）是 #main/#sidebar 的 margin:0 16px（16px*2），都不用改。 */
+        @media (min-width: 768px) and (max-width: 959px) {
+          #header-title, #footer, #wusi-domain-tip { width: calc(100% - 40px) !important; }
+        }
       </style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 全站随机固定背景：远端随机图 + 失败回落本地图池，固定不滚动（详见 static/js/wusi-bg.js） -->
