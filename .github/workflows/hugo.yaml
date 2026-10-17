@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - main
-  # 定时构建：每 6 小时一次（UTC 00/06/12/18 = 北京时间 08:00 / 14:00 / 20:00 / 02:00）。
+  # 定时构建：每 2 小时一次（UTC 偶数点整 = 北京时间偶数点整）。
   # github.io 随 push 即时构建（Actions 免费无限）；Cloudflare Pages 只在定时任务里触发，见文末。
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */2 * * *'
   # 需要立刻发布时，在 Actions 页面手动运行本工作流（Run workflow）。
   workflow_dispatch:
 

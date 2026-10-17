@@ -407,8 +407,8 @@
       if (!j || !j.ok) { return; }
       if (j.mode === 'pr') { tip.textContent = '评论会先进入待合并状态，站长合并后显示'; }
       else if (j.pending) { tip.textContent = '评论提交后需站长审核，通过后才会显示在这里'; }
-      else { tip.textContent = '提交后最晚 6 小时（下一次构建）就会显示在这里'; }
-      if (location.hostname && location.hostname.indexOf('pages.dev') >= 0) { tip.textContent = '提交后最晚6小时（一次构建）就会显示在这里，详见页底'; }
+      else { tip.textContent = '提交后最晚 2 小时（下一次构建）就会显示在这里'; }
+      if (location.hostname && location.hostname.indexOf('pages.dev') >= 0) { tip.textContent = '提交后最晚2小时（一次构建）就会显示在这里，详见页底'; }
     }).catch(function () {});
   })();
     form.appendChild(tip);
