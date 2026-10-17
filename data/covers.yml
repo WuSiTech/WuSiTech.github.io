@@ -1,15 +1,71 @@
-# 随机封面池（覆盖主题自带的那份）
-#
-# 主题的 randomCover.html 会从 hugo.Data.covers 里随机取一张，用在：
-#   - 没写 cover 的文章卡片（首页/列表/上一篇下一篇导航）
-#   - home_categories 里没填 cover 的分类卡片
-#
-# 主题默认那份只有一个外链：https://d-sketon.top/img/_backwebp/bg1.webp
-# （主题作者的服务器）。国内访问它可能慢或不通，所以这里全部换成本站自己的图。
-#
-# 想加图：把图片放进 static/images/ 下，再往下面追加一行路径即可（建议 16:9 或 3:2，宽度 ≥ 800）。
-- /images/banner.webp
-- /images/banner-800w.webp
-- /images/banner-600w.webp
-- /images/stm32/interrupt-path.webp
-- /images/stm32/hardware-wiring.webp
+# 文章封面池（主题的 helper/randomCover 从中洗牌分配，不填封面的文章自动使用）
+- /images/pool/covers/covers-02.webp
+- /images/pool/covers/covers-03.webp
+- /images/pool/covers/covers-104.webp
+- /images/pool/covers/covers-121.webp
+- /images/pool/covers/covers-128.webp
+- /images/pool/covers/covers-130.webp
+- /images/pool/covers/covers-14.webp
+- /images/pool/covers/covers-141.webp
+- /images/pool/covers/covers-146.webp
+- /images/pool/covers/covers-147.webp
+- /images/pool/covers/covers-148.webp
+- /images/pool/covers/covers-149.webp
+- /images/pool/covers/covers-15.webp
+- /images/pool/covers/covers-150.webp
+- /images/pool/covers/covers-152.webp
+- /images/pool/covers/covers-16.webp
+- /images/pool/covers/covers-17.webp
+- /images/pool/covers/covers-18.webp
+- /images/pool/covers/covers-189.webp
+- /images/pool/covers/covers-200.webp
+- /images/pool/covers/covers-206.webp
+- /images/pool/covers/covers-212.webp
+- /images/pool/covers/covers-219.webp
+- /images/pool/covers/covers-220.webp
+- /images/pool/covers/covers-221.webp
+- /images/pool/covers/covers-241.webp
+- /images/pool/covers/covers-242.webp
+- /images/pool/covers/covers-267.webp
+- /images/pool/covers/covers-283.webp
+- /images/pool/covers/covers-304.webp
+- /images/pool/covers/covers-305.webp
+- /images/pool/covers/covers-306.webp
+- /images/pool/covers/covers-307.webp
+- /images/pool/covers/covers-308.webp
+- /images/pool/covers/covers-309.webp
+- /images/pool/covers/covers-310.webp
+- /images/pool/covers/covers-311.webp
+- /images/pool/covers/covers-312.webp
+- /images/pool/covers/covers-313.webp
+- /images/pool/covers/covers-314.webp
+- /images/pool/covers/covers-316.webp
+- /images/pool/covers/covers-320.webp
+- /images/pool/covers/covers-321.webp
+- /images/pool/covers/covers-322.webp
+- /images/pool/covers/covers-325.webp
+- /images/pool/covers/covers-326.webp
+- /images/pool/covers/covers-327.webp
+- /images/pool/covers/covers-328.webp
+- /images/pool/covers/covers-329.webp
+- /images/pool/covers/covers-330.webp
+- /images/pool/covers/covers-331.webp
+- /images/pool/covers/covers-332.webp
+- /images/pool/covers/covers-347.webp
+- /images/pool/covers/covers-352.webp
+- /images/pool/covers/covers-360.webp
+- /images/pool/covers/covers-361.webp
+- /images/pool/covers/covers-362.webp
+- /images/pool/covers/covers-368.webp
+- /images/pool/covers/covers-377.webp
+- /images/pool/covers/covers-381.webp
+- /images/pool/covers/covers-400.webp
+- /images/pool/covers/covers-409.webp
+- /images/pool/covers/covers-42.webp
+- /images/pool/covers/covers-49.webp
+- /images/pool/covers/covers-65.webp
+- /images/pool/covers/covers-85.webp
+- /images/pool/covers/covers-86.webp
+- /images/pool/covers/covers-87.webp
+- /images/pool/covers/covers-94.webp
+- /images/pool/covers/covers-96.webp
