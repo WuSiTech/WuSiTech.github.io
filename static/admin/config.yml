@@ -357,7 +357,7 @@ collections:
     label: 友链
     files:
       - name: friends
-        label: 友链列表
+        label: 条目
         file: data/friends.yml
         format: yaml
         fields:
@@ -368,7 +368,7 @@ collections:
             summary: "{{fields.name}} — {{fields.url}}"
             fields:
               - { label: 站点名, name: name, widget: string }
-              - { label: 链接, name: url, widget: string }
+              - { label: 链接, name: url, widget: string, hint: 必须写完整网址，带 https://（只写域名会被当成站内相对路径） }
               - { label: 简介, name: desc, widget: string, required: false }
               - { label: 头像, name: image, widget: string, required: false, hint: 图片 URL 或 /images/xxx.webp }
 
