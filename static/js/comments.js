@@ -508,7 +508,12 @@
         })
         .then(function (out) {
           if (out.res.ok && out.data && out.data.ok) {
-            showMsg(out.data.message || '评论已提交', false);
+            var okMsg = out.data.message || '评论已提交';
+        // 提交成功的提示也按站点区分：wstk 要等定时构建，措辞与提示文案保持一致
+        if (location.hostname && location.hostname.indexOf('pages.dev') >= 0) {
+          okMsg = '评论已提交，最晚 2 小时后显示（想立即看到可去 wusitech.github.io）';
+        }
+        showMsg(okMsg, false);
             bodyInput.value = ''; replyToId = ''; replyToName = '';
             if (out.data.mode === 'direct') {
               // 直接入库模式：稍微等一会儿再拉一次，通常是构建还没跑完

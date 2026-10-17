@@ -677,7 +677,7 @@ injector:
       })();
     </script>
     <!-- 自建评论系统：读 static/comments/<slug>.json，提交到 Cloudflare Pages Function（详见 docs/评论系统（Git存储）.md） -->
-    <script>(function(){var _p=location.pathname;if(!(_p.indexOf("/posts/")===0||_p.indexOf("/about/")===0||_p.indexOf("/friend/")===0||_p.indexOf("/download/")===0))return;var a=document.querySelector(".article-entry");if(!a)return;var s=document.createElement("script");s.src="/js/comments.js?v=11";s.defer=true;document.body.appendChild(s);})();</script>
+    <script>(function(){var _p=location.pathname;if(!(_p.indexOf("/posts/")===0||_p.indexOf("/about/")===0||_p.indexOf("/friend/")===0||_p.indexOf("/download/")===0))return;var a=document.querySelector(".article-entry");if(!a)return;var s=document.createElement("script");s.src="/js/comments.js?v=12";s.defer=true;document.body.appendChild(s);})();</script>
       <!-- 站内本地搜索：索引 /index.json，零外部请求 -->
       <link rel="preload" as="image" href="/images/banner.webp" fetchpriority="high" />
       <script src="/js/search.js?v=12" defer></script>
