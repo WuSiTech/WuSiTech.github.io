@@ -5,8 +5,8 @@ draft = false
 description = "以 STM32F411CEU6 与标准外设库为例，完整讲解和实现PA0 下降沿触发 EXTI0 中断、翻转 PC13 电平的中断链路：使能时钟、配置GPIO、SYSCFG映射(相当于F1的AFIO)、EXTI 触发条件、NVIC 优先级分组与中断服务程序."
 categories = [ "STM32" ]
 tags = [ "STM32F4", "中断" ]
-cover = "/images/OIP.webp"
-banner = "images/banner.webp"
+cover = "/images/pool/covers/covers-104.webp"
+banner = ""
 +++
 
 参考：[https://www.bilibili.com/video/BV1th411z7sn](https://www.bilibili.com/video/BV1th411z7sn)
