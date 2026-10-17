@@ -1,0 +1,17 @@
+{
+  "slug": "about",
+  "comments": [
+    {
+      "id": "c_1792227966565_6b95f2",
+      "name": "测试2",
+      "email": "",
+      "website": "",
+      "body": "第二条测试：带 replyTo 字段的评论。",
+      "ts": "2026-10-17T09:06:06.565Z",
+      "ua": "curl/8.21.0",
+      "hidden": true,
+      "author": false,
+      "replyTo": "c_123"
+    }
+  ]
+}
