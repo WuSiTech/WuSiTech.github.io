@@ -572,3 +572,15 @@ export async function onRequest(context) {
   if (request.method === 'OPTIONS') return onRequestOptions(context);
   return fail(request, context.env, 405, '只接受 POST 请求');
 }
+
+// 前端用它决定表单下方的提示文案（是否走审核）。GET ?config=1 返回当前模式。
+// Cloudflare Pages 按请求方法分发：GET 命中这个 onRequestGet，不影响 POST 那条路径。
+export async function onRequestGet(context) {
+  const { request, env } = context;
+  const cfgUrl = new URL(request.url);
+  if (cfgUrl.searchParams.get('config') === '1') {
+    const mode = String(env.COMMENT_MODE || 'direct').toLowerCase() === 'pr' ? 'pr' : 'direct';
+    return jsonResponse(request, env, 200, { ok: true, mode, pending: pendingEnabled(env) });
+  }
+  return jsonResponse(request, env, 400, { ok: false, error: '不支持的请求' });
+}
