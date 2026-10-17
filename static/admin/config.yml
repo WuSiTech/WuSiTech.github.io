@@ -397,11 +397,11 @@ collections:
           - { label: 内部 ID, name: id, widget: hidden, required: false }
           - { label: 回复哪条（父评论 id）, name: replyTo, widget: string, required: false, hint: 把父评论的「内部 ID」粘贴到这里；留空就是顶级评论 }
           - { label: 昵称, name: name, widget: string }
-          - { label: 邮箱（不公开显示）, name: email, widget: string, required: false }
-          - { label: 网址, name: website, widget: string, required: false }
+          - { label: 邮箱（不公开）, name: email, widget: hidden, required: false }
+          - { label: 网址, name: website, widget: hidden, required: false }
           - { label: 正文, name: body, widget: text }
           - { label: 时间, name: ts, widget: string, required: false, hint: ISO 时间，一般不用改 }
-          - { label: 浏览器信息, name: ua, widget: string, required: false }
+          - { label: 浏览器信息, name: ua, widget: hidden, required: false }
           - label: 隐藏（页面不再显示，数据保留）
             name: hidden
             widget: boolean
@@ -438,11 +438,11 @@ collections:
         fields:
           - { label: 内部 ID, name: id, widget: hidden, required: false }
           - { label: 昵称, name: name, widget: string }
-          - { label: 邮箱（不公开显示）, name: email, widget: string, required: false }
-          - { label: 网址, name: website, widget: string, required: false }
+          - { label: 邮箱（不公开）, name: email, widget: hidden, required: false }
+          - { label: 网址, name: website, widget: hidden, required: false }
           - { label: 正文, name: body, widget: text }
           - { label: 时间, name: ts, widget: string, required: false, hint: ISO 时间，一般不用改 }
-          - { label: 浏览器信息, name: ua, widget: string, required: false }
+          - { label: 浏览器信息, name: ua, widget: hidden, required: false }
           - label: 隐藏（页面不再显示，数据保留）
             name: hidden
             widget: boolean
