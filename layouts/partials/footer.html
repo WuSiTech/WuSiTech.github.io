@@ -122,7 +122,9 @@
 </footer>
 
 <!-- ===== BLOG状态：放在页脚里（页面内容中，一定可见） ===== -->
-<div id="wusi-domain-tip" style="text-align:center;font-size:12.5px;line-height:1.9;opacity:.75;margin:14px 0 6px">
+{{- /* 注意：这里的行内 margin 必须写 auto 左右，否则会覆盖 Injector 里 #wusi-domain-tip 的
+       margin:10px auto，导致面板贴左边、不居中（之前就是这样）。 */ -}}
+<div id="wusi-domain-tip" style="text-align:center;font-size:12.5px;line-height:1.9;opacity:.75;margin:14px auto 6px">
   想获取最新内容，请访问 <a href="https://wusitech.github.io/" style="text-decoration:underline">wusitech.github.io</a>；
   想要加载更快的访问，请使用 <a href="https://wstk.pages.dev/" style="text-decoration:underline">wstk.pages.dev</a>。
   <br />（wusitech.github.io 即时更新；wstk.pages.dev 单次加载更快，但内容最多滞后 2 小时）

@@ -708,9 +708,17 @@ injector:
           background: rgba(255,255,255,.72) !important;
           backdrop-filter: blur(3px);
           border-radius: 12px;
+          /* 真正居中：主题是 position:absolute + width:95%，只写 margin:0 auto 对绝对定位
+             元素不生效（会贴左边、中心偏左 30~70px）。用 left/top 50% + translate 拉回来，
+             横向纵向都对齐视口中心；fade-in-blur 动画只动 opacity/filter，不冲突。 */
+          left: 50% !important;
+          top: 50% !important;
+          right: auto !important;
+          width: 95% !important;
+          margin: 0 !important;
           padding: 14px 22px !important;
-          display: inline-block;
-          margin: 0 auto;
+          transform: translate(-50%, -50%);
+          display: block;
           /* ⚠️ 主题给的是 width:95%；这里加了左右 padding，不改成 border-box 的话
              实际宽度 = 95% + 44px，窄屏（手机）会超出视口、出现横向滚动条。 */
           box-sizing: border-box;
