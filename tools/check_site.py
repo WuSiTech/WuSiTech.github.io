@@ -29,6 +29,9 @@ import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+# 允许的外部图片主机：GitHub Actions 实时构建徽章（站长明确要求直接引用，加载失败会 onerror 回落本地镜像）
+BADGE_ALLOW_HOSTS = {"github.com", "camo.githubusercontent.com"}
+
 SELF_HOSTS = {"wusitech.github.io", "wstk.pages.dev", "localhost", "127.0.0.1"}
 
 # 第三方资源目录：static/resources/ 与 static/vendor/ 是整包放进来的库，
@@ -149,7 +152,7 @@ def main(argv=None) -> int:
         print(f"[X] 找不到目录 {out_dir}（先 hugo 构建）", file=sys.stderr)
         return 2
 
-    allowed_hosts = set(SELF_HOSTS) | {h.lower() for h in args.allow}
+    allowed_hosts = set(SELF_HOSTS) | set(BADGE_ALLOW_HOSTS) | {h.lower() for h in args.allow}
 
     def is_site_file(path: Path) -> bool:
         rel = path.relative_to(out_dir)
