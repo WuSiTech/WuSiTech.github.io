@@ -111,6 +111,9 @@
     '#git-comments .gc-badge{flex:none;background:var(--gc-accent);color:#fff;',
     'border-radius:4px;padding:1px 6px;font-size:.75em;line-height:1.5;font-weight:400}',
     '#git-comments .gc-time{color:var(--gc-muted);font-size:.85em}',
+    '#git-comments .gc-replying{color:var(--gc-muted);font-size:.82em;margin-left:6px}',
+    '#git-comments .gc-reply-btn{margin-left:8px;background:none;border:0;padding:0;color:var(--gc-accent);cursor:pointer;font-size:.82em}',
+    '#git-comments .gc-reply-btn:hover{text-decoration:underline}',
     '#git-comments .gc-site{color:var(--gc-accent);font-size:.85em;text-decoration:none}',
     '#git-comments .gc-body{margin-top:6px;white-space:pre-wrap;word-break:break-word}',
     '#git-comments .gc-empty{color:var(--gc-muted);margin:0 0 18px}',
@@ -156,7 +159,70 @@
     }
   }
 
-  function renderList(listNode, comments) {
+  /* ---- 回复功能：扁平存储 + replyTo 父子指针 → 递归渲染成任意深度 ---- */
+  var replyToId = '';
+  var replyToName = '';
+
+  function gcIndexOf(comments) {
+    var byId = {};
+    (comments || []).forEach(function (c) { if (c && c.id) byId[c.id] = c; });
+    return byId;
+  }
+
+  function gcNode(c, depth, byId) {
+    var li = el('li', depth > 0 ? 'gc-item gc-reply-item' : 'gc-item');
+    if (depth > 0) { li.style.marginLeft = (Math.min(depth, 4) * 18) + 'px'; }
+    var head = el('div', 'gc-head');
+    head.appendChild(el('span', 'gc-name', String(c.name || '匿名')));
+    if (c.author === true) { head.appendChild(el('span', 'gc-badge', '博主')); }
+    head.appendChild(el('span', 'gc-time', formatTime(c.ts)));
+    var parent = c.replyTo && byId[c.replyTo];
+    if (parent) { head.appendChild(el('span', 'gc-replying', '回复 @' + String(parent.name || '匿名'))); }
+    var btn = el('button', 'gc-reply-btn', '回复');
+    btn.type = 'button';
+    btn.addEventListener('click', function () {
+      replyToId = String(c.id || '');
+      replyToName = String(c.name || '匿名');
+      var ta = document.querySelector('#git-comments textarea');
+      if (ta) {
+        if (ta.value.indexOf('@' + replyToName) !== 0) { ta.value = '@' + replyToName + ' ' + ta.value; }
+        ta.focus();
+      }
+    });
+    head.appendChild(btn);
+    li.appendChild(head);
+    li.appendChild(el('div', 'gc-body', String(c.body || '')));
+    return li;
+  }
+
+  function renderListTree(listNode, comments) {
+    var all = (comments || []).filter(function (c) { return c && c.hidden !== true; });
+    var byId = gcIndexOf(all);
+    var children = { __root__: [] };
+    all.forEach(function (c) {
+      var p = (c.replyTo && byId[c.replyTo]) ? c.replyTo : '__root__';
+      (children[p] = children[p] || []).push(c);
+    });
+    var done = {};
+    function walk(pid, depth) {
+      (children[pid] || []).forEach(function (c) {
+        if (done[c.id]) { return; }
+        done[c.id] = true;
+        listNode.appendChild(gcNode(c, depth, byId));
+        walk(c.id, depth + 1);
+      });
+    }
+    walk('__root__', 0);
+    all.forEach(function (c) {
+      if (!done[c.id]) { done[c.id] = true; listNode.appendChild(gcNode(c, 0, byId)); }
+    });
+  }
+
+  /* 用新实现覆盖原来的扁平渲染（原函数改名保留） */
+  function renderListPatched(listNode, comments) { renderListTree(listNode, comments); }
+  function renderList(listNode, comments) { renderListPatched(listNode, comments); }
+
+  function renderListFlat(listNode, comments) {
     listNode.textContent = '';
     for (var i = 0; i < comments.length; i++) {
       var c = comments[i] || {};
@@ -357,7 +423,7 @@
         .then(function (out) {
           if (out.res.ok && out.data && out.data.ok) {
             showMsg(out.data.message || '评论已提交', false);
-            bodyInput.value = '';
+            bodyInput.value = ''; replyToId = ''; replyToName = '';
             if (out.data.mode === 'direct') {
               // 直接入库模式：稍微等一会儿再拉一次，通常是构建还没跑完
               setTimeout(load, 3000);

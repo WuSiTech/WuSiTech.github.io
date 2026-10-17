@@ -449,6 +449,7 @@ export async function handleComment(request, env, deps) {
 
   const email = stripControl(typeof raw.email === 'string' ? raw.email : '').trim().slice(0, MAX_OPTIONAL_LEN);
   const website = normalizeWebsite(raw.website);
+  const replyTo = typeof raw.replyTo === 'string' ? stripControl(raw.replyTo).trim().slice(0, 64) : '';
   const ua = shortUa(request.headers.get('user-agent') || '');
 
   // 6) 正文里的链接数量（粗略防广告）
@@ -499,6 +500,7 @@ export async function handleComment(request, env, deps) {
     ua,
     hidden,
     author: false,
+    replyTo,
   };
 
   const path = `static/comments/${slug}.json`;
