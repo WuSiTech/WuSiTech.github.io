@@ -1,4 +1,4 @@
 {
-  "updated": "2026-10-17T00:00:00Z",
-  "workflows": { "hugo.yaml": { "state": "success" }, "tools.yml": { "state": "failure" } }
+  "updated": "",
+  "workflows": { "hugo.yaml": { "state": "unknown" }, "tools.yml": { "state": "unknown" } }
 }
