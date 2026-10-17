@@ -136,7 +136,23 @@
   var remote = {{ $remote | jsonify }};
   var local = {{ $local | jsonify }};
   function pick(a) { return (a && a.length) ? a[Math.floor(Math.random() * a.length)] : null; }
+  // 用一个独立的固定层承载背景，避免被主题的 body/容器样式覆盖
+  function bgLayer() {
+    var d = document.getElementById('wusi-bg');
+    if (!d) {
+      d = document.createElement('div');
+      d.id = 'wusi-bg';
+      d.style.cssText = 'position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center center;background-repeat:no-repeat;pointer-events:none';
+      document.body.appendChild(d);
+    }
+    return d;
+  }
   function setFixed(url) {
+    var d = bgLayer();
+    d.style.backgroundImage = 'url("' + url + '")';
+    return;
+  }
+  function _oldSetFixed(url) {
     document.body.style.backgroundImage = 'url("' + url + '")';
     document.body.style.backgroundSize = 'cover';
     document.body.style.backgroundPosition = 'center center';
