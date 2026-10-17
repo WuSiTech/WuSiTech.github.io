@@ -11,6 +11,18 @@
       "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.",
       "hidden": false,
       "author": false
+    },
+    {
+      "id": "c_1792227780071_84307d",
+      "name": "吾思",
+      "email": "",
+      "website": "",
+      "body": "@薛定谔的乌龟 AFIO是STM32F1系列才有的“复用功能中转站”，需要专门开启时钟；而STM32F4系列根本不存在AFIO，它用更直接的GPIOx_AFR寄存器，让每个引脚独立选择复用功能，无需额外时钟",
+      "ts": "2026-10-17T09:03:00.071Z",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.",
+      "hidden": true,
+      "author": false,
+      "replyTo": ""
     }
   ]
 }
