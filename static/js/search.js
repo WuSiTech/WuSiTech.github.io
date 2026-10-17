@@ -122,8 +122,25 @@
     document.body.appendChild(b);
   }
 
-  function boot() { ensureFallback(); }
+  // 把按钮插进页面已有的顶部导航（#sub-nav 优先，其次 #main-nav）；pjax 换页后自动补回。
+  function injectButton() {
+    if (document.getElementById('nav-search-btn-local')) return true;
+    var host = document.getElementById('sub-nav') || document.getElementById('main-nav');
+    if (!host) return false;
+    var a = document.createElement('a');
+    a.id = 'nav-search-btn-local';
+    a.className = 'nav-icon';
+    a.setAttribute('href', 'javascript:void(0)');
+    a.setAttribute('role', 'button');
+    a.setAttribute('title', '站内搜索');
+    a.setAttribute('aria-label', '站内搜索');
+    a.innerHTML = MAG;
+    if (host.id === 'main-nav') { a.style.marginLeft = '8px'; }
+    host.appendChild(a);
+    return true;
+  }
+  function boot() { injectButton(); ensureFallback(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  document.addEventListener('pjax:complete', ensureFallback);
-  document.addEventListener('pjax:end', ensureFallback);
+  document.addEventListener('pjax:complete', boot);
+  document.addEventListener('pjax:end', boot);
 })();
