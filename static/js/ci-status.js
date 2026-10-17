@@ -38,7 +38,7 @@
       var key = null;
       for (var k in WORKFLOWS) { if (src.indexOf(k) >= 0) key = k; }
       if (!key) return;
-      var st = stateOf(map[key]);
+      var st = (map[key] && map[key].state) || stateOf(map[key]);
       if (st === 'unknown') return;
       var span = document.createElement('span');
       span.style.cssText = 'display:inline-flex;align-items:center;gap:5px;font-size:13px;line-height:1;vertical-align:middle';
@@ -48,17 +48,13 @@
     });
   }
 
+  // 状态由 CI 在每次构建时写入站内 /ci-status.json（见 .github/workflows/hugo.yaml），
+  // 浏览器只读同域文件，不调用 GitHub API（API 免登录额度 60 次/小时，很容易被限流）。
   function fetchAll(done) {
-    var keys = Object.keys(WORKFLOWS);
-    var out = {}, n = 0;
-    keys.forEach(function (k) {
-      fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/' + k + '/runs?per_page=1', {
-        headers: { 'Accept': 'application/vnd.github+json' }
-      }).then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (j) { out[k] = j && j.workflow_runs && j.workflow_runs[0]; })
-        .catch(function () { out[k] = null; })
-        .then(function () { if (++n === keys.length) done(out); });
-    });
+    fetch('/ci-status.json', { cache: 'no-cache' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { done((j && j.workflows) || {}); })
+      .catch(function () { done({}); });
   }
 
   function start() {
