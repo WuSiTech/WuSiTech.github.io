@@ -15,11 +15,6 @@ url = "categories"
 icon = ""
 
 [[menu]]
-name = "tags"
-url = "tags"
-icon = ""
-
-[[menu]]
 name = "friend"
 url = "friend"
 icon = ""
