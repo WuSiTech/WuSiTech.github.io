@@ -434,10 +434,11 @@
     function load() {
       var sameOrigin = '/comments/' + slug + '.json';
       var crossOrigin = GC_DATA_BASE + '/comments/' + slug + '.json';
-      // 在 wstk.pages.dev 上就同域读；别的域名（含 GitHub Pages）先跨域读固定那一份，
-      // 这样两个域名看到的评论永远来自同一个地方。
-      var primary = onDataHost() ? sameOrigin : crossOrigin;
-      var fallback = onDataHost() ? crossOrigin : sameOrigin;
+      // 各站优先读自己同域的评论文件（github.io 随 push 构建、最新；wstk 随定时构建），
+      // 同域取不到（404/异常）才跨域回退到另一个站点。之前固定跨域读 wstk，
+      // 会让 github.io 一直显示 wstk 那份可能滞后两小时的旧数据。
+      var primary = sameOrigin;
+      var fallback = crossOrigin;
 
       fetchJson(primary)
         // 主来源失败（跨域被拦、那边还没部署、JSON 坏了……）→ 换另一个来源再试一次
