@@ -48,8 +48,8 @@ LOC = re.compile(r"<loc>\s*([^<\s]+)\s*</loc>", re.IGNORECASE)
 
 # 首页导航断言：首页必须有导航链接，防止后台把菜单写坏后静默丢导航。
 # 判定从宽（至少命中 NAV_MIN_HIT 个），这样以后增删一个合法栏目不会误报。
-NAV_LINKS = ("/", "/archives", "/categories", "/tags", "/friend", "/about")
-NAV_MIN_HIT = 5
+NAV_LINKS = ("/", "/categories", "/friend", "/about", "/download")
+NAV_MIN_HIT = 4
 # 只看主导航那一块：菜单（config 里的 [menu]，后台可改）就渲染在 <nav id="main-nav"> 里，
 # 写坏时整块消失。正文、侧栏、文章卡片里零散出现的同类链接不能证明「导航还在」
 # （比如首页的分类/标签小部件也指向 /categories、/tags），所以不拿它们凑数。
