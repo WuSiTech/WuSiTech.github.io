@@ -30,6 +30,14 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 # 允许的外部图片主机：GitHub Actions 实时构建徽章（站长明确要求直接引用，加载失败会 onerror 回落本地镜像）
+# 外部资源策略（站长定义）：判断标准是"会不会拖慢页面加载"，而不是一律禁止外链。
+#   - 外链 **图片**（img / data-src 等）：非阻塞，允许，只在报告里列出来供参考
+#   - 外链 **JS / CSS / 字体**：会阻塞或拖慢首屏，仍然算错误
+# 徽章与友链头像这类图片因此可以直接用外站地址。
+IMAGE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".ico", ".bmp")
+
+# 允许的外部主机（白名单里的主机上的任何资源都不算违规）：
+#   github.com / camo.githubusercontent.com —— GitHub Actions 实时构建徽章（图片，lazy 加载）
 BADGE_ALLOW_HOSTS = {"github.com", "camo.githubusercontent.com"}
 
 SELF_HOSTS = {"wusitech.github.io", "wstk.pages.dev", "localhost", "127.0.0.1"}
