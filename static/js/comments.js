@@ -422,7 +422,10 @@
 
     /** 取一份评论 JSON；非 200（404 / 403 / 5xx）一律当失败，交给调用方换来源重试 */
     function fetchJson(url) {
-      return fetch(url, { cache: 'no-cache' }).then(function (res) {
+      // 加时间戳绕过两层缓存：GitHub Pages 对静态文件约 10 分钟的缓存、以及 Service Worker 的缓存。
+    // 否则刚发布的评论要等缓存过期才出现（数据其实早就构建好了）。
+    var bust = url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now();
+    return fetch(bust, { cache: 'no-store' }).then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       });
