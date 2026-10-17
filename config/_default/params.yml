@@ -681,6 +681,13 @@ injector:
       <!-- 站内本地搜索：索引 /index.json，零外部请求 -->
       <link rel="preload" as="image" href="/images/banner.webp" fetchpriority="high" />
       <style id="wusi-bg-fix">body{background-attachment:fixed !important;background-size:cover !important;background-position:center center !important}</style>
+            <style id="wusi-bg-translucent">
+        /* 内容卡片半透明，让随机固定背景透出来 */
+        :root { --color-wrap: rgba(255,255,255,.82) !important; --color-background: transparent !important; }
+        html[data-theme="dark"] { --color-wrap: rgba(39,43,48,.86) !important; --color-background: transparent !important; }
+        body { background-color: transparent !important; }
+        .article-entry, .post-wrap, article { background: var(--color-wrap) !important; }
+      </style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
       <script src="/js/loader-tip.js?v=1" defer></script>
