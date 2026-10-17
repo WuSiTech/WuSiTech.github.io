@@ -408,7 +408,7 @@ collections:
           - label: 博主身份（显示「博主」标记）
             name: author
             widget: boolean
-            default: false
+            default: true
 
   # ---------------------------------------------------------------- 页面评论
   # 关于页 / 友链页 / 下载页等固定页面的评论（数据在 static/comments/<页面>.json，
@@ -448,7 +448,7 @@ collections:
           - label: 博主身份（显示「博主」标记）
             name: author
             widget: boolean
-            default: false
+            default: true
 
 
 # ---------------------------------------------------------------- 说明
