@@ -23,6 +23,18 @@
       "hidden": true,
       "author": false,
       "replyTo": ""
+    },
+    {
+      "id": "c_1792227964790_ee4a2a",
+      "name": "测试",
+      "email": "",
+      "website": "",
+      "body": "验证令牌是否配好的测试评论，验证完请在后台删除。",
+      "ts": "2026-10-17T09:06:04.790Z",
+      "ua": "curl/8.21.0",
+      "hidden": true,
+      "author": false,
+      "replyTo": ""
     }
   ]
 }
