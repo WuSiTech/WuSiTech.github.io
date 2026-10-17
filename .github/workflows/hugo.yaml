@@ -1,8 +1,10 @@
 name: Build and deploy
 on:
-  push:
-    branches:
-      - main
+  # 定时构建：每 12 小时一次（UTC 00:00 / 12:00 = 北京时间 08:00 / 20:00）。
+  # 不再随 push 触发 —— 即使仓库有新提交（包括新评论），也等下一次定时构建生效。
+  schedule:
+    - cron: '0 */12 * * *'
+  # 需要立刻发布时，在 Actions 页面手动运行本工作流（Run workflow）。
   workflow_dispatch:
 
 permissions:
@@ -111,3 +113,16 @@ jobs:
       # 部署失败时「补发 build-status.json」的机制已随该文件一起删除：
       # 现在页底状态来自 GitHub 官方徽章 SVG 本身（static/badges/*.svg），
       # 工作流失败时徽章下一次读取就会变成 failing，不需要补发 artifact。
+
+      # 站点部署完成后，再触发 Cloudflare Pages 构建（它不再跟随 push 自动构建）。
+      # 需要在仓库 Secrets 里配置 CF_DEPLOY_HOOK（Cloudflare Pages → Settings → Deploy hooks）。
+      - name: Trigger Cloudflare Pages build
+        continue-on-error: true
+        env:
+          HOOK: ${{ secrets.CF_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "未配置 CF_DEPLOY_HOOK，跳过"
+            exit 0
+          fi
+          curl -s -X POST "$HOOK" -o /dev/null -w "CF Pages hook HTTP %{http_code}\n"
