@@ -680,6 +680,7 @@ injector:
     <script>(function(){var _p=location.pathname;if(!(_p.indexOf("/posts/")===0||_p.indexOf("/about/")===0||_p.indexOf("/friend/")===0||_p.indexOf("/download/")===0))return;var a=document.querySelector(".article-entry");if(!a)return;var s=document.createElement("script");s.src="/js/comments.js?v=14";s.defer=true;document.body.appendChild(s);})();</script>
       <!-- 站内本地搜索：索引 /index.json，零外部请求 -->
       <link rel="preload" as="image" href="/images/banner.webp" fetchpriority="high" />
+      <style id="wusi-bg-fix">body{background-attachment:fixed !important;background-size:cover !important;background-position:center center !important}</style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
       <script src="/js/loader-tip.js?v=1" defer></script>
