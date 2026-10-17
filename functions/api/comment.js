@@ -34,7 +34,7 @@
  * 方便 tools/git-comments/test.mjs 用假的 fetch 完整跑一遍（见该文件）。
  */
 
-const DEFAULT_ALLOWED_ORIGINS = 'https://wusitech.github.io,https://wstk.pages.dev';
+const DEFAULT_ALLOWED_ORIGINS = 'https://wstek.win,https://www.wstek.win,https://wusitech.github.io,https://wstk.pages.dev';
 const DEFAULT_REPO = 'WuSiTech/WuSiTech.github.io';
 const DEFAULT_BRANCH = 'main';
 const API = 'https://api.github.com';
