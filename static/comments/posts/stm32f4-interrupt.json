@@ -23,7 +23,7 @@
       "ts": "2026-10-17T09:03:00.071Z",
       "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.",
       "hidden": false,
-      "author": false
+      "author": true
     }
   ]
 }
