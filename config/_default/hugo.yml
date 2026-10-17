@@ -10,7 +10,7 @@
 # 另外这里定义了「构建状态」挂件要用的 JSON 输出格式（末尾两节）。
 # ---------------------------------------------------------------------------
 
-baseURL: "https://wusitech.github.io/"
+baseURL: "https://wstek.win/"
 locale: "zh-cn"
 title: "吾思 梦阁"
 theme: "reimu"
