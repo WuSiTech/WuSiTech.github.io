@@ -752,6 +752,10 @@ injector:
         /* 内容整体抬到背景层之上 */
         #header-nav, #header, #header-outer, #main, #content, .container, #footer { position: relative; z-index: 1; }
       </style>
+      <style id="wusi-no-hscroll">
+        html, body { overflow-x: hidden !important; }
+        #header img { max-width: 100% !important; }
+      </style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
       <script src="/js/loader-tip.js?v=1" defer></script>
