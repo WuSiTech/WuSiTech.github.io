@@ -33,7 +33,7 @@ banner = "images/banner.webp"
 
 ## STM32的中断链路是什么？
 
-![中断链路](/images/interrupt-path.jpg)
+![中断链路](/images/interrupt-path.webp)
 
 如图，通过SYSCFG，可以从GPIOx中选出要中断的引脚。然后接到EXTI，EXTI负责检测进来的信号是否满足触发中断的条件（条件由自己设置）。当触发中断的条件时，信号通过EXTIx和其他的通路触发NVIC，NVIC负责将信息汇报CPU，此时中断触发。
 
