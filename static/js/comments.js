@@ -399,7 +399,17 @@
     actions.appendChild(msg);
     form.appendChild(actions);
 
-    var tip = el('p', 'gc-tip', '评论提交后需站长审核，通过后才会显示在这里');
+    var tip = el('p', 'gc-tip', '提交后即可显示（可能需要等一次构建）');
+  // 向接口查询当前是否开启审核，据此切换提示文案
+  (function () {
+    var api = endpoint.replace(/\/+$/, '');
+    fetch(api + '?config=1', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !j.ok) { return; }
+      if (j.mode === 'pr') { tip.textContent = '评论会先进入待合并状态，站长合并后显示'; }
+      else if (j.pending) { tip.textContent = '评论提交后需站长审核，通过后才会显示在这里'; }
+      else { tip.textContent = '提交后约一分钟（等一次构建）就会显示在这里'; }
+    }).catch(function () {});
+  })();
     form.appendChild(tip);
 
     section.appendChild(form);
