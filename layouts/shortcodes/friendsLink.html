@@ -1,0 +1,38 @@
+{{- /* 站点级覆盖：在主题原版基础上加「网址检测/归一化」——没写协议的自动补 https://
+       这样后台里只填 example.com 也不会被浏览器当成站内相对路径（/friend/example.com）。
+       ⚠️ 复制自主题 themes/reimu/layouts/shortcodes/friendsLink.html，
+          主题升级后如该短代码有变化，需要重新同步一次。 */ -}}
+{{- $friends := hugo.Data.friends -}}
+{{- $style := .Get 0 | default "standard" -}}
+{{- if .Site.Params.friends.shuffle -}}
+  {{- $friends = shuffle $friends -}}
+{{- end -}}
+
+{{- define "friend-url" -}}
+  {{- $u := .url | default "" -}}
+  {{- if and $u (not (or (strings.HasPrefix $u "http://") (strings.HasPrefix $u "https://") (strings.HasPrefix $u "//") (strings.HasPrefix $u "mailto:"))) -}}
+    {{- $u = printf "https://%s" $u -}}
+  {{- end -}}
+  {{- $u -}}
+{{- end -}}
+
+{{- $styleClass := "" -}}
+{{- if eq $style "compact" }}{{ $styleClass = " compact" }}{{ else if eq $style "detailed" }}{{ $styleClass = " detailed" }}{{ end -}}
+
+<div class="friend-wrap{{ $styleClass }}" data-aos="zoom-in">
+  {{- range $friends -}}
+    <div class="friend-item-wrap{{ $styleClass }}">
+      <a href="{{ template "friend-url" . }}" rel="noopener nofollow noreferrer" target="_blank"></a>
+      <div class="friend-icon-wrap{{ $styleClass }}">
+        <img class="no-lightbox" src="{{ .image }}" alt="{{ .name }}" />
+      </div>
+      <div class="friend-info-wrap{{ $styleClass }}">
+        <div class="friend-name{{ $styleClass }}">
+          {{ .name }}{{ if .badge }}<span class="friend-badge{{ $styleClass }}">{{ .badge }}</span>{{ end }}
+        </div>
+        <div class="friend-desc{{ $styleClass }}">{{ .desc }}</div>
+        {{- if .remark }}<div class="friend-remark{{ $styleClass }}">{{ .remark }}</div>{{ end }}
+      </div>
+    </div>
+  {{- end -}}
+</div>
