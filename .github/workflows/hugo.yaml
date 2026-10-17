@@ -1,7 +1,7 @@
 name: Build and deploy
 on:
   # 定时构建：每 6 小时一次（UTC 00/06/12/18 = 北京时间 08:00 / 14:00 / 20:00 / 02:00）。
-  # 不再随 push 触发 —— 即使仓库有新提交（包括新评论），也等下一次定时构建生效。
+  # github.io 随 push 即时构建（Actions 免费无限）；Cloudflare Pages 只在定时任务里触发，见文末。
   schedule:
     - cron: '0 */6 * * *'
   # 需要立刻发布时，在 Actions 页面手动运行本工作流（Run workflow）。
@@ -117,6 +117,8 @@ jobs:
       # 站点部署完成后，再触发 Cloudflare Pages 构建（它不再跟随 push 自动构建）。
       # 需要在仓库 Secrets 里配置 CF_DEPLOY_HOOK（Cloudflare Pages → Settings → Deploy hooks）。
       - name: Trigger Cloudflare Pages build
+        # 只在定时任务里触发，避免每次 push 都消耗 Cloudflare 的构建配额
+        if: ${{ github.event_name == 'schedule' }}
         continue-on-error: true
         env:
           HOOK: ${{ secrets.CF_DEPLOY_HOOK }}
