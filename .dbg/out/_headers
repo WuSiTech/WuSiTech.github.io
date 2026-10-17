@@ -1,5 +1,0 @@
-# 评论数据允许跨域读取：评论组件固定从 https://wstk.pages.dev 取 JSON，
-# 这样两个域名（wstk.pages.dev / wusitech.github.io）看到的评论永远一致。
-/comments/*
-  Access-Control-Allow-Origin: *
-  Cache-Control: public, max-age=60

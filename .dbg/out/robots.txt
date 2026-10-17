@@ -1,6 +1,0 @@
-User-agent: *
-Allow: /
-
-# sitemap 由 Hugo 在每次构建时自动生成（/sitemap.xml），
-# GitHub Actions 每次推送都会重新构建并部署，所以这里永远是新的。
-Sitemap: http://127.0.0.1:8099/sitemap.xml
