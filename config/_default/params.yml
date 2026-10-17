@@ -725,6 +725,27 @@ injector:
         }
         html[data-theme="dark"] #footer a, html[data-theme="dark"] .footer a, html[data-theme="dark"] footer a { color: #ff8b8b !important; }
       </style>
+      <style id="wusi-header-readable">
+        /* 头部标题/副标题：和页底一样用半透明面板 + 主题色文字，保证压在任何背景上都看得清 */
+        #header-title {
+          background: rgba(255,255,255,.72) !important;
+          backdrop-filter: blur(3px);
+          border-radius: 12px;
+          padding: 14px 22px !important;
+          display: inline-block;
+          margin: 0 auto;
+        }
+        #header-title h1, #header-title #logo h1, #header-title a, #subtitle-wrap, #subtitle, #subtitle a {
+          color: #333 !important;
+          text-shadow: none !important;
+        }
+        html[data-theme="dark"] #header-title { background: rgba(30,33,38,.78) !important; }
+        html[data-theme="dark"] #header-title h1, html[data-theme="dark"] #header-title a,
+        html[data-theme="dark"] #subtitle-wrap, html[data-theme="dark"] #subtitle, html[data-theme="dark"] #subtitle a { color: #ddd !important; }
+        /* 文章页的时间/字数那一行也放在同一块面板里 */
+        #header .post-meta, #header .post-info { color: #333 !important; }
+        html[data-theme="dark"] #header .post-meta, html[data-theme="dark"] #header .post-info { color: #ddd !important; }
+      </style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
       <script src="/js/loader-tip.js?v=1" defer></script>
