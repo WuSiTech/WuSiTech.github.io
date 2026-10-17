@@ -683,7 +683,7 @@ injector:
       <!-- 注：原来这里有一条 /images/banner.webp 的 preload；
            随机固定背景上线后 #header 里的 banner 图已被隐藏，不再需要预加载，故删除。 -->
       <style id="wusi-footer-readable">
-        /* 页底文字压在随机背景上会看不清：给页脚一块半透明面板，并按明暗主题切换文字颜色 */
+        /* 页底文字压在随机背景上会看不清：给页脚一层半透明背景（真正背景由下面的固定通栏条统一提供） */
         #footer, .footer, footer, #wusi-domain-tip {
           background: rgba(255,255,255,.72) !important;
           color: #333 !important;
@@ -692,11 +692,8 @@ injector:
           padding: 12px 16px;
           margin: 10px auto;
         }
-        /* 宽度和主内容对齐（页脚、页底域名提示；文章卡片里的 <footer> 不参与）：
-           主内容左右各留 16px —— 桌面是 #main/#sidebar 的 margin:0 16px，
-           手机是 #main 的 padding:0 16px，所以用 100% - 32px；
-           宽屏时 #content 有 layout.max_width（1350px）上限，减两侧 16px 就是 1318px。
-           ⚠️ 改 config/_default/params.yml 的 layout.max_width 时要同步改这里的 1318。 */
+        /* 宽度和主内容对齐（只对文档流里的页脚/域名提示生效；固定通栏条里的元素在下面单独改成满宽）：
+           主内容左右各留 16px —— 桌面是 #main/#sidebar 的 margin:0 16px，手机是 #main 的 padding:0 16px。 */
         #footer, #wusi-domain-tip {
           width: calc(100% - 32px);
           max-width: 1318px;
@@ -710,37 +707,76 @@ injector:
         }
         html[data-theme="dark"] #footer a, html[data-theme="dark"] .footer a, html[data-theme="dark"] footer a { color: #ff8b8b !important; }
 
-        /* ===== 页脚整块固定在视口底部常驻（用户要求"底部固定"） =====
-           宽度用 --wusi-page-width：固定元素默认相对视口，含不含滚动条会和内容区差几像素；
-           wusi-bg.js 用 documentElement.clientWidth 写这个变量，保证和内容区一样宽。
-           底部一层「到透明」的渐变，滚动上去的内容在面板缝隙里不会穿帮。 */
+        /* ===== 固定页脚：整条通栏贴在视口底部（用户要求"固定的底 + 一整横排"，参考主题原生 footer） =====
+           #wusi-footer-fixed 是一条通栏（满宽、无圆角、带半透明+毛玻璃背景），
+           里面的页脚（虚线 + 版权 + 字数/阅读时长）、域名提示、BLOG 状态徽章都变成
+           透明、满宽的"行"，由这一整条背景统一承载 —— 不再是一块块带圆角的浮动卡片。
+           宽度用 --wusi-page-width（= documentElement.clientWidth，wusi-bg.js 写入），
+           避免固定元素和内容区差一个滚动条宽度。 */
         #wusi-footer-fixed {
           position: fixed;
           left: 0;
           bottom: 0;
-          width: var(--wusi-page-width, 100%);
           z-index: 150;
-          padding: 0 0 8px;
+          width: var(--wusi-page-width, 100%);
           box-sizing: border-box;
-          background: linear-gradient(to top, var(--color-background) 55%, rgba(238,238,238,0));
-          pointer-events: none; /* 只有面板本身接收鼠标，缝隙和渐变区不挡内容 */
-        }
-        #wusi-footer-fixed > * { pointer-events: auto; }
-        /* 固定栏里的页脚紧凑一点（虚线间距、内边距收小），别占太多视口高度 */
-        #wusi-footer-fixed #footer {
-          margin: 0 auto 6px;
-          padding: 8px 16px;
-        }
-        #wusi-footer-fixed .footer-line {
-          margin: 4px 0 10px;
+          background: rgba(255, 255, 255, .86);
+          -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(10px);
+          box-shadow: 0 -6px 24px rgba(0, 0, 0, .06);
+          color: #333;
         }
         html[data-theme="dark"] #wusi-footer-fixed {
-          background: linear-gradient(to top, #21252b 55%, rgba(33,37,43,0));
+          background: rgba(30, 33, 38, .9);
+          box-shadow: 0 -6px 24px rgba(0, 0, 0, .3);
+          color: #ddd;
+        }
+        /* 条内三块：透明、满宽、无圆角、无外边距（背景/毛玻璃由整条承载） */
+        #wusi-footer-fixed #footer,
+        #wusi-footer-fixed #wusi-domain-tip,
+        #wusi-footer-fixed .wusi-badges {
+          width: 100% !important;
+          max-width: none !important;
+          margin: 0 !important;
+          border-radius: 0 !important;
+          background: none !important;
+          -webkit-backdrop-filter: none !important;
+          backdrop-filter: none !important;
+          box-shadow: none !important;
+          box-sizing: border-box;
+        }
+        /* 虚线横贯整条（主题的 .footer-line 本来就是 width:200% + 横向滚动动画，放在通栏里正好） */
+        #wusi-footer-fixed .footer-line { margin: 8px 0 12px; }
+        #wusi-footer-fixed #footer { padding: 0; }
+        #wusi-footer-fixed #footer-info { padding: 0 16px; }
+        /* 域名提示、BLOG 状态：通栏里的小字行，别再各自占一块背景 */
+        #wusi-footer-fixed #wusi-domain-tip {
+          margin: 0 !important;
+          padding: 8px 16px 0;
+          font-size: 12px;
+          line-height: 1.65;
+          opacity: .72;
+        }
+        #wusi-footer-fixed .wusi-badges {
+          gap: 8px;
+          padding: 8px 16px 12px;
+        }
+        /* 手机端把这一条压扁一点（字号/间距收小，别占太多屏幕） */
+        @media (max-width: 767px) {
+          #wusi-footer-fixed .footer-line { margin: 4px 0 8px; }
+          #wusi-footer-fixed #footer-info { padding: 0 12px; }
+          #wusi-footer-fixed #wusi-domain-tip {
+            padding: 4px 12px 0;
+            font-size: 11px;
+            line-height: 1.5;
+          }
+          #wusi-footer-fixed .wusi-badges {
+            gap: 6px;
+            padding: 4px 12px 8px;
+          }
         }
         /* 固定后页脚脱离文档流，用等高占位把页面最后的内容顶上来（高度由 JS 量出来写入） */
         #wusi-footer-spacer { height: var(--wusi-footer-h, 180px); }
-        /* 回到顶部按钮原来贴右下角，现在会被固定页脚挡住，往上让出页脚高度 */
-        .sidebar-top { bottom: calc(var(--wusi-footer-h, 0px) + 14px) !important; }
       </style>
       <style id="wusi-header-readable">
         /* 头部标题/副标题不再加半透明面板（用户要求"不用框"）：
@@ -797,7 +833,7 @@ injector:
            上面按桌面写的 32px 会差 4px，这里单独对齐成 40px —— 手机（≤767）是 16px*2，
            宽屏（≥960）是 #main/#sidebar 的 margin:0 16px（16px*2），都不用改。 */
         @media (min-width: 768px) and (max-width: 959px) {
-          #header-title, #footer, #wusi-domain-tip { width: calc(100% - 40px) !important; }
+          #header-title { width: calc(100% - 40px) !important; }
         }
       </style>
       <script src="/js/search.js?v=12" defer></script>

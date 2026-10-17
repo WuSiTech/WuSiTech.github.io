@@ -97,8 +97,9 @@ Hugo 静态博客，主题 [reimu](https://github.com/D-Sketon/hugo-theme-reimu)
 
 ## 页面底部的「BLOG状态」徽章
 
-放在**页脚**里，由站点级覆盖 [layouts/partials/footer.html](layouts/partials/footer.html) 实现
-（`</footer>` 之后那个 `class="wusi-badges"` 的块，内容是小字「BLOG状态」+ 两张徽章图）：
+放在**底部固定通栏条**里：由站点级覆盖 [layouts/partials/footer.html](layouts/partials/footer.html) 实现
+（`</footer>` 之后那个 `class="wusi-badges"` 的块，和页脚、域名提示一起被包进
+`<div id="wusi-footer-fixed">`，是那条通栏里的一行；内容是「BLOG状态」小字 + 两张徽章图）：
 
 - 图片是 `static/badges/build-and-deploy.svg` 与 `static/badges/tools-and-config-checks.svg`，
   页面上引用 `/badges/…`，**不产生任何外链请求**；
@@ -113,10 +114,9 @@ Hugo 静态博客，主题 [reimu](https://github.com/D-Sketon/hugo-theme-reimu)
   `BADGES` 地址表（文件名对应 `static/badges/*.svg`）；
 - 明细与位置约束见 [docs/构建状态挂件.md](docs/构建状态挂件.md)。
 
-历史遗留：旧的「查 GitHub API → 生成 `/build-status.json` → 前端填字」链路虽然已经停用，
-文件还在仓库里 —— `static/js/build-status.js`（已经没有任何地方引用）、
-`static/css/build-status.css`（`params.yml` 的 `injector.body_end` 仍会加载它，
-而 `footer.html` 里用一行 `<style>.build-status{display:none!important}</style>` 把旧条压掉）。
+历史遗留的「查 GitHub API → 生成 `/build-status.json` → 前端填字」链路已经**整条删除**
+（`static/js/build-status.js`、`static/css/build-status.css` 等文件都不在了，
+`params.yml` 里也没有对应的加载代码）；现在页面上只剩这一行本地徽章。
 
 ## 侧边栏 widgets
 

@@ -6,10 +6,12 @@
   {{- $totalReadingTime = add $totalReadingTime .ReadingTime -}}
 {{- end -}}
 
-{{- /* 页脚（虚线 + 版权 + 字数/阅读时长，也就是用户说的"页脚这一整块"）固定在视口底部常驻，
-       见 Injector 里的 #wusi-footer-fixed 样式；固定后脱离文档流，所以页面最后放一个等高占位
-       #wusi-footer-spacer（高度由 static/js/wusi-bg.js 量出来写入），避免最后的内容被挡住。
-       域名提示 / BLOG 状态徽章仍留在正常文档流里（页面最底部），不占用固定栏高度。 */ -}}
+{{- /* 底部固定通栏条（用户要求"固定的底 + 一整横排"，参考主题原生 footer）：
+       #wusi-footer-fixed 是一条满宽的通栏（半透明 + 毛玻璃），里面依次是
+       页脚（虚线 + 版权 + 字数/阅读时长）、域名提示、BLOG 状态徽章 —— 三块都只是透明、满宽的"行"，
+       不再各自带圆角卡片背景；样式见 Injector 里的 #wusi-footer-fixed 规则。
+       固定后脱离文档流，所以页面最后放一个等高占位 #wusi-footer-spacer
+       （高度由 static/js/wusi-bg.js 量出来写入），避免最后的内容被挡住。 */ -}}
 <div id="wusi-footer-fixed">
 <footer id="footer" aria-label="Site footer">
   <div style="width: 100%; overflow: hidden">
@@ -125,20 +127,21 @@
     {{- end -}}
   </div>
 </footer>
-</div>
 
-<!-- ===== BLOG状态：放在页脚里（页面内容中，一定可见） ===== -->
-{{- /* 注意：这里的行内 margin 必须写 auto 左右，否则会覆盖 Injector 里 #wusi-domain-tip 的
-       margin:10px auto，导致面板贴左边、不居中（之前就是这样）。 */ -}}
-<div id="wusi-domain-tip" style="text-align:center;font-size:12.5px;line-height:1.9;opacity:.75;margin:14px auto 6px">
+<!-- ===== 域名提示 / BLOG状态：和页脚一起放进底部固定通栏条 ===== -->
+{{- /* 固定通栏条 #wusi-footer-fixed 的背景/毛玻璃由 Injector 里的 CSS 统一提供，
+       下面这几块在里面都只是"透明、满宽的行"，不再各自带圆角卡片背景。
+       行内 margin 写 auto 左右，避免覆盖样式表里的居中。 */ -}}
+<div id="wusi-domain-tip" style="text-align:center">
   想获取最新内容，请访问 <a href="https://wstek.win/" style="text-decoration:underline">wstek.win</a>；
   备用访问 <a href="https://wstk.pages.dev/" style="text-decoration:underline">wstk.pages.dev</a>（界面相同，内容最多滞后 2 小时）。
   <br />（wstek.win 与 wusitech.github.io 指向同一份站点，即时更新；wstk.pages.dev 最多滞后 2 小时）
 </div>
-<div class="wusi-badges" role="group" aria-label="BLOG状态" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 0 4px;flex-wrap:wrap">
+<div class="wusi-badges" role="group" aria-label="BLOG状态" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap">
   <span style="color:#8a8a8a;font-size:12px;white-space:nowrap">BLOG状态</span>
   <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml" target="_blank" rel="noopener" title="Build and deploy：查看 Actions"><img loading="lazy" decoding="async" src="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/hugo.yaml/badge.svg" onerror="this.onerror=null;this.src='/badges/build-and-deploy.svg'" alt="Build and deploy 状态" style="height:20px;display:block" /></a>
   <a href="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml" target="_blank" rel="noopener" title="Tools and config checks：查看 Actions"><img loading="lazy" decoding="async" src="https://github.com/WuSiTech/WuSiTech.github.io/actions/workflows/tools.yml/badge.svg" onerror="this.onerror=null;this.src='/badges/tools-and-config-checks.svg'" alt="Tools and config checks 状态" style="height:20px;display:block" /></a>
+</div>
 </div>
 <!-- 固定页脚的占位（高度 = 页脚实际高度，由 /js/wusi-bg.js 写入），防止最后一段内容被挡住 -->
 <div id="wusi-footer-spacer" aria-hidden="true"></div>
