@@ -314,32 +314,6 @@
 })();
 
 /* ==========================================================================
-   页脚固定底栏：量页脚实际高度写入 --wusi-footer-h（占位高度 + 回到顶部按钮让位），
-   同时用 documentElement.clientWidth 写 --wusi-page-width，保证固定页脚和内容区一样宽
-   ========================================================================== */
-(function () {
-  "use strict";
-  var root = document.documentElement;
-  var dock = document.getElementById("wusi-footer-fixed");
-  if (!dock) {
-    return;
-  }
-  function sync() {
-    var h = Math.ceil(dock.getBoundingClientRect().height);
-    root.style.setProperty("--wusi-footer-h", h + "px");
-    root.style.setProperty("--wusi-page-width", (root.clientWidth || window.innerWidth) + "px");
-  }
-  sync();
-  window.addEventListener("resize", sync);
-  window.addEventListener("load", sync);
-  if (window.ResizeObserver) {
-    try {
-      new ResizeObserver(sync).observe(dock);
-    } catch (e) {}
-  }
-})();
-
-/* ==========================================================================
    鼠标悬停顶部大图区域 → 内容渐渐淡出，方便欣赏背景（行为与 cialloking 一致）：
    进入 #header 后 #content 在 3 秒内 1 → 0.1 → 0 淡出；移出立即恢复（CSS 里有 .2s 过渡）。
    ========================================================================== */

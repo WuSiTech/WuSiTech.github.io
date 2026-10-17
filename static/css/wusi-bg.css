@@ -61,16 +61,6 @@ html[data-theme="dark"] #wusi-bg::after {
   background: rgba(10, 12, 16, 0.45);
 }
 
-/* 打印时不要固定底栏（屏幕上的固定页脚/占位都是给浏览用的） */
-@media print {
-  #wusi-footer-fixed {
-    position: static;
-  }
-  #wusi-footer-spacer {
-    display: none;
-  }
-}
-
 /* 鼠标悬停顶部大图区域时，JS 会逐帧改 #content 的 opacity（1 → 0.1 → 0 淡出，移出恢复）。
    这里给 .2s 过渡，移出时快速恢复，不至于生硬。 */
 #content {

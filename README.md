@@ -97,9 +97,9 @@ Hugo 静态博客，主题 [reimu](https://github.com/D-Sketon/hugo-theme-reimu)
 
 ## 页面底部的「BLOG状态」徽章
 
-放在**底部固定通栏条**里：由站点级覆盖 [layouts/partials/footer.html](layouts/partials/footer.html) 实现
+放在**页面最底部的整条通栏**里：由站点级覆盖 [layouts/partials/footer.html](layouts/partials/footer.html) 实现
 （`</footer>` 之后那个 `class="wusi-badges"` 的块，和页脚、域名提示一起被包进
-`<div id="wusi-footer-fixed">`，是那条通栏里的一行；内容是「BLOG状态」小字 + 两张徽章图）：
+`<div id="wusi-footer-bar">`，是页面最后那条通栏里的一行；内容是「BLOG状态」小字 + 两张徽章图）：
 
 - 图片是 `static/badges/build-and-deploy.svg` 与 `static/badges/tools-and-config-checks.svg`，
   页面上引用 `/badges/…`，**不产生任何外链请求**；
