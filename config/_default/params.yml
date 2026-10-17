@@ -746,6 +746,12 @@ injector:
         #header .post-meta, #header .post-info { color: #333 !important; }
         html[data-theme="dark"] #header .post-meta, html[data-theme="dark"] #header .post-info { color: #ddd !important; }
       </style>
+      <style id="wusi-bg-boost">
+        html, body { background-color: transparent !important; background-image: none !important; }
+        #wusi-bg { z-index: 0 !important; }
+        /* 内容整体抬到背景层之上 */
+        #header-nav, #header, #header-outer, #main, #content, .container, #footer { position: relative; z-index: 1; }
+      </style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
       <script src="/js/loader-tip.js?v=1" defer></script>
