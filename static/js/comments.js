@@ -165,6 +165,7 @@
 
   /* ---- 回复功能：扁平存储 + replyTo 父子指针 → 递归渲染成任意深度 ---- */
   var replyToId = '';
+  var gcPage = 1;
   var replyToName = '';
 
   function gcIndexOf(comments) {
@@ -232,7 +233,7 @@
      *   - 回复的头部加一个 ↑，表示「回复上面的评论」
      */
     var PAGE_SIZE = 10;
-    if (!state.page) { state.page = 1; }
+    if (!gcPage) { gcPage = 1; }
     var all = (comments || []).filter(function (c) { return c && c.hidden !== true; });
     var byId = {};
     all.forEach(function (c) { if (c.id) { byId[c.id] = c; } });
@@ -255,8 +256,8 @@
       return arr;
     });
     var pages = Math.max(1, Math.ceil(threads.length / PAGE_SIZE));
-    if (state.page > pages) { state.page = pages; }
-    var start = (state.page - 1) * PAGE_SIZE;
+    if (gcPage > pages) { gcPage = pages; }
+    var start = (gcPage - 1) * PAGE_SIZE;
     listNode.textContent = '';
     threads.slice(start, start + PAGE_SIZE).forEach(function (thread) {
       thread.forEach(function (item) {
@@ -281,15 +282,15 @@
       bar.className = 'gc-pager';
       var prev = document.createElement('button');
       prev.type = 'button'; prev.textContent = '上一页';
-      prev.disabled = state.page <= 1;
-      prev.addEventListener('click', function () { state.page = Math.max(1, state.page - 1); renderList(listNode, comments); });
+      prev.disabled = gcPage <= 1;
+      prev.addEventListener('click', function () { gcPage = Math.max(1, gcPage - 1); renderList(listNode, comments); });
       var info = document.createElement('span');
       info.className = 'gc-pager-info';
-      info.textContent = '第 ' + state.page + ' / ' + pages + ' 页';
+      info.textContent = '第 ' + gcPage + ' / ' + pages + ' 页';
       var next = document.createElement('button');
       next.type = 'button'; next.textContent = '下一页';
-      next.disabled = state.page >= pages;
-      next.addEventListener('click', function () { state.page = Math.min(pages, state.page + 1); renderList(listNode, comments); });
+      next.disabled = gcPage >= pages;
+      next.addEventListener('click', function () { gcPage = Math.min(pages, gcPage + 1); renderList(listNode, comments); });
       bar.appendChild(prev); bar.appendChild(info); bar.appendChild(next);
       host.appendChild(bar);
     }
