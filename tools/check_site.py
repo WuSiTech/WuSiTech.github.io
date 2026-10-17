@@ -174,6 +174,7 @@ def main(argv=None) -> int:
 
     missing: list[tuple[str, str]] = []
     blocked: list[tuple[str, str]] = []
+    external_images: list[tuple[str, str]] = []
     ignored_external = 0
 
     for page in pages:
@@ -188,7 +189,12 @@ def main(argv=None) -> int:
             if is_external(url):
                 host = host_of(url)
                 if host and host not in allowed_hosts:
-                    blocked.append((rel_page, url))
+                    # 外链图片（含友链头像、构建徽章）：非阻塞、可用 loading=lazy 异步化，
+                    # 站长明确允许；只统计不报错。外链 JS / CSS / 字体会拖慢首屏，仍然算错误。
+                    if url.split("?")[0].split("#")[0].lower().endswith(IMAGE_EXT):
+                        external_images.append((rel_page, url))
+                    else:
+                        blocked.append((rel_page, url))
                 continue
             target = internal_target(url, page, out_dir)
             if target is not None and not target.exists():
