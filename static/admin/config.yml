@@ -409,6 +409,47 @@ collections:
             widget: boolean
             default: false
 
+  # ---------------------------------------------------------------- 页面评论
+  # 关于页 / 友链页 / 下载页等固定页面的评论（数据在 static/comments/<页面>.json，
+  # 线上路径 /comments/<页面>.json；与文章评论分开，便于在后台单独审核）
+  - name: page_comments
+    label: 页面评论
+    label_singular: 评论文件
+    folder: static/comments
+    # 允许手动新建：某篇文章还没有任何评论时，你可以先建文件再写博主回复
+    create: false
+    extension: json
+    format: json
+    identifier_field: slug
+    sortable_fields: [slug]
+    summary: "{{slug}}"
+    fields:
+      - label: 文章路径
+        name: slug
+        widget: string
+        hint: 与文章 URL 对应，例如 posts/stm32f4-interrupt（一般不用改）
+      - label: 评论
+        name: comments
+        widget: list
+        summary: "{{fields.name}}：{{fields.body}}"
+        fields:
+          - { label: 内部 ID, name: id, widget: hidden, required: false }
+          - { label: 昵称, name: name, widget: string }
+          - { label: 邮箱（不公开显示）, name: email, widget: string, required: false }
+          - { label: 网址, name: website, widget: string, required: false }
+          - { label: 正文, name: body, widget: text }
+          - { label: 时间, name: ts, widget: string, required: false, hint: ISO 时间，一般不用改 }
+          - { label: 浏览器信息, name: ua, widget: string, required: false }
+          - label: 隐藏（页面不再显示，数据保留）
+            name: hidden
+            widget: boolean
+            default: false
+          - label: 博主身份（显示「博主」标记）
+            name: author
+            widget: boolean
+            default: false
+
+
 # ---------------------------------------------------------------- 说明
 # 1) 站点级配置分三处：
 #    - config/_default/params.toml（个人信息 / 菜单 / 首页分类卡片）→ 已放进后台的
