@@ -114,6 +114,10 @@
     '#git-comments .gc-replying{color:var(--gc-muted);font-size:.82em;margin-left:6px}',
     '#git-comments .gc-reply-btn{margin-left:8px;background:none;border:0;padding:0;color:var(--gc-accent);cursor:pointer;font-size:.82em}',
     '#git-comments .gc-reply-btn:hover{text-decoration:underline}',
+    '#git-comments .gc-up{color:var(--gc-accent);font-weight:600}',
+    '#git-comments .gc-pager{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:14px}',
+    '#git-comments .gc-pager button{padding:4px 12px;border-radius:6px;border:1px solid var(--gc-border);background:transparent;color:inherit;cursor:pointer}',
+    '#git-comments .gc-pager button:disabled{opacity:.4;cursor:default}',
     '#git-comments .gc-site{color:var(--gc-accent);font-size:.85em;text-decoration:none}',
     '#git-comments .gc-body{margin-top:6px;white-space:pre-wrap;word-break:break-word}',
     '#git-comments .gc-empty{color:var(--gc-muted);margin:0 0 18px}',
@@ -219,7 +223,77 @@
   }
 
   /* 用新实现覆盖原来的扁平渲染（原函数改名保留） */
-  function renderListPatched(listNode, comments) { renderListTree(listNode, comments); }
+  function renderListPatched(listNode, comments) {
+    /* 线程 + 分页渲染
+     *   - 线程 = 主评论 + 它的所有回复（递归）；回复永远紧跟主评论
+     *   - 线程内：主评论在前，回复按时间从旧到新
+     *   - 线程之间：按主评论时间从新到旧（所以第 1 页是最新的一批）
+     *   - 分页以「线程」为单位，绝不把回复和它的主评论拆到两页
+     *   - 回复的头部加一个 ↑，表示「回复上面的评论」
+     */
+    var PAGE_SIZE = 10;
+    if (!state.page) { state.page = 1; }
+    var all = (comments || []).filter(function (c) { return c && c.hidden !== true; });
+    var byId = {};
+    all.forEach(function (c) { if (c.id) { byId[c.id] = c; } });
+    var kids = {};
+    all.forEach(function (c) {
+      var p = (c.replyTo && byId[c.replyTo]) ? c.replyTo : '__root__';
+      (kids[p] = kids[p] || []).push(c);
+    });
+    function ms(s) { var d = new Date(s); return isNaN(d.getTime()) ? 0 : d.getTime(); }
+    Object.keys(kids).forEach(function (k) {
+      kids[k].sort(function (a, b) { return ms(a.ts) - ms(b.ts); });
+    });
+    var roots = (kids['__root__'] || []).slice().sort(function (a, b) { return ms(b.ts) - ms(a.ts); });
+    var threads = roots.map(function (r) {
+      var arr = [];
+      (function walk(c, depth) {
+        arr.push({ c: c, depth: depth });
+        (kids[c.id] || []).forEach(function (x) { walk(x, depth + 1); });
+      })(r, 0);
+      return arr;
+    });
+    var pages = Math.max(1, Math.ceil(threads.length / PAGE_SIZE));
+    if (state.page > pages) { state.page = pages; }
+    var start = (state.page - 1) * PAGE_SIZE;
+    listNode.textContent = '';
+    threads.slice(start, start + PAGE_SIZE).forEach(function (thread) {
+      thread.forEach(function (item) {
+        var li = gcNode(item.c, item.depth, byId);
+        if (item.depth > 0) {
+          var head = li.querySelector('.gc-head');
+          if (head) {
+            var up = document.createElement('span');
+            up.className = 'gc-up';
+            up.textContent = '\u2191 ';
+            head.insertBefore(up, head.firstChild);
+          }
+        }
+        listNode.appendChild(li);
+      });
+    });
+    var host = listNode.parentNode;
+    var bar = host ? host.querySelector('.gc-pager') : null;
+    if (bar) { bar.remove(); }
+    if (pages > 1 && host) {
+      bar = document.createElement('div');
+      bar.className = 'gc-pager';
+      var prev = document.createElement('button');
+      prev.type = 'button'; prev.textContent = '上一页';
+      prev.disabled = state.page <= 1;
+      prev.addEventListener('click', function () { state.page = Math.max(1, state.page - 1); renderList(listNode, comments); });
+      var info = document.createElement('span');
+      info.className = 'gc-pager-info';
+      info.textContent = '第 ' + state.page + ' / ' + pages + ' 页';
+      var next = document.createElement('button');
+      next.type = 'button'; next.textContent = '下一页';
+      next.disabled = state.page >= pages;
+      next.addEventListener('click', function () { state.page = Math.min(pages, state.page + 1); renderList(listNode, comments); });
+      bar.appendChild(prev); bar.appendChild(info); bar.appendChild(next);
+      host.appendChild(bar);
+    }
+  }
   function renderList(listNode, comments) { renderListPatched(listNode, comments); }
 
   function renderListFlat(listNode, comments) {
