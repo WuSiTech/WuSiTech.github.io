@@ -393,8 +393,8 @@ collections:
         widget: list
         summary: "{{fields.name}}：{{fields.body}}"
         fields:
-          - { label: 内部 ID, name: id, widget: hidden, required: false }
-          - { label: 回复哪条（父评论 id）, name: replyTo, widget: string, required: false, hint: 填父评论的「内部 ID」；留空就是顶级评论 }
+          - { label: 内部 ID（回复时要复制这一串）, name: id, widget: string, required: false, hint: 这条评论的唯一标识；别人要回复它时，把这一串粘贴到「回复哪条」 }
+          - { label: 回复哪条（父评论 id）, name: replyTo, widget: string, required: false, hint: 把父评论的「内部 ID」粘贴到这里；留空就是顶级评论 }
           - { label: 昵称, name: name, widget: string }
           - { label: 邮箱（不公开显示）, name: email, widget: string, required: false }
           - { label: 网址, name: website, widget: string, required: false }
@@ -434,7 +434,7 @@ collections:
         widget: list
         summary: "{{fields.name}}：{{fields.body}}"
         fields:
-          - { label: 内部 ID, name: id, widget: hidden, required: false }
+          - { label: 内部 ID（回复时要复制这一串）, name: id, widget: string, required: false, hint: 这条评论的唯一标识；别人要回复它时，把这一串粘贴到「回复哪条」 }
           - { label: 昵称, name: name, widget: string }
           - { label: 邮箱（不公开显示）, name: email, widget: string, required: false }
           - { label: 网址, name: website, widget: string, required: false }
