@@ -27,7 +27,7 @@
     a.target = '_blank';
     a.rel = 'noopener';
     tip.appendChild(a);
-    tip.appendChild(document.createTextNode('（' + other.name + '）QAQ'));
+    tip.appendChild(document.createTextNode(' QAQ'));
     word.appendChild(tip);
   }
 
