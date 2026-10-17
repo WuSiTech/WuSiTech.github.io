@@ -158,33 +158,6 @@
   probe.setAttribute('src', r); // 用 setAttribute，避免被站内引用检查误判为 HTML src 属性
 })();
 </script>
-{{- $covers := slice -}}
-{{- range (readDir "static/images/pool/covers") -}}
-  {{- if and (not .IsDir) (strings.HasSuffix .Name ".webp") -}}
-    {{- $covers = $covers | append (printf "/images/pool/covers/%s" .Name) -}}
-  {{- end -}}
-{{- end -}}
-<script>
-(function () {
-  // 稳定随机封面：文章没有封面图时，按文章链接的哈希从封面池取一张（同一篇永远同一张）
-  var pool = {{ $covers | jsonify }};
-  if (!pool || !pool.length) { return; }
-  function hash(s) { var h = 0; for (var i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; } return Math.abs(h); }
-  var cards = document.querySelectorAll('.post-wrap, .post-item, .post-card');
-  Array.prototype.forEach.call(cards, function (card) {
-    var link = card.querySelector('a[href]');
-    var img = card.querySelector('.post-cover img, img');
-    if (!link || !img) { return; }
-    if (img.getAttribute('data-cover-set') === '1') { return; }
-    img.setAttribute('data-cover-set', '1');
-    var pick = pool[hash(link.getAttribute('href') || '') % pool.length];
-    img.setAttribute('src', pick);
-    img.style.opacity = '1';
-    img.style.visibility = 'visible';
-  });
-})();
-</script>
-<!-- random-cover-block -->
 <!-- random-bg-block -->
 <div id="wusi-domain-tip" style="text-align:center;font-size:12.5px;line-height:1.9;opacity:.75;margin:14px 0 6px">
   想获取最新内容，请访问 <a href="https://wusitech.github.io/" style="text-decoration:underline">wusitech.github.io</a>；
