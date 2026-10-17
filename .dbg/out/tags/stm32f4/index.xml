@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>STM32F4 on 吾思 梦阁</title><link>http://127.0.0.1:8099/tags/stm32f4/</link><description>Recent content from 吾思 梦阁</description><generator>Hugo</generator><language>zh-cn</language><copyright>本博客所有文章除特别声明外，均采用 BY-NC-SA 许可协议。转载请注明出处！</copyright><lastBuildDate>Fri, 16 Oct 2026 19:30:00 +0800</lastBuildDate><atom:link href="http://127.0.0.1:8099/tags/stm32f4/index.xml" rel="self" type="application/rss+xml"/><item><title>STM32F4 配置中断</title><link>http://127.0.0.1:8099/posts/stm32f4-interrupt/</link><pubDate>Fri, 16 Oct 2026 19:30:00 +0800</pubDate><guid>http://127.0.0.1:8099/posts/stm32f4-interrupt/</guid><description>
+<![CDATA[<h1>STM32F4 配置中断</h1><p>作者：WuSi（）</p>
+        
+          <p>参考：<a href="https://www.bilibili.com/video/BV1th411z7sn">https://www.bilibili.com/video/BV1th411z7sn</a></p>
+<h2 id="中断是什么有什么用">
+<a class="header-anchor" href="#%e4%b8%ad%e6%96%ad%e6%98%af%e4%bb%80%e4%b9%88%e6%9c%89%e4%bb%80%e4%b9%88%e7%94%a8"></a>
+中断是什么？有什么用？
+</h2><blockquote>
+<p>中断的主要作用是让CPU在运行程序时能及时响应外部或内部的突发事件，从而提高系统效率、保证系统可靠性并满足实时处理需求。 中断使CPU暂停当前任务，转去执行中断服务程序，处理完后再返回原任务继续执行。</p>
+</blockquote>
+<p>在课程视频里如此：
+• 中断：在主程序运行过程中，出现了特定的中断触发条件（中断源），使得CPU暂停当前正在运行的程序，转而去处理中断程序，处理完成后又返回原来被暂停的位置继续运行</p>
+<p>• 中断优先级：当有多个中断源同时申请中断时，CPU会根据中断源的轻重缓急进行裁决，优先响应更加紧急的中断源（就像病人去医院一样，让病情危急的病人先治疗）</p>
+<p><a
+  href="/images/20261016-185545.webp"
+  data-fancybox="gallery">
+  <img
+    class="lazyload"
+    data-src="/images/20261016-185545.webp"
+    data-sizes="auto"
+    alt=""
+  />
+</a></p>
+<p>• 中断嵌套：当一个中断程序正在运行时，又有新的更高优先级的中断源申请中断，CPU再次暂停当前中断程序，转而去处理新的中断程序，处理完成后依次进行返回</p>
+<p>如图阐释了中断的工作原理：
+<a
+  href="/images/20261016-184440.webp"
+  data-fancybox="gallery">
+  <img
+    class="lazyload"
+    data-src="/images/20261016-184440.webp"
+    data-sizes="auto"
+    alt="中断可以嵌套"
+  />
+</a></p>
+<p>需注意中断是阻塞的，因此不能在中断函数中调用所需时间过长的函数，否则会影响主函数的执行产生混乱。</p>
+<p>我认为，中断可以代替一部分轮询，提高运行的效率。<del>（这不就是特殊的回调吗ᗜˬᗜ）</del></p>
+<h2 id="stm32的中断链路是什么">
+<a class="header-anchor" href="#stm32%e7%9a%84%e4%b8%ad%e6%96%ad%e9%93%be%e8%b7%af%e6%98%af%e4%bb%80%e4%b9%88"></a>
+STM32的中断链路是什么？
+</h2><p><a
+  href="/images/interrupt-path.webp"
+  data-fancybox="gallery">
+  <img
+    class="lazyload"
+    data-src="/images/interrupt-path.webp"
+    data-sizes="auto"
+    alt="中断链路"
+  />
+</a></p>
+<p>如图，通过SYSCFG，可以从GPIOx中选出要中断的引脚。然后接到EXTI，EXTI负责检测进来的信号是否满足触发中断的条件（条件由自己设置）。当触发中断的条件时，信号通过EXTIx和其他的通路触发NVIC，NVIC负责将信息汇报CPU，此时中断触发。</p>
+<p>对于SYSCFG，我们可以把它看做一个“接线器”，它负责将P?x（指PAx，PBx,&hellip;）接到对应的EXTI。值得注意的是，PAx/PBx&hellip;等相同x但不同GPIOx的引脚共用一个SYSCFG寄存器，也就是说，当设置PA0通过SYSCFG连接到EXTI0时，PB0,PC0等等就不能使用中断，否则会引发未知错误。</p>
+<p><a
+  href="/images/20261016-185707.webp"
+  data-fancybox="gallery">
+  <img
+    class="lazyload"
+    data-src="/images/20261016-185707.webp"
+    data-sizes="auto"
+    alt="SYSCFG/AFIO"
+  />
+</a></p>
+<p>对于EXTI，他是一个“检测器”和“控制器”。检测前端来的信号是否满足条件，以及控制EXTIx等通道传输中断信号。如图，ST公司将P?0-P?4的线分别映射到EXTI0-EXTI4，但是后续5-15，ST将其分别映射到两个EXTI通路中P?5-P?9共同使用EXTI9_5，P?10-P?15同理。</p>
+<p>那可能有人会问：如果使用了P?5-P?15，在EXTI9_5或EXTI15_10中该如何判定到底是哪个口引起的中断呢？
+其实，中断信号储存在寄存器内，可以使用if (EXTI-&gt;PR &amp; (1 &laquo; x)) 来判断和执行（x取5-15，是P?x的x。PR是挂起寄存器的意思），如下图。<del>（看不懂的话可以配课看的www）</del><a
+  href="/images/20261016-185755.webp"
+  data-fancybox="gallery">
+  <img
+    class="lazyload"
+    data-src="/images/20261016-185755.webp"
+    data-sizes="auto"
+    alt=""
+  />
+</a></p>
+<p>NVIC是一个外设，用于管理和传递中断，还可以设置优先级（见上面优先级的图）<a
+  href="/images/20261016-185446.webp"
+  data-fancybox="gallery">
+  <img
+    class="lazyload"
+    data-src="/images/20261016-185446.webp"
+    data-sizes="auto"
+    alt=""
+  />
+</a></p>
+<p>在STM32中实现中断，本质上就是打通这三个“关卡”。</p>
+<h2 id="如何实现标准库">
+<a class="header-anchor" href="#%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0%e6%a0%87%e5%87%86%e5%ba%93"></a>
+如何实现？（标准库）
+</h2><h3 id="先理清一下步骤">
+<a class="header-anchor" href="#%e5%85%88%e7%90%86%e6%b8%85%e4%b8%80%e4%b8%8b%e6%ad%a5%e9%aa%a4"></a>
+先理清一下步骤。
+</h3><p>时钟使能-&gt;设置GPIO引脚-&gt;设置SYSCFG-&gt;设置EXTI-&gt;设置NVIC-&gt;写中断函数（这一步随便，我倾向于最后写）</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;main.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="c1">//设置TimingDelay，可能是我的库的问题必须要写
+</span></span></span><span class="line"><span class="cl"><span class="k">static</span> <span class="n">__IO</span> <span class="kt">uint32_t</span> <span class="n">TimingDelay</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">TimingDelay_Decrement</span><span class="p">(</span><span class="kt">void</span><span class="p">){</span><span class="k">if</span> <span class="p">(</span><span class="n">TimingDelay</span> <span class="o">!=</span> <span class="mh">0x00</span><span class="p">)</span> <span class="n">TimingDelay</span><span class="o">--</span><span class="p">;}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">//中断函数（其实不一定非要写到主程序里）
+</span></span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">EXTI0_IRQHandler</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="p">(</span><span class="nf">EXTI_GetITStatus</span><span class="p">(</span><span class="n">EXTI_Line0</span><span class="p">)</span> <span class="o">!=</span> <span class="n">RESET</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">GPIO_ToggleBits</span><span class="p">(</span><span class="n">GPIOC</span><span class="p">,</span> <span class="n">GPIO_Pin_13</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">EXTI_ClearITPendingBit</span><span class="p">(</span><span class="n">EXTI_Line0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">//使能时钟
+</span></span></span><span class="line"><span class="cl">    <span class="nf">RCC_AHB1PeriphClockCmd</span><span class="p">(</span><span class="n">RCC_AHB1Periph_GPIOA</span><span class="p">,</span> <span class="n">ENABLE</span><span class="p">);</span>  <span class="c1">// GPIOA
+</span></span></span><span class="line"><span class="cl">    <span class="nf">RCC_AHB1PeriphClockCmd</span><span class="p">(</span><span class="n">RCC_AHB1Periph_GPIOC</span><span class="p">,</span> <span class="n">ENABLE</span><span class="p">);</span>  <span class="c1">// GPIOC
+</span></span></span><span class="line"><span class="cl">    <span class="c1">//注意，SYSCFG也要使能
+</span></span></span><span class="line"><span class="cl">    <span class="nf">RCC_APB2PeriphClockCmd</span><span class="p">(</span><span class="n">RCC_APB2Periph_SYSCFG</span><span class="p">,</span> <span class="n">ENABLE</span><span class="p">);</span> <span class="c1">// SYSCFG
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//初始化引脚
+</span></span></span><span class="line"><span class="cl">    <span class="n">GPIO_InitTypeDef</span> <span class="n">GPIO_Struct</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">GPIO_Struct</span><span class="p">.</span><span class="n">GPIO_Mode</span><span class="o">=</span><span class="n">GPIO_Mode_IN</span><span class="p">;</span> <span class="c1">//输入模式，用于中断
+</span></span></span><span class="line"><span class="cl">    <span class="n">GPIO_Struct</span><span class="p">.</span><span class="n">GPIO_OType</span><span class="o">=</span><span class="n">GPIO_OType_PP</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">GPIO_Struct</span><span class="p">.</span><span class="n">GPIO_Pin</span><span class="o">=</span><span class="n">GPIO_Pin_0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">GPIO_Struct</span><span class="p">.</span><span class="n">GPIO_PuPd</span><span class="o">=</span><span class="n">GPIO_PuPd_UP</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">GPIO_Struct</span><span class="p">.</span><span class="n">GPIO_Speed</span><span class="o">=</span><span class="n">GPIO_High_Speed</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">GPIO_Init</span><span class="p">(</span><span class="n">GPIOA</span><span class="p">,</span><span class="o">&amp;</span><span class="n">GPIO_Struct</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    <span class="n">GPIO_Struct</span><span class="p">.</span><span class="n">GPIO_Mode</span><span class="o">=</span><span class="n">GPIO_Mode_OUT</span><span class="p">;</span><span class="c1">//输出，在这里连接了灯。用于检测中断
+</span></span></span><span class="line"><span class="cl">    <span class="n">GPIO_Struct</span><span class="p">.</span><span class="n">GPIO_OType</span><span class="o">=</span><span class="n">GPIO_OType_PP</span><span class="p">;</span><span class="c1">//
+</span></span></span><span class="line"><span class="cl">    <span class="n">GPIO_Struct</span><span class="p">.</span><span class="n">GPIO_Pin</span><span class="o">=</span><span class="n">GPIO_Pin_13</span><span class="p">;</span><span class="c1">//
+</span></span></span><span class="line"><span class="cl">    <span class="n">GPIO_Struct</span><span class="p">.</span><span class="n">GPIO_PuPd</span><span class="o">=</span><span class="n">GPIO_PuPd_UP</span><span class="p">;</span><span class="c1">//
+</span></span></span><span class="line"><span class="cl">    <span class="n">GPIO_Struct</span><span class="p">.</span><span class="n">GPIO_Speed</span><span class="o">=</span><span class="n">GPIO_High_Speed</span><span class="p">;</span><span class="c1">//
+</span></span></span><span class="line"><span class="cl">    <span class="nf">GPIO_Init</span><span class="p">(</span><span class="n">GPIOC</span><span class="p">,</span><span class="o">&amp;</span><span class="n">GPIO_Struct</span><span class="p">);</span><span class="c1">//
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//初始化SYSCFG，F1系列使用初始化AFIO的函数
+</span></span></span><span class="line"><span class="cl">    <span class="nf">SYSCFG_EXTILineConfig</span><span class="p">(</span><span class="n">EXTI_PortSourceGPIOA</span><span class="p">,</span> <span class="n">EXTI_PinSource0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    <span class="c1">//设置EXTI
+</span></span></span><span class="line"><span class="cl">    <span class="n">EXTI_InitTypeDef</span> <span class="n">EXTI_Struct</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">EXTI_Struct</span><span class="p">.</span><span class="n">EXTI_Line</span><span class="o">=</span><span class="n">EXTI_Line0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">EXTI_Struct</span><span class="p">.</span><span class="n">EXTI_LineCmd</span><span class="o">=</span><span class="n">ENABLE</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">EXTI_Struct</span><span class="p">.</span><span class="n">EXTI_Mode</span><span class="o">=</span><span class="n">EXTI_Mode_Interrupt</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">EXTI_Struct</span><span class="p">.</span><span class="n">EXTI_Trigger</span><span class="o">=</span><span class="n">EXTI_Trigger_Falling</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">EXTI_Init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">EXTI_Struct</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//设置NVIC
+</span></span></span><span class="line"><span class="cl">    <span class="n">NVIC_InitTypeDef</span> <span class="n">NVIC_Struct</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">NVIC_PriorityGroupConfig</span><span class="p">(</span><span class="n">NVIC_PriorityGroup_2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NVIC_Struct</span><span class="p">.</span><span class="n">NVIC_IRQChannel</span><span class="o">=</span><span class="n">EXTI0_IRQn</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NVIC_Struct</span><span class="p">.</span><span class="n">NVIC_IRQChannelCmd</span><span class="o">=</span><span class="n">ENABLE</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NVIC_Struct</span><span class="p">.</span><span class="n">NVIC_IRQChannelPreemptionPriority</span><span class="o">=</span><span class="mi">2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NVIC_Struct</span><span class="p">.</span><span class="n">NVIC_IRQChannelSubPriority</span><span class="o">=</span><span class="mi">2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">NVIC_Init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">NVIC_Struct</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">//空循环，防止意外
+</span></span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>下面有几个点要详细展开：</p>
+        
+        <hr><p>本文2026-10-16首发于<a href='http://127.0.0.1:8099/'>吾思 梦阁</a>，最后修改于2026-10-16</p>]]></description><category>STM32</category></item></channel></rss>

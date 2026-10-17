@@ -1,0 +1,472 @@
+# ==============================================================================
+# 后台配置（Sveltia CMS，兼容 Decap CMS / Netlify CMS 的 config.yml 格式）
+#
+# 入口： https://wusitech.github.io/admin/   （镜像： https://wstk.pages.dev/admin/ ）
+# 内容仍然以 Markdown 存在 Git 仓库里，后台保存 = 直接提交到 main 分支，
+# 提交后 GitHub Actions 自动构建部署，和手动改文件完全等价。
+#
+# ⚠️ 使用前必须做一次性配置（详见 docs/后台与评论部署指南.md）：
+#    1. 建一个 GitHub OAuth App
+#    2. 用仓库里的 tools/cms-oauth-worker/worker.js 部署一个 Cloudflare Worker
+#    3. 把下面 backend.base_url 换成该 Worker 地址
+# ==============================================================================
+
+backend:
+  name: github
+  repo: WuSiTech/WuSiTech.github.io
+  branch: main
+  # GitHub 登录中转（Cloudflare Worker，免费）；已部署并回填
+  base_url: https://wusitech-cms-auth.2739715775.workers.dev
+
+# 本地调试：在电脑上跑 `npx decap-server` 后，用 hugo server 打开
+# http://localhost:1313/admin/ 即可免登录直接写入本地文件（线上不生效）。
+local_backend: true
+
+# 保存即提交（不做 PR 审核流）
+publish_mode: simple
+
+# 关掉 Decap 的实时预览（Hugo 短代码在预览里显示不准，容易误会）
+editor:
+  preview: false
+
+site_url: https://wusitech.github.io/
+display_url: https://wusitech.github.io/
+logo_url: https://wusitech.github.io/avatar/avatar.webp
+
+# 图片库：指向站点图片的家目录 static/images（不是某个 uploads 子目录）。
+#   - 后台「选择图片 → 全局资源」里能直接看到 static/images 下的全部图片和子目录
+#     （banner.webp、stm32/… 等），可以挑现成的图当封面或正文插图，不必先上传。
+#   - 新上传的图片会落在 static/images/ 根目录（想归档就自己在后台「新建文件夹」，
+#     例如 stm32），插入后路径自动写成 /images/xxx.webp，与站内现有用法一致。
+#   - 站点里其它目录的图片（例如 static/avatar/avatar.webp）不在这里显示，属正常。
+# 提示：webp 压缩可以用仓库里的 tools/img2webp.py，比后台直传的 PNG 小很多
+media_folder: static/images
+public_folder: /images
+
+# 关掉后台媒体对话框里的外链图库（Pexels / Pixabay / Unsplash / Lorem Picsum）。
+# 本站硬性约束：运行时不得依赖被墙/外部资源（tools/check_site.py 会拦外部资源），
+# 这些图库要联网拉境外 API，必须全关。
+# 依据（static/admin/sveltia-cms.js 里内置的配置 schema，Sveltia 0.241.0）：
+#   StockAssetProviderName:{type:`string`,enum:[`pexels`,`picsum`,`pixabay`,`unsplash`]}
+#   MediaLibraries:{type:`object`,properties:{…,
+#     stock_assets:{anyOf:[{type:`boolean`,const:!1},{$ref:`#/definitions/StockMediaLibrary`}]}},
+#     additionalProperties:!1}
+# 运行时：IZ=({fieldConfig:e}={})=>{let t=eF({libraryName:`stock_assets`,…});
+#         if(t===!1)return{providers:[]}; …}
+# 即 stock_assets: false 会让提供者列表为空，「外链图库」分组整块不渲染。
+#「输入 URL」（外部位置）保留：它由字段的 choose_url 控制（默认 true），
+# 不影响站点默认行为，站长偶尔需要贴外链。
+media_libraries:
+  # 关掉后台媒体对话框里的外链图库（Pexels / Pixabay / Unsplash / Lorem Picsum）。
+  # 本站硬性约束：运行时不依赖外部资源（tools/check_site.py 会拦），这些图库要联网拉境外 API，必须全关。
+  # 注意：不要在这里写 config/transformations（写法不符 schema 会让整个后台打不开）；
+  #       上传的图片转 WebP 由 .github/workflows/webp.yml 在推送后自动完成。
+  stock_assets: false
+collections:
+  # ---------------------------------------------------------------- 文章
+  - name: posts
+    label: 文章
+    label_singular: 一篇文章
+    folder: content/posts
+    create: true
+    slug: "{{slug}}"
+    extension: md
+    # 文章用 +++ TOML；不写这行的话，Sveltia 会把「新建」的文章存成 YAML
+    # front matter（存量文件会自动识别，不受影响）
+    format: toml-frontmatter
+    sortable_fields: [date, title]
+    summary: "{{title}}  ·  {{date}}"
+    fields:
+      - label: 标题
+        name: title
+        widget: string
+      - label: 发布日期
+        name: date
+        widget: datetime
+        default: "{{now}}"
+        date_format: "YYYY-MM-DD"
+        time_format: "HH:mm:ss"
+        format: "YYYY-MM-DDTHH:mm:ssZ" # 与现有文章一致：2026-10-14T22:30:00+08:00
+        input_timezone: Asia/Shanghai # 避免时区漂移
+      - label: 草稿
+        name: draft
+        widget: boolean
+        default: true
+        hint: 草稿不会出现在站点上；写好后再关掉
+      - label: 摘要
+        name: description
+        widget: text
+        required: false
+        hint: 首页卡片与搜索结果里显示的简介
+      - label: 分类
+        name: categories
+        widget: list
+        required: false
+        default: ["STM32"]
+        hint: 已存在的分类：STM32（新分类会自动生成分类页；要在首页显示分类卡片，去「站点设置 → 首页分类卡片」里加一条）
+      - label: 标签
+        name: tags
+        widget: list
+        required: false
+        default: []
+      - label: 首页缩略图（cover）
+        name: cover
+        widget: image
+        required: false
+        hint: 首页卡片/列表用，建议 1200×760 的 webp
+      - label: 文章页顶部大图（banner）
+        name: banner
+        widget: image
+        required: false
+        hint: 留空则用站点默认 banner
+      - label: 正文
+        name: body
+        widget: markdown
+
+  # ---------------------------------------------------------------- 固定页面
+  # ⚠️ 这是 files 式集合：**只列出下面写死的这几个文件**，不会自动发现 content/ 下的新页面。
+  #    在 content/ 里新建页面（例如 content/download.md）之后，必须在这里照现有条目补一条
+  #    —— 于是站长加页面时要知道「新页面得登记进 static/admin/config.yml 的这个列表」，
+  #    否则后台「页面」菜单里看不到、也改不了那个文件。
+  #    照抄一条现有条目改四处：name（英文标识）、label（中文菜单名）、file（文件路径）、
+  #    fields（字段清单）。format 一律 yaml-frontmatter（本集合的页面都是 --- YAML --- 头）。
+  #    ⚠️ fields 必须与文件的 front matter 一一对应：Sveltia 保存时会按这里声明的字段
+  #    重写整个文件，文件里有、这里没声明的键会被静默丢掉。
+  - name: pages
+    label: 页面
+    files:
+      - name: about
+        label: 关于页
+        file: content/about.md
+        format: yaml-frontmatter
+        fields:
+          - { label: 标题, name: title, widget: string }
+          - { label: 简介, name: description, widget: string, required: false }
+          - label: 日期
+            name: date
+            widget: datetime
+            date_format: "YYYY-MM-DD"
+            time_format: "HH:mm:ss"
+            format: "YYYY-MM-DDTHH:mm:ssZ"
+            input_timezone: Asia/Shanghai
+          - { label: 正文, name: body, widget: markdown }
+
+      - name: friend
+        label: 友情链接页
+        file: content/friend.md
+        format: yaml-frontmatter
+        fields:
+          - { label: 标题, name: title, widget: string }
+          - { label: 简介, name: description, widget: string, required: false }
+          - label: 日期
+            name: date
+            widget: datetime
+            date_format: "YYYY-MM-DD"
+            time_format: "HH:mm:ss"
+            format: "YYYY-MM-DDTHH:mm:ssZ"
+            input_timezone: Asia/Shanghai
+          - { label: 正文, name: body, widget: markdown }
+
+      - name: download
+        label: 下载
+        file: content/download.md
+        format: yaml-frontmatter
+        fields:
+          - { label: 标题, name: title, widget: string }
+          - { label: 简介, name: description, widget: string, required: false }
+          - label: 日期
+            name: date
+            widget: datetime
+            date_format: "YYYY-MM-DD"
+            time_format: "HH:mm:ss"
+            format: "YYYY-MM-DDTHH:mm:ssZ"
+            input_timezone: Asia/Shanghai
+          - { label: 正文, name: body, widget: markdown }
+
+
+  # ---------------------------------------------------------------- 站点设置
+  # 只管理 config/_default/params.toml 这一个文件：个人信息 / 菜单 / 首页分类卡片。
+  #
+  # 为什么是一个单独的文件：Sveltia 保存时会按下面【声明了的字段】重写整个文件，
+  # 没声明的键会被整段丢掉。params.yml 有 750 多行（含站长手调的代码高亮配色
+  # CSS、注入脚本、评论系统等），所以那三块被专门搬进了 params.toml，
+  # 这个集合也只指向 params.toml，绝不碰 params.yml。
+  #
+  # ⚠️ 两条硬规矩：
+  #   1) params.toml 里那三块的【每一个键】都必须在这里声明，缺一个就会被保存丢一个
+  #      （评论集合踩过这个坑）。
+  #   2) 反过来，不属于这三块的 params 键【绝对不要】加进来 —— 它们住在 params.yml
+  #      里，这个集合管不着，写进来只会写错文件。
+  #
+  # ⚠️ params.toml 里那些说明性注释，第一次在后台保存后就会被重写掉（CMS 不保留
+  #    注释），所以关键的提醒都写在这里和 params.toml 的文件头两处。
+  - name: site
+    label: 站点设置
+    files:
+      - name: params
+        label: 站点设置（个人信息 / 菜单 / 首页分类卡片）
+        file: config/_default/params.toml
+        format: toml
+        description: >-
+          只改 config/_default/params.toml 这一个文件。保存会重写整个文件，
+          所以这里看不到 params.yml 的内容是正常的（那里面有代码高亮配色和注入脚本，
+          刻意不交给后台管）。改菜单时注意：名称是「站点文案」里的键名，不是显示文字
+          —— 要改栏目叫法，去「站点设置 → 站点文案」改那条键的值。
+        fields:
+          # ---------------- 个人信息
+          - label: 作者名
+            name: author
+            widget: string
+            hint: 页脚版权、侧边栏作者名、页面标题后缀都用它
+          - label: 作者邮箱
+            name: email
+            widget: string
+            required: false
+            hint: 目前只用于 RSS（/index.xml）的作者邮箱，可以留空
+          - label: 站点简介
+            name: description
+            widget: text
+            required: false
+            hint: 侧边栏作者名下方那行字，也是搜索引擎摘要的兜底
+          - label: 头像文件名
+            name: avatar
+            widget: string
+            required: false
+            hint: 只写文件名，图片放在 static/avatar/ 目录下，例如 avatar.webp
+          - label: 社交链接
+            name: social
+            widget: list
+            required: false
+            summary: "{{fields.name}} → {{fields.url}}"
+            hint: 现在为空。不想要的条目直接删掉整行；上下顺序就是页面上从左到右的顺序
+            fields:
+              - label: 图标名
+                name: name
+                widget: string
+                hint: 只能用主题内置的图标名。常用：github / bilibili / zhihu / weibo / email / qq / twitter / telegram / youtube / steam。填错不会报错，只是不显示图标
+              - label: 链接
+                name: url
+                widget: string
+                hint: 完整网址，例如 https://github.com/WuSiTech；邮箱写 mailto:you@example.com
+          # ---------------- 菜单
+          - label: 菜单
+            name: menu
+            widget: list
+            required: false
+            summary: "{{fields.name}} → /{{fields.url}}"
+            hint: >-
+              上下顺序就是导航栏从左到右的顺序。
+              名称必须先在「站点设置 → 站点文案」里有一条同名键，否则那一项在网页上会是空白。
+              新增栏目 = 先在「站点文案」加一条键值（键名英文，如 projects → 项目），
+              再回到这里加一条菜单，名称填 projects、链接填 /projects。
+            fields:
+              - label: 名称（文案键名）
+                name: name
+                widget: string
+                hint: >-
+                  ⚠️ 这里填的是「站点文案」里的【键名】，不是网页上显示的文字。
+                  网页显示什么，由「站点设置 → 站点文案」里同名键的值决定：
+                  把 archives 的值从「归档」改成「文章归档」，导航上就显示「文章归档」，本项不用动。
+                  现在对应关系：home=首页、archives=归档、categories=分类、tags=标签、friend=友链、about=关于。
+                  加新栏目：先去「站点文案」点添加、新增一行（键名英文如 projects，值写显示文字如 项目），
+                  再回来加一条菜单，名称填 projects、链接填 /projects。
+                  ⚠️ 直接在这里填中文（例如「项目」）会显示成空白 —— 主题只按 i18n 键取文字，没有「查不到就显示键名」的回退。
+              - label: 链接
+                name: url
+                widget: string
+                required: false
+                hint: 站内路径，以 / 开头更清楚，例如 /archives；不要写域名。留空表示站点根目录（首页）
+              - label: 图标
+                name: icon
+                widget: string
+                required: false
+                hint: 留空用主题默认图标；也可以填 fontawesome 十六进制码（如 f0c1）或图片路径（如 /avatar/avatar.webp）。想彻底隐藏图标，要手改文件写成 icon = false（这里只能填字符串，填 "false" 会被当成一个图标码）
+          # ---------------- 首页分类卡片
+          - label: 首页分类卡片
+            name: home_categories
+            widget: object
+            fields:
+              - label: 显示分类卡片
+                name: enable
+                widget: boolean
+                default: true
+                hint: 关掉后首页不再显示分类卡片（分类页 /categories/ 仍然可以访问）
+              - label: 卡片列表
+                name: content
+                widget: list
+                required: false
+                summary: "{{fields.categories}}"
+                hint: 只写「已经存在」的分类（分类由文章的 categories 自动生成）；这里没列出的分类不会显示卡片
+                fields:
+                  - label: 分类名
+                    name: categories
+                    widget: string
+                    hint: 必须和文章里的 categories 完全一致（大小写敏感），例如 STM32
+                  - label: 封面图
+                    name: cover
+                    widget: image
+                    required: false
+                    hint: 留空用随机封面；建议和文章封面用同一张图
+
+      # -------------------------------------------------------------- 站点文案
+      # i18n/zh-CN.yml（项目级 i18n 表）：导航栏每个栏目显示的文字都来自这里。
+      # 主题模板用 {{ i18n .name }} 取文字，键不存在就是空白、没有回退 ——
+      # 所以「菜单」里出现的每个 name，这个文件里都必须有一条同名键。
+      #
+      # 为什么用 root: true 的 keyvalue 字段：
+      #   这个 YAML 文件整体就是一张「键 → 文字」表，字段声明成 root: true 后，
+      #   CMS 读写时都不会把它套在外层键里（本仓库自带的 sveltia-cms.js 里
+      #   CM()/HB()/I1() 对这一形态有专门处理，config schema 的 KeyValueField
+      #   也声明了 root）；这样站长才能自助「加一条键值」而不必去改 config.yml。
+      #   若哪天升级 CMS 后发现保存出来的文件被包了一层（例如 strings:），
+      #   说明该版本不再支持 root，需改回逐个键声明 string 字段。
+      - name: strings
+        label: 站点文案（导航栏文字）
+        file: i18n/zh-CN.yml
+        format: yaml
+        description: >-
+          导航栏文字表：键名（英文）→ 网页上真正显示的文字。
+          改一个值 = 给栏目改名；加一条键值 = 为「菜单」里准备新增的栏目提供文字。
+          菜单项名称必须在这里存在，否则那一项在网页上是空白。
+        fields:
+          - label: 文案表（键 → 显示文字）
+            name: strings
+            widget: keyvalue
+            root: true
+            key_label: 键名（英文，如 projects）
+            value_label: 显示文字（如 项目）
+            hint: >-
+              左列键名用英文小写（字母/数字/点号），右列写导航栏上真正显示的文字。
+              ⚠️ 现有的 home / archives / categories / tags / friend / about 六条不要删，
+              它们对应现在导航栏的六个栏目，删了对应的文字就是空白。
+              这里新增的每一条键，都要在「站点设置 → 菜单」里加一项、名称填同一个键名，才会出现在导航栏。
+
+  # ---------------------------------------------------------------- 评论管理
+  # 评论数据在 static/comments/posts/ 下（每篇文章一个 JSON 文件），由 Cloudflare
+  # Pages Function 写入：默认走 PR 审核，合并后才出现在页面上。
+  # 这个集合用来管理【已经发布】的评论：
+  #   - 隐藏：把「隐藏」开关打开（数据保留，页面不再显示）
+  #   - 删除：直接移除这条
+  #   - 博主回复：新增一条评论，昵称写你自己，「博主身份」打开
+  # 注意：字段必须与 Function 写入的完全一致，否则保存时会把字段丢掉。
+  # ---------------------------------------------------------------- 友链
+  # data/friends.yml 的根就是一个数组（YAML 列表），所以这里只声明【一个】root 字段：
+  #   - root: true 让后台把文件根直接当成列表编辑，不会额外套一层 friends:
+  #   - 该机制要求该集合的 fields 里**有且只有一个**字段（多一个就会失效）
+  - name: friends
+    label: 友链
+    files:
+      - name: friends
+        label: 条目
+        file: data/friends.yml
+        format: yaml
+        fields:
+          - label: 友链
+            name: friends
+            widget: list
+            root: true
+            summary: "{{fields.name}} — {{fields.url}}"
+            fields:
+              - { label: 站点名, name: name, widget: string }
+              - { label: 链接, name: url, widget: string, hint: 必须写完整网址，带 https://（只写域名会被当成站内相对路径） }
+              - { label: 简介, name: desc, widget: string, required: false }
+              - { label: 头像, name: image, widget: string, required: false, hint: 图片 URL 或 /images/xxx.webp }
+
+  - name: comments
+    label: 评论
+    label_singular: 评论文件
+    folder: static/comments/posts
+    # 允许手动新建：某篇文章还没有任何评论时，你可以先建文件再写博主回复
+    create: true
+    extension: json
+    format: json
+    identifier_field: slug
+    sortable_fields: [slug]
+    summary: "{{slug}}"
+    fields:
+      - label: 文章路径
+        name: slug
+        widget: string
+        hint: 与文章 URL 对应，例如 posts/stm32f4-interrupt（一般不用改）
+      - label: 评论
+        name: comments
+        widget: list
+        collapsed: true
+        summary: "{{fields.name}}：{{fields.body}}"
+        fields:
+          - { label: 内部 ID, name: id, widget: hidden, required: false }
+          - { label: 回复哪条（父评论 id）, name: replyTo, widget: hidden, required: false }
+          - { label: 昵称, name: name, widget: string }
+          - { label: 邮箱（不公开）, name: email, widget: hidden, required: false }
+          - { label: 网址, name: website, widget: hidden, required: false }
+          - { label: 正文, name: body, widget: text }
+          - { label: 时间, name: ts, widget: string, required: false, hint: ISO 时间，一般不用改 }
+          - { label: 浏览器信息, name: ua, widget: hidden, required: false }
+          - label: 隐藏（页面不再显示，数据保留）
+            name: hidden
+            widget: boolean
+            default: false
+          - label: 博主身份（显示「博主」标记）
+            name: author
+            widget: boolean
+            default: true
+
+  # ---------------------------------------------------------------- 页面评论
+  # 关于页 / 友链页 / 下载页等固定页面的评论（数据在 static/comments/<页面>.json，
+  # 线上路径 /comments/<页面>.json；与文章评论分开，便于在后台单独审核）
+  - name: page_comments
+    label: 页面评论
+    label_singular: 评论文件
+    folder: static/comments
+    # 允许手动新建：某篇文章还没有任何评论时，你可以先建文件再写博主回复
+    create: false
+    extension: json
+    format: json
+    identifier_field: slug
+    sortable_fields: [slug]
+    summary: "{{slug}}"
+    fields:
+      - label: 文章路径
+        name: slug
+        widget: string
+        hint: 与文章 URL 对应，例如 posts/stm32f4-interrupt（一般不用改）
+      - label: 评论
+        name: comments
+        widget: list
+        collapsed: true
+        summary: "{{fields.name}}：{{fields.body}}"
+        fields:
+          - { label: 内部 ID, name: id, widget: hidden, required: false }
+          - { label: 昵称, name: name, widget: string }
+          - { label: 邮箱（不公开）, name: email, widget: hidden, required: false }
+          - { label: 网址, name: website, widget: hidden, required: false }
+          - { label: 正文, name: body, widget: text }
+          - { label: 时间, name: ts, widget: string, required: false, hint: ISO 时间，一般不用改 }
+          - { label: 浏览器信息, name: ua, widget: hidden, required: false }
+          - label: 隐藏（页面不再显示，数据保留）
+            name: hidden
+            widget: boolean
+            default: false
+          - label: 博主身份（显示「博主」标记）
+            name: author
+            widget: boolean
+            default: true
+
+
+# ---------------------------------------------------------------- 说明
+# 1) 站点级配置分三处：
+#    - config/_default/params.toml（个人信息 / 菜单 / 首页分类卡片）→ 已放进后台的
+#      「站点设置」集合，可以直接在 /admin/ 里改。
+#    - i18n/zh-CN.yml（导航栏每个栏目显示的文字）→ 已放进后台的「站点文案」集合。
+#      菜单项的 name 是这里的键名；键在、文字才在。加栏目 = 先在这里加键值，
+#      再去「菜单」加一项引用同一个键名。
+#    - config/_default/params.yml（代码高亮配色、注入脚本、评论系统、搜索、
+#      动画等其余全部主题参数）→ 刻意没有放进后台，因为 CMS 保存时会按表单字段
+#      重写整个文件，会把未声明的配置项丢掉。要改这些请直接在 GitHub 网页上编辑：
+#      https://github.com/WuSiTech/WuSiTech.github.io/edit/main/config/_default/params.yml
+#
+# 2) 友情链接数据（data/friends.yml）目前是一个空的 YAML 列表，也没有放进后台：
+#    等要加友链时手动按文件里的注释格式追加即可。
+#
+# 3) 只有仓库的 collaborator 才能通过后台写入（Sveltia 登录时会校验仓库写权限），
+#    再加上 Worker 里的 ALLOWED_GITHUB_USERS 白名单，双重限制。

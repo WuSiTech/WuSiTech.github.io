@@ -680,32 +680,6 @@ injector:
     <script>(function(){var _p=location.pathname;if(!(_p.indexOf("/posts/")===0||_p.indexOf("/about/")===0||_p.indexOf("/friend/")===0||_p.indexOf("/download/")===0))return;var a=document.querySelector(".article-entry");if(!a)return;var s=document.createElement("script");s.src="/js/comments.js?v=14";s.defer=true;document.body.appendChild(s);})();</script>
       <!-- 站内本地搜索：索引 /index.json，零外部请求 -->
       <link rel="preload" as="image" href="/images/banner.webp" fetchpriority="high" />
-      <style id="wusi-bg-fix">body{background-attachment:fixed !important;background-size:cover !important;background-position:center center !important}</style>
-            <style id="wusi-bg-translucent">
-        /* 内容卡片半透明，让随机固定背景透出来 */
-        :root { --color-wrap: rgba(255,255,255,.82) !important; --color-background: transparent !important; }
-        html[data-theme="dark"] { --color-wrap: rgba(39,43,48,.86) !important; --color-background: transparent !important; }
-        body { background-color: transparent !important; }
-        .article-entry, .post-wrap, article { background: var(--color-wrap) !important; }
-      </style>
-      <style id="wusi-bg-fix2">
-        /* 去掉头部的黑色遮罩，改用轻量文字阴影保证可读 */
-        #header { background: transparent !important; }
-        #header::after, #header .banner-mask { background: none !important; }
-        #header .post-title, #header .post-meta, #header h1, #header h2, #header .post-description {
-          text-shadow: 0 1px 6px rgba(255,255,255,.9), 0 0 2px rgba(255,255,255,.9); }
-        /* 文章标题与摘要区域半透明，让背景透出 */
-        #header .post-info, #header .post-wrap, #header .banner-info { background: rgba(255,255,255,.55) !important;
-          border-radius: 10px; padding: 10px 14px; backdrop-filter: blur(2px); }
-        html[data-theme="dark"] #header .post-info, html[data-theme="dark"] #header .post-wrap, html[data-theme="dark"] #header .banner-info {
-          background: rgba(30,33,38,.6) !important; }
-        /* 文章正文卡片更透一点 */
-        .article-entry { background: rgba(255,255,255,.72) !important; }
-        html[data-theme="dark"] .article-entry { background: rgba(30,33,38,.78) !important; }
-        /* 鼠标悬停在页面（背景）上时，内容再透一点，方便欣赏背景；移开恢复 */
-        .article-entry, .post-wrap, .widget-wrap, .post-info { transition: opacity .35s ease, background-color .35s ease; }
-        body:hover .article-entry, body:hover .post-wrap, body:hover .widget-wrap { opacity: .82; }
-      </style>
       <style id="wusi-footer-readable">
         /* 页底文字压在随机背景上会看不清：给页脚一块半透明面板，并按明暗主题切换文字颜色 */
         #footer, .footer, footer, #wusi-domain-tip {
@@ -745,16 +719,6 @@ injector:
         /* 文章页的时间/字数那一行也放在同一块面板里 */
         #header .post-meta, #header .post-info { color: #333 !important; }
         html[data-theme="dark"] #header .post-meta, html[data-theme="dark"] #header .post-info { color: #ddd !important; }
-      </style>
-      <style id="wusi-bg-boost">
-        html, body { background-color: transparent !important; background-image: none !important; }
-        #wusi-bg { z-index: 0 !important; }
-        /* 内容整体抬到背景层之上 */
-        #header-nav, #header, #header-outer, #main, #content, .container, #footer { position: relative; z-index: 1; }
-      </style>
-      <style id="wusi-no-hscroll">
-        html, body { overflow-x: hidden !important; }
-        #header img { max-width: 100% !important; }
       </style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
