@@ -1,5 +1,9 @@
 name: Build and deploy
 on:
+  # github.io 随 push 即时构建（Actions 对公开仓库免费、无分钟数上限）。
+  push:
+    branches:
+      - main
   # 定时构建：每 6 小时一次（UTC 00/06/12/18 = 北京时间 08:00 / 14:00 / 20:00 / 02:00）。
   # github.io 随 push 即时构建（Actions 免费无限）；Cloudflare Pages 只在定时任务里触发，见文末。
   schedule:
