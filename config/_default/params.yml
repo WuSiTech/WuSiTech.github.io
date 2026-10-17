@@ -688,6 +688,13 @@ injector:
         body { background-color: transparent !important; }
         .article-entry, .post-wrap, article { background: var(--color-wrap) !important; }
       </style>
+      <style id="wusi-article-banner">
+        /* 文章头图改为整屏固定背景：去掉主题的白色渐变遮罩，上面加一层暗色渐变保证标题可读 */
+        #header img { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important;
+          object-fit: cover !important; z-index: -2 !important; -webkit-mask-image: none !important; mask-image: none !important; opacity: .9 !important; }
+        #header { background: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.55)) !important; }
+        #header::after, #header .banner-mask { background: linear-gradient(to bottom, rgba(0,0,0,.2), rgba(0,0,0,.5)) !important; }
+      </style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
       <script src="/js/loader-tip.js?v=1" defer></script>
