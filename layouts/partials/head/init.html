@@ -1,0 +1,75 @@
+{{- /*
+  站点级覆盖：themes/reimu/layouts/partials/head/init.html
+  （Hugo 会优先使用站点 layouts/ 下的同名 partial，不需要改 themes/）
+
+  原文件只有两条 Hugo 版本告警，这里原样保留；
+  额外把「随机固定背景」需要的数据注入给 /js/wusi-bg.js：
+    banner —— 当前页 front matter 的 banner（其次 cover），用于文章页整屏头图；
+              没有就是空字符串，脚本改走远端随机图
+    remote —— data/remote_backgrounds.yml 里的远端图源（111 条）
+    local  —— static/images/pool/bg/ 下的本地兜底图（10 张，构建时自动列目录）
+
+  放在 <head> 里只是一小段 JSON（约 10KB，gzip 后 ~3KB），
+  不发起任何网络请求；真正的选图/探测/回落都在 wusi-bg.js 里异步做。
+*/ -}}
+{{- $version := int (index (split hugo.Version ".") 1) -}}
+{{- if lt $version 158 -}}
+  {{- warnf "当前 Hugo 版本小于 0.158.0，请到官方地址下载 Hugo 最新版本：https://github.com/gohugoio/hugo/releases" -}}  
+  {{- warnf "Current Hugo version is less then 0.158.0, Please download Hugo latest version on offical site: https://github.com/gohugoio/hugo/releases" -}}  
+{{- end -}}
+
+{{- if not hugo.IsExtended -}}
+  {{- warnf "Hugo Reimu 主题使用了 SCSS 框架，请到官方地址下载 Hugo Extended 版本：https://github.com/gohugoio/hugo/releases" -}}  
+  {{- warnf "Because that use SCSS framework in Hugo Reimu, Please download Hugo extended version on offical site: https://github.com/gohugoio/hugo/releases" -}}  
+{{- end -}}
+
+{{- /* 当前页的 banner（其次 cover）：主题把 banner 画在 #header 的 img 上；
+       这里只取"图片"形式的值，rgb(...) 那种纯色不算。 */ -}}
+{{- $banner := "" -}}
+{{- with .Params.banner -}}
+  {{- if strings.HasPrefix . "http" -}}
+    {{- $banner = . -}}
+  {{- else if not (strings.HasPrefix . "rgb") -}}
+    {{- $banner = . | relURL -}}
+  {{- end -}}
+{{- else -}}
+  {{- with .Params.cover -}}
+    {{- if strings.HasPrefix . "http" -}}
+      {{- $banner = . -}}
+    {{- else if not (strings.HasPrefix . "rgb") -}}
+      {{- $banner = . | relURL -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 远端图源：data/remote_backgrounds.yml（读不到就空数组，脚本自动走本地） */ -}}
+{{- $remote := slice -}}
+{{- with hugo.Data.remote_backgrounds -}}
+  {{- with .remote_backgrounds -}}
+    {{- $remote = . -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 本地兜底图：构建时直接列 static/images/pool/bg/ 目录，新增图片不用改代码 */ -}}
+{{- $localNames := slice -}}
+{{- $dir := try (os.ReadDir "static/images/pool/bg") -}}
+{{- with $dir.Value -}}
+  {{- range . -}}
+    {{- if and (not .IsDir) (strings.HasSuffix .Name ".webp") -}}
+      {{- $localNames = $localNames | append .Name -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- $local := slice -}}
+{{- range sort $localNames -}}
+  {{- $local = $local | append (printf "/images/pool/bg/%s" .) -}}
+{{- end -}}
+
+<script>
+  window.__WUSI_BG__ = {{ dict "banner" $banner "remote" $remote "local" $local | jsonify | safeJS }};
+  {{- if $banner }}
+  /* 本页有 banner/cover：让样式表把主题那张头图改成整屏固定背景（见 /css/wusi-bg.css）。
+     在 <head> 里加类名，保证首帧就生效，不会先闪一下普通背景。 */
+  document.documentElement.classList.add("wusi-page-banner");
+  {{- end }}
+</script>

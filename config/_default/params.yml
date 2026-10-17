@@ -617,6 +617,8 @@ injector:
   # 运算符又没设色、继承了更亮的正文色，看起来反而比代码本身更显眼。
   # 这里用主题自带的 --highlight-* 变量重新分配，亮/暗模式各自生效。
   head_end: |
+    <!-- 全站随机固定背景（样式；数据/逻辑见 layouts/partials/head/init.html + static/js/wusi-bg.js） -->
+    <link rel="stylesheet" href="/css/wusi-bg.css" />
     <style>
       /* 变量 / 宏 / 结构体成员：改用正文色，不再和注释同色 */
       .article-entry .chroma .n,
@@ -679,7 +681,8 @@ injector:
     <!-- 自建评论系统：读 static/comments/<slug>.json，提交到 Cloudflare Pages Function（详见 docs/评论系统（Git存储）.md） -->
     <script>(function(){var _p=location.pathname;if(!(_p.indexOf("/posts/")===0||_p.indexOf("/about/")===0||_p.indexOf("/friend/")===0||_p.indexOf("/download/")===0))return;var a=document.querySelector(".article-entry");if(!a)return;var s=document.createElement("script");s.src="/js/comments.js?v=14";s.defer=true;document.body.appendChild(s);})();</script>
       <!-- 站内本地搜索：索引 /index.json，零外部请求 -->
-      <link rel="preload" as="image" href="/images/banner.webp" fetchpriority="high" />
+      <!-- 注：原来这里有一条 /images/banner.webp 的 preload；
+           随机固定背景上线后 #header 里的 banner 图已被隐藏，不再需要预加载，故删除。 -->
       <style id="wusi-footer-readable">
         /* 页底文字压在随机背景上会看不清：给页脚一块半透明面板，并按明暗主题切换文字颜色 */
         #footer, .footer, footer, #wusi-domain-tip {
@@ -708,12 +711,20 @@ injector:
           padding: 14px 22px !important;
           display: inline-block;
           margin: 0 auto;
+          /* ⚠️ 主题给的是 width:95%；这里加了左右 padding，不改成 border-box 的话
+             实际宽度 = 95% + 44px，窄屏（手机）会超出视口、出现横向滚动条。 */
+          box-sizing: border-box;
+          max-width: 100%;
         }
         #header-title h1, #header-title #logo h1, #header-title a, #subtitle-wrap, #subtitle, #subtitle a {
           color: #333 !important;
           text-shadow: none !important;
         }
         html[data-theme="dark"] #header-title { background: rgba(30,33,38,.78) !important; }
+        /* ⚠️ 必须带上 #logo 那一级：上面浅色规则里有 #header-title #logo h1（两个 id），
+           优先级比 html[data-theme="dark"] #header-title h1（一个 id）高，
+           不写全的话暗色下 h1 仍然是深灰 #333，压在深色面板上看不清。 */
+        html[data-theme="dark"] #header-title #logo h1,
         html[data-theme="dark"] #header-title h1, html[data-theme="dark"] #header-title a,
         html[data-theme="dark"] #subtitle-wrap, html[data-theme="dark"] #subtitle, html[data-theme="dark"] #subtitle a { color: #ddd !important; }
         /* 文章页的时间/字数那一行也放在同一块面板里 */
@@ -721,6 +732,8 @@ injector:
         html[data-theme="dark"] #header .post-meta, html[data-theme="dark"] #header .post-info { color: #ddd !important; }
       </style>
       <script src="/js/search.js?v=12" defer></script>
+      <!-- 全站随机固定背景：远端随机图 + 失败回落本地图池，固定不滚动（详见 static/js/wusi-bg.js） -->
+      <script src="/js/wusi-bg.js?v=1" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
       <script src="/js/loader-tip.js?v=1" defer></script>
     <!-- ===== 页底「BLOG状态」固定条（引用仓库里的本地徽章，不请求任何外部资源） =====

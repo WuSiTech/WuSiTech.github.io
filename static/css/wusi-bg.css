@@ -1,0 +1,91 @@
+/* ==========================================================================
+   全站随机固定背景 —— 站点级扩展样式（不改 themes/）
+   配套脚本：static/js/wusi-bg.js
+   数据来源：data/remote_backgrounds.yml（远端图源）+ static/images/pool/bg/（本地兜底）
+
+   这里解决的是「背景层看不见」的根因：主题在
+     body { background: var(--color-background) }
+     #wrap { position: absolute; z-index: 1; background: var(--color-background) }
+   两层不透明底色，把任何垫在下面的背景都盖掉了。
+   所以本文件把 html/body/#wrap/#container 的底色全部放开，只留下 html 的底色当没图时的兜底，
+   再让 #wusi-bg（position:fixed）当真正的不滚动背景层。
+   ========================================================================== */
+
+/* 没图 / 图还没加载出来时的兜底底色（放在最底层，不会被盖住） */
+html {
+  background-color: var(--color-background);
+}
+
+body,
+#container,
+#wrap {
+  background: transparent !important;
+}
+
+/* 固定背景层：position:fixed 不随页面滚动；inset:0 只占视口，
+   不用 100vw（100vw 含滚动条宽度，是之前出现横向滚动条的原因） */
+#wusi-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1; /* 在 html 底色之上、#wrap（z-index:1）内容之下 */
+  overflow: hidden;
+  pointer-events: none; /* 不挡任何点击/选择 */
+  background-color: var(--color-background);
+}
+
+#wusi-bg .wusi-bg-layer {
+  position: absolute;
+  inset: 0;
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  will-change: opacity;
+}
+
+#wusi-bg .wusi-bg-layer.is-on {
+  opacity: 1;
+}
+
+/* 背景压暗/提亮一层，保证亮色主题下页面留白处的文字也看得清。
+   暗色主题下更狠一些，避免大图太刺眼。 */
+#wusi-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme="dark"] #wusi-bg::after {
+  background: rgba(10, 12, 16, 0.45);
+}
+
+/* 主题把 banner 画在 #header 里的 <img> 上（可能被 <picture> 包着），
+   默认这张图会随页面滚动、并且带一层白色渐变遮罩。
+   普通页面：整屏背景由 #wusi-bg 承担，这张图要藏起来，否则会和背景层叠在一起；
+   有 banner 的页面（文章页，html 上有 wusi-page-banner 类）：把这张图本身变成
+   整屏固定背景，一图两用 —— 不用再额外下载一遍同一张图。 */
+#header > picture {
+  display: none !important;
+}
+
+html:not(.wusi-page-banner) #header img {
+  display: none !important;
+}
+
+/* 有 banner 的页面：图片铺满视口、固定不滚动。
+   ⚠️ 宽度必须用 100%（相对视口内容区），不能用 100vw —— 100vw 含滚动条宽度，
+   会把页面撑出横向滚动条（之前踩过的坑）。 */
+html.wusi-page-banner #header img {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  object-fit: cover;
+  z-index: -1 !important;
+  -webkit-mask: none !important;
+  mask: none !important;
+}
