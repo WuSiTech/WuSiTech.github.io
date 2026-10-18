@@ -34,7 +34,7 @@ Hugo 静态博客，主题 [reimu](https://github.com/D-Sketon/hugo-theme-reimu)
 | 手段 | 位置 |
 | ---- | ---- |
 | vendor 库全部本地化 | `data/vendor.yml`（**整文件覆盖**主题那份）把 41 个库写成 `local|…`，文件在 `static/resources/`（34 个目录 / 182 个文件）；CI 用 `tools/localize_vendor.py --dry-run --strict` 阻止回退到 CDN |
-| 随机封面池换成本站图 | `data/covers.yml` 覆盖主题那份（主题默认那份指向作者服务器 `d-sketon.top`） |
+| 随机封面池换成本站图 | `data/covers.yml` 覆盖主题那份（主题默认那份指向作者服务器 `d-sketon.top`）；清单指向 media 分支的站内路径，见下面「图片池（media 分支）」 |
 | 徽章本地镜像 | `static/badges/*.svg`，页面引用 `/badges/…`，由 `.github/scripts/fetch_badges.py` 在 CI 构建前刷新 |
 | 评论系统自建 | 前端 `static/js/comments.js`，后端 `functions/api/comment.js`，不引入任何第三方评论服务 |
 | 后台本体是仓库里的文件 | `static/admin/index.html` + `static/admin/sveltia-cms.js`（本地 bundle，不拉 CDN） |
@@ -66,10 +66,34 @@ Hugo 静态博客，主题 [reimu](https://github.com/D-Sketon/hugo-theme-reimu)
 - **媒体库**：根目录就是 `static/images`（`media_folder: static/images`、`public_folder: /images`），
   后台「全局资源」里能直接挑现有图片；新上传的落在 `static/images/` 根目录，插入路径自动写成 `/images/…`。
   外链图库（Pexels / Pixabay / Unsplash / Lorem Picsum）已整块关闭（`media_libraries.stock_assets: false`）。
+- **封面图是下拉框**（`widget: select`）：374 个候选项来自 media 分支的封面池，由
+  `sync-cover-pool.yml` 自动写进 `static/admin/config.yml` 的 `COVER_OPTIONS` 标记区，手改会被覆盖。
+  池里的图片不在后台媒体库（它们在 media 分支），但下拉框直接按站内路径选，不影响使用。
 - **上传的图片不在后台转码**：转 WebP 由 `.github/workflows/webp.yml` 在推送之后完成
   （转换 → 改写仓库里的引用 → 删除原图 → 自动提交）。想在本地先转可以用 `tools/img2webp.py`。
 - ⚠️ **不要**在 `static/admin/config.yml` 里写 `media_libraries.*.config.transformations`：
   那个写法不符合 Sveltia 0.241.0 的配置 schema，会导致**整个后台打不开**（曾踩过）。
+
+## 图片池（media 分支，main 里不含大图）
+
+封面原图（374 张 `.webp`/`.avif`，约 113MB，**不压缩**）和随机背景的本地兜底图（10 张）
+**不在 main 分支**，而是单独放在 `media` 孤儿分支（不继承 main 的提交历史）。
+main 上只留清单：`data/covers.yml`、`data/cover_pool.yml` 和 `media.lock`。
+
+| 谁 | 怎么拿到图片 |
+| --- | --- |
+| GitHub Actions（`hugo.yaml` / `tools.yml`） | `git ls-remote origin media` 取最新提交哈希当缓存键 → `actions/cache` 缓存 `static/images/pool` → **只有缓存未命中**才 `git fetch --depth=1` + `git worktree` 拉取。平时构建时间不变，media 变动后的那次多花 1~2 分钟 |
+| 本地 | `python tools/fetch_media_pool.py`（国内网络加 `--proxy http://127.0.0.1:7890`）。图片落在 `static/images/pool/`，该目录已在 `.gitignore` 里 |
+
+- **加图 / 换图**：把原图提交到 `media` 分支的 `images/pool/covers/`（保持原格式、原文件名，不压缩）。
+  推送后 `sync-cover-pool.yml` 会自动重算 `data/cover_pool.yml` 和后台「封面图」下拉框选项，
+  并触发一次站点构建；新图随之下线。
+- `media.lock`：建池时 media 分支的提交哈希（想找回/回滚某版图片时按它检出）。
+- `data/covers.yml`：**随机封面池快照**（没填封面的文章从里面洗牌取图）。它的内容是全量 374 张；
+  media 加图后想让它也进随机池，在 main 上跑一次
+  `python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录> --covers-yml`。
+- 完整说明（目录结构、加图步骤、和 main 的约定）见
+  [docs/图片池（media 分支）.md](docs/图片池（media%20分支）.md)。
 
 ## 评论系统（自建，数据存在 Git 仓库里）
 
@@ -155,23 +179,26 @@ Hugo 静态博客，主题 [reimu](https://github.com/D-Sketon/hugo-theme-reimu)
 | `tools/img2webp.py` | 任意图片 → WebP（批量 / 缩放 / `--target-kb` 目标体积 / `--max-dim` 限长边 / `--in-place` 重压），需要 Pillow | `python tools/img2webp.py static/images -r --max-dim 1600 --target-kb 300` |
 | `tools/auto_webp.py` | CI 用：把新增/修改的位图转 WebP + 改写引用 + 删原图（**默认 dry-run**）；`--all` 处理存量图（会跳过主题素材） | `python tools/auto_webp.py --files static/images/interrupt-path.jpg`（预演）<br>`python tools/auto_webp.py --apply --range origin/main..HEAD` |
 | `tools/rename_image.py` | 图片改名 / 移目录，并同步改写 `content/`、`config/`、`data/`、`static/` 里的引用（**默认 dry-run**，绝不 commit/push） | `python tools/rename_image.py static/images/a.jpg static/images/stm32/a.jpg`（预演，加 `--apply` 落盘） |
+| `tools/fetch_media_pool.py` | 本地构建前把 media 分支的图片池拉到 `static/images/pool`（CI 由工作流自己做这一步）；`--check` 只看是否就绪 | `python tools/fetch_media_pool.py --proxy http://127.0.0.1:7890` |
 | `tools/check_site.py` | 构建产物四项校验（断链 / 未授权外部资源 / sitemap / 首页导航） | `python tools/check_site.py --dir public` |
 | `tools/localize_vendor.py` | 把 `data/vendor.yml` 里能本地化的库切到 `local|`；`--strict` 用于 CI 防回退 | `python tools/localize_vendor.py --dry-run --strict` |
 | `tools/check_twikoo.py` | 旧的 Twikoo 评论后端体检（地址可达性 / 版本 / CORS / 匿名读）——**当前评论方案不是 Twikoo**，脚本保留备用；没有 argparse，不带参数会打印用法并以退出码 2 结束 | `python tools/check_twikoo.py https://xxx.netlify.app/.netlify/functions/twikoo` |
 | `tools/cms-oauth-worker/worker.js` | 后台 GitHub OAuth 登录中转（Cloudflare Worker）；自测在 `tools/cms-oauth-worker/test.mjs`（12 项） | `node tools/cms-oauth-worker/test.mjs` |
 | `tools/git-comments/test.mjs` | 自建评论 Function 的自测（28 项，假 fetch，不联网） | `node tools/git-comments/test.mjs` |
 | `.github/scripts/fetch_badges.py` | 把 README 顶部两张徽章镜像到 `static/badges/`（CI 构建前跑，本地可带 `--proxy`） | `python .github/scripts/fetch_badges.py --out-dir static/badges` |
+| `.github/scripts/sync_cover_pool.py` | 从 media 分支的封面原图生成 `data/cover_pool.yml` 与后台下拉选项标记区；`--covers-yml` 同时重写随机封面池 | `python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录> --covers-yml` |
 
 ## CI 工作流（`.github/workflows/`）
 
 | 文件 | 工作流名 | 触发 | 干什么 |
 | ---- | -------- | ---- | ------ |
-| `hugo.yaml` | Build and deploy | push 到 `main` / 手动 | 镜像徽章 → 装 Dart Sass 1.104.0 + Hugo Extended 0.166.0 → `hugo --minify --baseURL <Pages URL>` → 上传 artifact → 部署 GitHub Pages |
-| `tools.yml` | Tools and config checks | push 到 `main` 且改动命中 `tools/**` `data/**` `config/**` `static/admin/**` `static/badges/**` `static/resources/**` `static/css/**` `static/js/**` `layouts/**` `.github/scripts/**` 或本文件；任意 PR；手动 | 三个 job：**Python 工具自测**（`py_compile` 全仓库 Python 文件、6 个脚本的 `--help` CLI 冒烟、`test_check_twikoo.py`、`test_auto_webp.py`、`localize_vendor.py --dry-run --strict`）、**后台登录中转自测**（`node tools/cms-oauth-worker/test.mjs`）、**Hugo 构建检查**（装 Hugo → 构建 → `python3 tools/check_site.py --dir public`） |
+| `hugo.yaml` | Build and deploy | push 到 `main` / 定时（每 2 小时）/ 手动 | 镜像徽章 → **拉图片池（media 分支，缓存优先）** → 装 Dart Sass 1.104.0 + Hugo Extended 0.166.0 → `hugo --minify --baseURL <Pages URL>` → 上传 artifact → 部署 GitHub Pages → 定时任务里再触发 Cloudflare Pages Deploy Hook |
+| `tools.yml` | Tools and config checks | push 到 `main` 且改动命中 `tools/**` `data/**` `config/**` `static/admin/**` `static/badges/**` `static/resources/**` `static/css/**` `static/js/**` `layouts/**` `.github/scripts/**` `.github/workflows/**` 或本文件；任意 PR；手动 | 三个 job：**Python 工具自测**（`py_compile` 全仓库 Python 文件、6 个脚本的 `--help` CLI 冒烟、`test_check_twikoo.py`、`test_auto_webp.py`、`localize_vendor.py --dry-run --strict`）、**后台登录中转自测**（`node tools/cms-oauth-worker/test.mjs`）、**Hugo 构建检查**（拉图片池 → 装 Hugo → 构建 → `python3 tools/check_site.py --dir public`） |
 | `webp.yml` | Auto WebP | push 到 `main` 且 `static/images/**` 变更；手动（`range` 填 `all` 或任意 git 范围，处理存量图） | 把本次新增/修改的位图转 WebP、改写引用、删原图，用带 `[skip ci]` 的提交推回，再 `gh workflow run hugo.yaml` 补一次部署（否则 `[skip ci]` 会把部署一起跳过） |
+| `sync-cover-pool.yml` | 同步封面池 | push 到 `media`（工作流文件在 media 分支上也有一份）/ 手动 | 用 Git Tree API 列 media 分支的封面原图 → 重写 `data/cover_pool.yml` 和 `static/admin/config.yml` 的 `COVER_OPTIONS` 标记区 → 自动提交回 `main` → 再显式 `gh workflow run hugo.yaml` 触发一次构建（media 的 push 和 `GITHUB_TOKEN` 的提交都不会自动触发部署，不显式触发新图片就上不了线） |
 
-三者关系：`hugo.yaml` 只管构建部署；`tools.yml` 是**护栏**（不部署，专门在改工具 / 配置 / 前端资源时把关）；
-`webp.yml` 是图片兜底，跑完主动触发一次 `hugo.yaml`。
+三个构建类工作流的关系：`hugo.yaml` 只管构建部署；`tools.yml` 是**护栏**（不部署，专门在改工具 / 配置 / 前端资源时把关）；
+`webp.yml` 是图片兜底，跑完主动触发一次 `hugo.yaml`；`sync-cover-pool.yml` 管「media 加图 → 后台下拉框跟着更新」。
 
 两个经验：
 
@@ -188,6 +215,7 @@ Hugo 静态博客，主题 [reimu](https://github.com/D-Sketon/hugo-theme-reimu)
 | [后台与评论部署指南.md](docs/后台与评论部署指南.md) | 写作后台（Sveltia CMS）的两条登录路线、Cloudflare Worker 部署、后台维护；**评论部分是旧的 Twikoo + Netlify + MongoDB Atlas 方案**，现已被下面那篇取代 |
 | [评论系统（Git存储）.md](docs/评论系统（Git存储）.md) | 当前评论方案：架构与数据流向、一次性部署（令牌 + 环境变量）、本地调试（`wrangler pages dev`）、审核流程、备份与已知限制 |
 | [图片与媒体库操作说明.md](docs/图片与媒体库操作说明.md) | 后台媒体库怎么删图 / 「移动」图片为什么必须用脚本 / 图片转 WebP 的三条路径与自查命令 |
+| [图片池（media 分支）.md](docs/图片池（media%20分支）.md) | 封面原图为什么在 media 孤儿分支、构建/本地怎么拉、怎么加图、清单怎么自动同步回 main |
 | [构建状态挂件.md](docs/构建状态挂件.md) | 页底「BLOG状态」徽章的来源、位置约束、旧链路为什么删掉、本地怎么验证 |
 | [随机固定背景.md](docs/随机固定背景.md) | 全站随机固定背景：远端图源 / 本地兜底、文章页 banner 整屏、为什么以前看不见、怎么调参和验证 |
 | [升级与维护注意事项.md](docs/升级与维护注意事项.md) | 平时自检三条命令、主题升级要做的事、构建告警逐条说明、版本配套表 |
@@ -198,6 +226,10 @@ Hugo 静态博客，主题 [reimu](https://github.com/D-Sketon/hugo-theme-reimu)
 Python 脚本要 Python 3.8+，其中 `tools/img2webp.py`、`tools/auto_webp.py` 需要 **Pillow**（CI 用 venv 装）。
 
 ```bash
+# 首次构建 / media 分支换过图之后：先把图片池拉到 static/images/pool（main 里没有大图）
+python tools/fetch_media_pool.py                   # 国内网络加 --proxy http://127.0.0.1:7890
+python tools/fetch_media_pool.py --check           # 只看图片池是否就绪
+
 hugo server -D                                     # 本地预览（含草稿），http://localhost:1313
 hugo --minify                                      # 构建到 public/
 hugo --minify --baseURL https://wstk.pages.dev/     # 想本地预览 Cloudflare 效果时（评论提交仍指向线上）
@@ -245,10 +277,15 @@ sitemap 与 robots.txt 自动使用 `https://wusitech.github.io/`。
 
 Cloudflare Dashboard → Workers & Pages → 该项目 → Settings → Builds & deployments：
 
-- **Build command**（自己装 Hugo Extended，版本与 CI 保持一致）：
+- **Build command**（自己装 Hugo Extended，版本与 CI 保持一致；**必须先拉 media 分支的图片池**，
+  否则封面全 404 —— 见上「图片池（media 分支）」）：
 
   ```bash
-  curl -sfL -o /tmp/hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.166.0/hugo_extended_0.166.0_linux-amd64.tar.gz \
+  git fetch origin media --depth=1 \
+    && rm -rf /tmp/media && git worktree add /tmp/media FETCH_HEAD \
+    && mkdir -p static/images/pool \
+    && cp -r /tmp/media/images/pool/. static/images/pool/ \
+    && curl -sfL -o /tmp/hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.166.0/hugo_extended_0.166.0_linux-amd64.tar.gz \
     && tar -xzf /tmp/hugo.tar.gz -C /tmp hugo \
     && git submodule update --init --recursive \
     && /tmp/hugo --minify --baseURL https://wstk.pages.dev/
@@ -257,8 +294,16 @@ Cloudflare Dashboard → Workers & Pages → 该项目 → Settings → Builds &
   如果 Cloudflare 的构建镜像已经自带 Extended Hugo，可简化为：
 
   ```bash
-  git submodule update --init --recursive && hugo --minify --baseURL https://wstk.pages.dev/
+  git fetch origin media --depth=1 \
+    && rm -rf /tmp/media && git worktree add /tmp/media FETCH_HEAD \
+    && mkdir -p static/images/pool \
+    && cp -r /tmp/media/images/pool/. static/images/pool/ \
+    && git submodule update --init --recursive \
+    && hugo --minify --baseURL https://wstk.pages.dev/
   ```
+
+  ⚠️ 这一段是 Cloudflare Dashboard 里的**人工配置**，仓库里改不到；迁移到 media 分支后
+  必须去 Dashboard 把 Build command 换成上面这版（否则 `wstk.pages.dev` 上的封面会全部断图）。
 
 - **Build output directory**：`public`
 - **环境变量**：`HUGO_VERSION = 0.166.0`、`TZ = Asia/Shanghai`；
@@ -299,12 +344,15 @@ Cloudflare Dashboard → Workers & Pages → 该项目 → Settings → Builds &
 - `layouts/robots.txt`：robots.txt 模板
 - `functions/api/comment.js`：评论提交接口（Cloudflare Pages Function）
 - `static/comments/`：评论数据（每篇文章一个 JSON，另有 `README.md` 说明）
-- `static/images/`：图片资源（后台媒体库根目录）
+- `static/images/`：图片资源（后台媒体库根目录）。**其中 `static/images/pool/` 不在 main**：
+  构建时由 media 分支拉进来，本地用 `python tools/fetch_media_pool.py`，目录已被 `.gitignore`
 - `static/avatar/`、`static/badges/`、`static/css/`、`static/js/`、`static/vendor/`
 - `static/admin/`：写作后台（Sveltia CMS，入口 `/admin/`）
 - `static/resources/`：主题 vendor 库的本地副本（**必须保留跟踪**）
 - `static/_headers`：Cloudflare Pages 响应头（评论跨域）
 - `data/vendor.yml`、`data/covers.yml`、`data/friends.yml`：覆盖主题的 data 文件（**整文件覆盖**，不是深合并）
+- `data/cover_pool.yml`：media 分支封面清单（自动生成，供后台下拉框 / 工具读取）
+- `media.lock`：media 分支的提交哈希快照（图片池版本，见上「图片池」）
 - `docs/`：文档（见上索引）
 - `tools/`：脚本（见上表格）
 - `public/`、`resources/`、`.verify*/`、`.hugo_build.lock`：构建产物，已在 `.gitignore` 中忽略

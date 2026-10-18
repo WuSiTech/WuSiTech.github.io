@@ -20,7 +20,7 @@ on:
       - 'static/js/**'
       - 'layouts/**'
       - '.github/scripts/**'
-      - '.github/workflows/tools.yml'
+      - '.github/workflows/**'
   pull_request:
   workflow_dispatch:
 
@@ -54,6 +54,7 @@ jobs:
           python3 tools/img2webp.py --help > /dev/null
           python3 tools/auto_webp.py --help > /dev/null
           python3 tools/localize_vendor.py --help > /dev/null
+          python3 tools/fetch_media_pool.py --help > /dev/null
           python3 tools/check_twikoo.py > /dev/null || test $? -eq 2   # 不带参数应打印用法并以 2 退出
 
       - name: Twikoo 自检工具的 mock 测试（4 个场景）
@@ -80,7 +81,43 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
-          fetch-depth: 0
+          # 不要 fetch-depth: 0 —— 那会把 media 分支的 113MB 图片也一起拉下来。
+          # 这个 job 只需要「当前提交」+ 下面按需拉取的图片池。
+          fetch-depth: 1
+
+      # ---------- 图片池（media 分支）：与 hugo.yaml 同样的三步 ----------
+      # 清单 data/covers.yml 里引用了 374 张封面，产物校验（断链检查）需要它们真的存在，
+      # 所以这里也必须先把图片池拉到 static/images/pool。
+      - name: 解析 media 分支版本
+        id: media
+        run: |
+          SHA="$(git ls-remote origin media | cut -f1)"
+          if [ -z "${SHA}" ]; then
+            echo "::error::取不到 origin/media 分支：图片池是构建的必需输入"
+            exit 1
+          fi
+          echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
+
+      - name: 缓存图片池
+        uses: actions/cache@v4
+        with:
+          path: static/images/pool
+          key: media-${{ steps.media.outputs.sha }}
+
+      - name: 拉取图片池（缓存未命中才执行）
+        run: |
+          if [ -d static/images/pool/covers ]; then
+            echo "缓存命中：图片池已就绪（$(find static/images/pool -type f | wc -l) 个文件）"
+            exit 0
+          fi
+          git fetch origin media --depth=1
+          rm -rf "${RUNNER_TEMP}/media"
+          # 用 FETCH_HEAD：浅克隆的 remote.origin.fetch 只映射当前分支，
+          # fetch 别的分支不会生成 refs/remotes/origin/media（理由同 hugo.yaml）。
+          git worktree add "${RUNNER_TEMP}/media" FETCH_HEAD
+          mkdir -p static/images/pool
+          cp -r "${RUNNER_TEMP}/media/images/pool/." static/images/pool/
+          echo "已拉取图片池：$(find static/images/pool -type f | wc -l) 个文件"
 
       - name: 安装 Dart Sass（主题编译 SCSS 需要）
         run: |
