@@ -44,8 +44,8 @@
   var HIST_REMOTE_SIZE = 8;
   var HIST_LOCAL_SIZE = 4;
 
-  var remote = Array.isArray(cfg.remote) ? cfg.remote : [];
-  var local = Array.isArray(cfg.local) ? cfg.local : [];
+  var remote = Array.isArray(cfg.pool) ? cfg.pool : (Array.isArray(cfg.remote) ? cfg.remote : []);
+  var local = Array.isArray(cfg.pool) ? cfg.pool : (Array.isArray(cfg.local) ? cfg.local : []);
   var banner = typeof cfg.banner === "string" ? cfg.banner : "";
 
   var mode = "";
