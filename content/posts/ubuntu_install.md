@@ -5,8 +5,8 @@ draft = false
 description = "详细阐释了如何进行Ubuntu安装"
 categories = [ "Ubuntu" ]
 tags = [ "Ubuntu", "系统", "Linux" ]
-cover = "/images/OIP2.webp"
-banner = "images/banner.webp"
+cover = "/images/pool/covers/covers-377.webp"
+banner = ""
 +++
 
 （复制了自己以前的文章）
