@@ -4,8 +4,8 @@
 
   原文件只有两条 Hugo 版本告警，这里原样保留；
   额外把「随机固定背景」需要的数据注入给 /js/wusi-bg.js：
-    banner —— 当前页 front matter 的 banner（其次 cover），用于文章页整屏头图；
-              没有就是空字符串，脚本改走远端随机图
+    banner —— 只有文章 front matter 里**显式写了 banner** 才用（用于文章页整屏固定背景）；
+              没写 banner 的页面（包括有 cover 的文章）一律走远端随机图 / 本地兜底图
     remote —— data/remote_backgrounds.yml 里的远端图源（111 条）
     local  —— static/images/pool/bg/ 下的本地兜底图（10 张，构建时自动列目录）
 
@@ -23,22 +23,16 @@
   {{- warnf "Because that use SCSS framework in Hugo Reimu, Please download Hugo extended version on offical site: https://github.com/gohugoio/hugo/releases" -}}  
 {{- end -}}
 
-{{- /* 当前页的 banner（其次 cover）：主题把 banner 画在 #header 的 img 上；
-       这里只取"图片"形式的值，rgb(...) 那种纯色不算。 */ -}}
+{{- /* 当前页的 banner：只有文章 front matter 里**显式写了 banner**（且是图片路径）才算。
+       ⚠️ 不能用 cover（封面）兜底：cover 只是首页卡片的缩略图，不是文章背景图；
+       没写 banner 的文章和普通页面一样，背景走下面的随机图源（远端池 + 本地池）。
+       主题会把 banner 画在 #header 的 img 上；这里只取"图片"形式的值，rgb(...) 纯色不算。 */ -}}
 {{- $banner := "" -}}
 {{- with .Params.banner -}}
   {{- if strings.HasPrefix . "http" -}}
     {{- $banner = . -}}
   {{- else if not (strings.HasPrefix . "rgb") -}}
     {{- $banner = . | relURL -}}
-  {{- end -}}
-{{- else -}}
-  {{- with .Params.cover -}}
-    {{- if strings.HasPrefix . "http" -}}
-      {{- $banner = . -}}
-    {{- else if not (strings.HasPrefix . "rgb") -}}
-      {{- $banner = . | relURL -}}
-    {{- end -}}
   {{- end -}}
 {{- end -}}
 
@@ -68,7 +62,7 @@
 <script>
   window.__WUSI_BG__ = {{ dict "banner" $banner "remote" $remote "local" $local | jsonify | safeJS }};
   {{- if $banner }}
-  /* 本页有 banner/cover：让样式表把主题那张头图改成整屏固定背景（见 /css/wusi-bg.css）。
+  /* 本页显式指定了 banner：让样式表把主题那张头图改成整屏固定背景（见 /css/wusi-bg.css）。
      在 <head> 里加类名，保证首帧就生效，不会先闪一下普通背景。 */
   document.documentElement.classList.add("wusi-page-banner");
   {{- end }}

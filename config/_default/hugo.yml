@@ -41,8 +41,8 @@ markup:
 # 全站随机固定背景：把「页面默认 banner」关掉
 #
 # 背景由 static/js/wusi-bg.js + static/css/wusi-bg.css 负责：
-#   · 文章页在 front matter 里写了自己的 banner/cover → 用它当整屏固定背景；
-#   · 其它页面（首页/关于/友链…）→ 用随机远端图。
+#   · 文章页 front matter 里**显式写了 banner** → 用它当整屏固定背景（cover 不算，cover 只是卡片缩略图）；
+#   · 没写 banner 的页面（包括有 cover 的文章、首页/关于/友链…）→ 用随机图源。
 # 主题原来的行为是"没有自定义 banner 就渲染站点默认 banner.webp"，
 # 这张 155KB 的图现在不显示（被整屏背景替代）却仍会被浏览器下载，
 # 所以用 cascade 把页面级 banner 默认值设为 false：主题于是不再输出那个 <img>，

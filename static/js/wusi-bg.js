@@ -2,13 +2,14 @@
    全站随机固定背景 —— 站点级扩展脚本（不改 themes/）
    样式：static/css/wusi-bg.css
    页面数据：layouts/partials/head/init.html 注入 window.__WUSI_BG__
-             （banner = 当前页 front matter 的 banner/cover；remote = 远端图源；local = 本地兜底）
+             （banner = 当前页 front matter **显式写的 banner**，没写就是空；
+              remote = 远端图源；local = 本地兜底）
 
    行为（按优先级）：
-     1. 当前页有 banner/cover → 直接用主题已经渲染好的 #header 头图当整屏固定背景
+     1. 当前页显式写了 banner → 直接用主题已经渲染好的 #header 头图当整屏固定背景
         （样式表把那张图 position:fixed 铺满视口，一图两用，不会重复下载）；
         这里只负责"图挂了就退回随机背景"和状态上报；
-     2. 没有 banner → 从远端图源里随机取一张，异步探测（不阻塞首屏）；
+     2. 没写 banner（注意：cover 封面不算！）→ 和普通页面一样，从图源里随机取一张；
      3. 远端 300ms 还没好 → 先铺一张本地图池的兜底图，远端成功后淡入覆盖，
         失败/超时（4s）则保留本地兜底图；
      4. 所有图都失败 → 只留主题底色，页面依然正常。
