@@ -3,7 +3,6 @@
 ########################################
 
 # image lightbox (点击文章图片放大查看)
-fancybox: true
 
 # main menu navigation
 # ⚠️ 菜单已搬到 config/_default/params.toml（后台「站点设置」集合管理）。
@@ -629,10 +628,6 @@ injector:
   #    要等 lazysizes 运行后才有 src；CSS 里 .sidebar-author img{opacity:0}
   #    只有补上 .lazyloaded 才显示。这里在 DOM 就绪前同步设好 src 并切好 class。
   body_end: |
-    <!-- Fancybox 灯箱所需资源已本地化到 static/vendor/，不再依赖 cdn.jsdelivr.net（国内经常超时） -->
-    <link rel="stylesheet" href="/vendor/fancybox/fancybox-3.5.7.min.css" />
-    <script src="/vendor/jquery/jquery-3.7.1.min.js"></script>
-    <script src="/vendor/fancybox/fancybox-3.5.7.min.js"></script>
     <!-- 站点级定制 CSS/JS：原内联在这里的两段样式块和三段脚本已拆到
          static/css/wusi-site.css 与 static/js/wusi-site.js（fancybox 初始化 / 侧栏头像立即加载 /
          评论系统按页加载：只在 /posts/ /about/ /friend/ /download/ 且有 .article-entry 时加载）。

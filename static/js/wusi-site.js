@@ -4,21 +4,11 @@
    加载位置：injector.body_end，defer；三段脚本按原顺序合并，执行顺序不变。
 
    内容：
-     1) Fancybox 灯箱初始化（jQuery / fancybox 已在前面同步加载完）；
-     2) 侧栏头像立即加载：主题输出的是 lazyload（没有 src），要等 lazysizes 跑完才显示，
+          2) 侧栏头像立即加载：主题输出的是 lazyload（没有 src），要等 lazysizes 跑完才显示，
         这里在 DOM 解析完就补上 src 和 .lazyloaded；
      3) 评论系统按页加载：只在 /posts/ /about/ /friend/ /download/ 且页面有 .article-entry 时
         追加 /js/comments.js（详见 docs/评论系统（Git存储）.md）。
    ========================================================================== */
-
-/* ===== 1) Fancybox 灯箱初始化 ===== */
-document.addEventListener('DOMContentLoaded', function () {
-  if (window.jQuery && jQuery.fn.fancybox) {
-    jQuery('[data-fancybox="gallery"]').fancybox({
-      buttons: ["zoom", "close"]
-    });
-  }
-});
 
 /* ===== 2) 侧栏头像立即加载 ===== */
 (function () {
