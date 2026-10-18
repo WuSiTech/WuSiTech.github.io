@@ -1,15 +1,14 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 REM ============================================================
-REM  Hugo å‘å¸ƒç®¡ç†è„šæœ¬ï¼ˆç«™ç‚¹æ ¹ç›®å½•è¿è¡Œï¼‰
-REM  å‘å¸ƒæµç¨‹ï¼š[4] æ„å»ºè‡ªæ£€ -> åªæš‚å­˜æ–‡ç« å’Œå›¾ç‰‡ -> æäº¤ -> æ‹‰å– -> ä»£ç†æ¨é€
-REM  ä¸ docs\obsidian-push.bat è¡Œä¸ºä¸€è‡´ï¼ŒåŒºåˆ«æ˜¯è¿™é‡Œå¤šäº†å®Œæ•´çš„èœå•åŠŸèƒ½ã€‚
+REM  Hugo ·¢²¼¹ÜÀí½Å±¾£¨Õ¾µã¸ùÄ¿Â¼ÔËĞĞ£©
+REM  ·¢²¼Á÷³Ì£º[4] ¹¹½¨×Ô¼ì -> Ö»Ôİ´æÎÄÕÂºÍÍ¼Æ¬ -> Ìá½» -> À­È¡ -> ´úÀíÍÆËÍ
+REM  Óë docs\obsidian-push.bat ĞĞÎªÒ»ÖÂ£¬Çø±ğÊÇÕâÀï¶àÁËÍêÕûµÄ²Ëµ¥¹¦ÄÜ¡£
 REM ============================================================
 
-REM ---------- å·¥å…·å®šä½ï¼šä¼˜å…ˆ PATHï¼Œå…¶æ¬¡å¸¸è§å®‰è£…è·¯å¾„ ----------
+REM ---------- ¹¤¾ß¶¨Î»£ºÓÅÏÈ PATH£¬Æä´Î³£¼û°²×°Â·¾¶ ----------
 set "HUGO=hugo"
 where hugo >nul 2>nul
 if errorlevel 1 (
@@ -27,7 +26,7 @@ if errorlevel 1 (
   )
 )
 
-REM ---------- ä»£ç†ï¼šgit æœ¬åœ°é…ç½® -> æ³¨å†Œè¡¨ -> é»˜è®¤ 7890 ----------
+REM ---------- ´úÀí£ºgit ±¾µØÅäÖÃ -> ×¢²á±í -> Ä¬ÈÏ 7890 ----------
 set "PROXY="
 for /f "delims=" %%a in ('git config --local --get http.proxy 2^>nul') do set "PROXY=%%a"
 if not defined PROXY set "PROXY=http://127.0.0.1:7890"
@@ -36,23 +35,23 @@ if not defined PROXY set "PROXY=http://127.0.0.1:7890"
 cls
 echo.
 echo ============================================
-echo             Hugo å‘å¸ƒç®¡ç†
+echo             Hugo ·¢²¼¹ÜÀí
 echo ============================================
 echo.
-echo   [1] æ–°å»ºæ–‡ç« 
-echo   [2] æœ¬åœ°é¢„è§ˆ (hugo server -D)
-echo   [3] åªæ„å»ºé™æ€æ–‡ä»¶ (hugo --minify)
-echo   [4] å‘å¸ƒåˆ° GitHubï¼ˆæ„å»ºè‡ªæ£€ + æäº¤ + æ¨é€ï¼‰
-echo   [5] ä¸€é”®å†™ä½œï¼ˆæ–°å»º + é¢„è§ˆï¼‰
-echo   [6] æ¸…ç†æ„å»ºäº§ç‰© (public/)
-echo   [7] æ›´æ–°ä¸»é¢˜å­æ¨¡å—
-echo   [8] æŸ¥çœ‹ä»“åº“çŠ¶æ€
-echo   [9] ä»è¿œç«¯æ‹‰å–æ›´æ–° (git pull --rebase)
+echo   [1] ĞÂ½¨ÎÄÕÂ
+echo   [2] ±¾µØÔ¤ÀÀ (hugo server -D)
+echo   [3] Ö»¹¹½¨¾²Ì¬ÎÄ¼ş (hugo --minify)
+echo   [4] ·¢²¼µ½ GitHub£¨¹¹½¨×Ô¼ì + Ìá½» + ÍÆËÍ£©
+echo   [5] Ò»¼üĞ´×÷£¨ĞÂ½¨ + Ô¤ÀÀ£©
+echo   [6] ÇåÀí¹¹½¨²úÎï (public/)
+echo   [7] ¸üĞÂÖ÷Ìâ×ÓÄ£¿é
+echo   [8] ²é¿´²Ö¿â×´Ì¬
+echo   [9] ´ÓÔ¶¶ËÀ­È¡¸üĞÂ (git pull --rebase)
 echo.
-echo   [0] é€€å‡º
+echo   [0] ÍË³ö
 echo.
 echo ============================================
-set /p choice=è¯·é€‰æ‹©æ“ä½œ: 
+set /p choice=ÇëÑ¡Ôñ²Ù×÷: 
 
 if "%choice%"=="1" goto newpost
 if "%choice%"=="2" goto preview
@@ -65,163 +64,163 @@ if "%choice%"=="8" goto status
 if "%choice%"=="9" goto pull
 if "%choice%"=="0" goto end
 echo.
-echo æ— æ•ˆé€‰é¡¹ï¼Œè¯·é‡æ–°è¾“å…¥ã€‚
+echo ÎŞĞ§Ñ¡Ïî£¬ÇëÖØĞÂÊäÈë¡£
 pause
 goto menu
 
 REM ============================================================
-REM [1] æ–°å»ºæ–‡ç« 
+REM [1] ĞÂ½¨ÎÄÕÂ
 REM ============================================================
 :newpost
 cls
 echo.
-echo ============ æ–°å»ºæ–‡ç«  ============
+echo ============ ĞÂ½¨ÎÄÕÂ ============
 echo.
-set /p postname=è¯·è¾“å…¥æ–‡ç« æ–‡ä»¶åï¼ˆè‹±æ–‡/æ‹¼éŸ³ï¼Œä¸è¦å¸¦ .mdï¼‰: 
+set /p postname=ÇëÊäÈëÎÄÕÂÎÄ¼şÃû£¨Ó¢ÎÄ/Æ´Òô£¬²»Òª´ø .md£©: 
 if "%postname%"=="" (
-    echo æ–‡ä»¶åä¸èƒ½ä¸ºç©ºã€‚
+    echo ÎÄ¼şÃû²»ÄÜÎª¿Õ¡£
     pause
     goto menu
 )
 echo.
-echo æ­£åœ¨åˆ›å»ºï¼šcontent/posts/%postname%.md
+echo ÕıÔÚ´´½¨£ºcontent/posts/%postname%.md
 "%HUGO%" new content "content/posts/%postname%.md"
 if errorlevel 1 (
     echo.
-    echo åˆ›å»ºå¤±è´¥ï¼Œè¯·ç¡®è®¤ Hugo æ˜¯å¦å®‰è£…ã€è·¯å¾„æ˜¯å¦æ­£ç¡®ã€‚
+    echo ´´½¨Ê§°Ü£¬ÇëÈ·ÈÏ Hugo ÊÇ·ñ°²×°¡¢Â·¾¶ÊÇ·ñÕıÈ·¡£
 ) else (
     echo.
-    echo åˆ›å»ºæˆåŠŸã€‚æŠŠ front matter é‡Œçš„ draft æ”¹æˆ false å†å‘å¸ƒã€‚
-    echo æ–‡ä»¶è·¯å¾„ï¼šcontent\posts\%postname%.md
+    echo ´´½¨³É¹¦¡£°Ñ front matter ÀïµÄ draft ¸Ä³É false ÔÙ·¢²¼¡£
+    echo ÎÄ¼şÂ·¾¶£ºcontent\posts\%postname%.md
 )
 echo.
 pause
 goto menu
 
 REM ============================================================
-REM [2] æœ¬åœ°é¢„è§ˆ
+REM [2] ±¾µØÔ¤ÀÀ
 REM ============================================================
 :preview
 cls
 echo.
-echo ============ æœ¬åœ°é¢„è§ˆ ============
+echo ============ ±¾µØÔ¤ÀÀ ============
 echo.
-echo åœ¨æµè§ˆå™¨æ‰“å¼€ http://localhost:1313 ï¼ŒæŒ‰ Ctrl+C åœæ­¢ã€‚
+echo ÔÚä¯ÀÀÆ÷´ò¿ª http://localhost:1313 £¬°´ Ctrl+C Í£Ö¹¡£
 echo.
 "%HUGO%" server -D
 pause
 goto menu
 
 REM ============================================================
-REM [3] æ„å»ºé™æ€æ–‡ä»¶
+REM [3] ¹¹½¨¾²Ì¬ÎÄ¼ş
 REM ============================================================
 :build
 cls
 echo.
-echo ============ æ„å»ºé™æ€æ–‡ä»¶ ============
+echo ============ ¹¹½¨¾²Ì¬ÎÄ¼ş ============
 echo.
 "%HUGO%" --minify --cleanDestinationDir
 if errorlevel 1 (
     echo.
-    echo æ„å»ºå¤±è´¥ï¼Œä¸Šé¢æœ‰æŠ¥é”™ã€‚
+    echo ¹¹½¨Ê§°Ü£¬ÉÏÃæÓĞ±¨´í¡£
 ) else (
     echo.
-    echo æ„å»ºæˆåŠŸï¼Œäº§ç‰©åœ¨ public\ ç›®å½•ã€‚
+    echo ¹¹½¨³É¹¦£¬²úÎïÔÚ public\ Ä¿Â¼¡£
 )
 echo.
 pause
 goto menu
 
 REM ============================================================
-REM [4] å‘å¸ƒåˆ° GitHubï¼ˆæ„å»ºè‡ªæ£€ + æäº¤ + æ¨é€ï¼‰
+REM [4] ·¢²¼µ½ GitHub£¨¹¹½¨×Ô¼ì + Ìá½» + ÍÆËÍ£©
 REM ============================================================
 :publish
 cls
 echo.
-echo ============ å‘å¸ƒåˆ° GitHub ============
+echo ============ ·¢²¼µ½ GitHub ============
 echo.
-echo [ä»£ç†] !PROXY!
-echo        ï¼ˆç«¯å£ä¸å¯¹å°±æ‰§è¡Œï¼šgit config --local http.proxy http://127.0.0.1:æ–°ç«¯å£ï¼‰
+echo [´úÀí] !PROXY!
+echo        £¨¶Ë¿Ú²»¶Ô¾ÍÖ´ĞĞ£ºgit config --local http.proxy http://127.0.0.1:ĞÂ¶Ë¿Ú£©
 echo.
 
-echo [1/4] æ„å»ºè‡ªæ£€ï¼šhugo --minify
+echo [1/4] ¹¹½¨×Ô¼ì£ºhugo --minify
 "%HUGO%" --minify --cleanDestinationDir
 if errorlevel 1 (
     echo.
-    echo [åœæ­¢] æ„å»ºå¤±è´¥ï¼Œæ²¡æœ‰æäº¤ä»»ä½•ä¸œè¥¿ã€‚
+    echo [Í£Ö¹] ¹¹½¨Ê§°Ü£¬Ã»ÓĞÌá½»ÈÎºÎ¶«Î÷¡£
     pause
     goto menu
 )
 
 if "!PY!"=="" (
     echo.
-    echo [è·³è¿‡] æ²¡æ‰¾åˆ° pythonï¼Œè·³è¿‡äº§ç‰©æ ¡éªŒã€‚
+    echo [Ìø¹ı] Ã»ÕÒµ½ python£¬Ìø¹ı²úÎïĞ£Ñé¡£
     goto stage
 )
 echo.
-echo [2/4] äº§ç‰©æ ¡éªŒï¼štools\check_site.py
+echo [2/4] ²úÎïĞ£Ñé£ºtools\check_site.py
 "!PY!" tools\check_site.py
 if errorlevel 1 (
     echo.
-    echo [åœæ­¢] ç«™ç‚¹äº§ç‰©æ ¡éªŒæ²¡é€šè¿‡ï¼ˆä¸Šé¢æœ‰æ˜ç»†ï¼‰ï¼Œæ²¡æœ‰æäº¤ä»»ä½•ä¸œè¥¿ã€‚
+    echo [Í£Ö¹] Õ¾µã²úÎïĞ£ÑéÃ»Í¨¹ı£¨ÉÏÃæÓĞÃ÷Ï¸£©£¬Ã»ÓĞÌá½»ÈÎºÎ¶«Î÷¡£
     pause
     goto menu
 )
 
 :stage
 echo.
-echo [3/4] æš‚å­˜æ”¹åŠ¨ï¼ˆåªç¢°æ–‡ç« å’Œå›¾ç‰‡ï¼Œä¸ç”¨ git add .ï¼‰
+echo [3/4] Ôİ´æ¸Ä¶¯£¨Ö»ÅöÎÄÕÂºÍÍ¼Æ¬£¬²»ÓÃ git add .£©
 git add -u content static
 if exist "content\posts" git add content\posts
 if exist "static\images\obsidian" git add static\images\obsidian
 if exist "static\images\posts" git add static\images\posts
 echo.
-echo ---- å°†è¦æäº¤çš„å†…å®¹ ----
+echo ---- ½«ÒªÌá½»µÄÄÚÈİ ----
 git status --short
 echo ------------------------
 echo.
 
 git diff --cached --quiet
 if not errorlevel 1 (
-    echo æ²¡æœ‰éœ€è¦æäº¤çš„æ”¹åŠ¨ï¼Œç›´æ¥å°è¯•æ¨é€ã€‚
+    echo Ã»ÓĞĞèÒªÌá½»µÄ¸Ä¶¯£¬Ö±½Ó³¢ÊÔÍÆËÍ¡£
     goto dopush
 )
 
 set "msg="
-set /p msg=æäº¤è¯´æ˜ï¼ˆç›´æ¥å›è½¦ = ã€Œæ›´æ–°æ–‡ç« ã€ï¼‰:
-if not defined msg set "msg=æ›´æ–°æ–‡ç« "
+set /p msg=Ìá½»ËµÃ÷£¨Ö±½Ó»Ø³µ = ¡¸¸üĞÂÎÄÕÂ¡¹£©:
+if not defined msg set "msg=¸üĞÂÎÄÕÂ"
 echo.
-echo [4/4] æäº¤...
+echo [4/4] Ìá½»...
 git commit -m "!msg!"
 if errorlevel 1 (
     echo.
-    echo [åœæ­¢] æäº¤å¤±è´¥ï¼Œæ²¡æœ‰æ¨é€ã€‚
+    echo [Í£Ö¹] Ìá½»Ê§°Ü£¬Ã»ÓĞÍÆËÍ¡£
     pause
     goto menu
 )
 
 :dopush
 echo.
-echo å…ˆæ‹‰å–è¿œç«¯ï¼ˆrebaseï¼Œé¿å…è¦†ç›–åˆ«äººçš„æ”¹åŠ¨ï¼‰...
+echo ÏÈÀ­È¡Ô¶¶Ë£¨rebase£¬±ÜÃâ¸²¸Ç±ğÈËµÄ¸Ä¶¯£©...
 git pull --rebase origin main
 
 echo.
-echo æ­£åœ¨æ¨é€ï¼ˆèµ°ä»£ç†ï¼‰...
+echo ÕıÔÚÍÆËÍ£¨×ß´úÀí£©...
 git -c http.proxy=!PROXY! -c https.proxy=!PROXY! push origin HEAD
 if errorlevel 1 (
     echo.
-    echo ä»£ç†æ¨é€å¤±è´¥ï¼Œå°è¯•ç›´è¿...
+    echo ´úÀíÍÆËÍÊ§°Ü£¬³¢ÊÔÖ±Á¬...
     git push origin HEAD
 )
 if errorlevel 1 (
     echo.
-    echo [å¤±è´¥] æ¨é€æ²¡æˆåŠŸã€‚è¯·æ£€æŸ¥ï¼š
-    echo        1. ä»£ç†è½¯ä»¶æ˜¯å¦åœ¨è¿è¡Œï¼Œç«¯å£æ˜¯ä¸æ˜¯ !PROXY!
-    echo        2. GitHub å‡­æ®æ˜¯å¦å¤±æ•ˆ
-    echo        3. æœ‰å†²çªï¼šå…ˆåœ¨ç»ˆç«¯æ‰§è¡Œ git pull --rebase origin main å¹¶è§£å†³å†²çª
+    echo [Ê§°Ü] ÍÆËÍÃ»³É¹¦¡£Çë¼ì²é£º
+    echo        1. ´úÀíÈí¼şÊÇ·ñÔÚÔËĞĞ£¬¶Ë¿ÚÊÇ²»ÊÇ !PROXY!
+    echo        2. GitHub Æ¾¾İÊÇ·ñÊ§Ğ§
+    echo        3. ÓĞ³åÍ»£ºÏÈÔÚÖÕ¶ËÖ´ĞĞ git pull --rebase origin main ²¢½â¾ö³åÍ»
 ) else (
     echo.
-    echo [æˆåŠŸ] å·²æ¨é€ã€‚1~2 åˆ†é’Ÿå GitHub Actions è‡ªåŠ¨æ„å»ºä¸Šçº¿ï¼š
+    echo [³É¹¦] ÒÑÍÆËÍ¡£1~2 ·ÖÖÓºó GitHub Actions ×Ô¶¯¹¹½¨ÉÏÏß£º
     echo        https://github.com/WuSiTech/WuSiTech.github.io/actions
 )
 echo.
@@ -229,110 +228,110 @@ pause
 goto menu
 
 REM ============================================================
-REM [5] ä¸€é”®å†™ä½œï¼ˆæ–°å»º + é¢„è§ˆï¼‰
+REM [5] Ò»¼üĞ´×÷£¨ĞÂ½¨ + Ô¤ÀÀ£©
 REM ============================================================
 :newpreview
 cls
 echo.
-echo ============ ä¸€é”®å†™ä½œ ============
+echo ============ Ò»¼üĞ´×÷ ============
 echo.
-set /p postname=è¯·è¾“å…¥æ–‡ç« æ–‡ä»¶åï¼ˆè‹±æ–‡/æ‹¼éŸ³ï¼Œä¸è¦å¸¦ .mdï¼‰: 
+set /p postname=ÇëÊäÈëÎÄÕÂÎÄ¼şÃû£¨Ó¢ÎÄ/Æ´Òô£¬²»Òª´ø .md£©: 
 if "%postname%"=="" (
-    echo æ–‡ä»¶åä¸èƒ½ä¸ºç©ºã€‚
+    echo ÎÄ¼şÃû²»ÄÜÎª¿Õ¡£
     pause
     goto menu
 )
 "%HUGO%" new content "content/posts/%postname%.md"
 if errorlevel 1 (
-    echo åˆ›å»ºå¤±è´¥ã€‚
+    echo ´´½¨Ê§°Ü¡£
     pause
     goto menu
 )
 echo.
-echo åˆ›å»ºæˆåŠŸï¼Œæ­£åœ¨æ‰“å¼€æœ¬åœ°é¢„è§ˆ...
+echo ´´½¨³É¹¦£¬ÕıÔÚ´ò¿ª±¾µØÔ¤ÀÀ...
 "%HUGO%" server -D
 pause
 goto menu
 
 REM ============================================================
-REM [6] æ¸…ç†æ„å»ºäº§ç‰©
+REM [6] ÇåÀí¹¹½¨²úÎï
 REM ============================================================
 :clean
 cls
 echo.
-echo ============ æ¸…ç†æ„å»ºäº§ç‰© ============
+echo ============ ÇåÀí¹¹½¨²úÎï ============
 echo.
 if exist "public" (
-    echo æ­£åœ¨åˆ é™¤ public\ ...
+    echo ÕıÔÚÉ¾³ı public\ ...
     rmdir /s /q "public"
-    echo å·²åˆ é™¤ã€‚
+    echo ÒÑÉ¾³ı¡£
 ) else (
-    echo public\ ä¸å­˜åœ¨ï¼Œæ— éœ€æ¸…ç†ã€‚
+    echo public\ ²»´æÔÚ£¬ÎŞĞèÇåÀí¡£
 )
 echo.
 pause
 goto menu
 
 REM ============================================================
-REM [7] æ›´æ–°ä¸»é¢˜å­æ¨¡å—
+REM [7] ¸üĞÂÖ÷Ìâ×ÓÄ£¿é
 REM ============================================================
 :updatetheme
 cls
 echo.
-echo ============ æ›´æ–°ä¸»é¢˜å­æ¨¡å— ============
+echo ============ ¸üĞÂÖ÷Ìâ×ÓÄ£¿é ============
 echo.
-echo æ³¨æ„ï¼šæœ¬ç«™åœ¨ layouts\ ä¸‹æœ‰ä¸»é¢˜è¦†ç›–æ–‡ä»¶ï¼Œå‡çº§åå¯èƒ½éœ€è¦å¯¹ä¸€ä¸‹ã€‚
-echo è¯¦è§ docs\ç«™ç‚¹å®šåˆ¶è¯´æ˜.md
+echo ×¢Òâ£º±¾Õ¾ÔÚ layouts\ ÏÂÓĞÖ÷Ìâ¸²¸ÇÎÄ¼ş£¬Éı¼¶ºó¿ÉÄÜĞèÒª¶ÔÒ»ÏÂ¡£
+echo Ïê¼û docs\Õ¾µã¶¨ÖÆËµÃ÷.md
 echo.
-set /p ok=ç¡®è®¤ç»§ç»­ï¼Ÿ(y/N): 
+set /p ok=È·ÈÏ¼ÌĞø£¿(y/N): 
 if /i not "!ok!"=="y" goto menu
 git submodule update --remote --merge
 if errorlevel 1 (
     echo.
-    echo æ›´æ–°å¤±è´¥ã€‚
+    echo ¸üĞÂÊ§°Ü¡£
 ) else (
     echo.
-    echo æ›´æ–°å®Œæˆã€‚ç”¨ [2] é¢„è§ˆç¡®è®¤æ²¡é—®é¢˜å†ç”¨ [4] å‘å¸ƒã€‚
+    echo ¸üĞÂÍê³É¡£ÓÃ [2] Ô¤ÀÀÈ·ÈÏÃ»ÎÊÌâÔÙÓÃ [4] ·¢²¼¡£
 )
 echo.
 pause
 goto menu
 
 REM ============================================================
-REM [8] æŸ¥çœ‹ä»“åº“çŠ¶æ€
+REM [8] ²é¿´²Ö¿â×´Ì¬
 REM ============================================================
 :status
 cls
 echo.
-echo ============ ä»“åº“çŠ¶æ€ ============
+echo ============ ²Ö¿â×´Ì¬ ============
 echo.
-echo --- Git çŠ¶æ€ ---
+echo --- Git ×´Ì¬ ---
 git status
 echo.
-echo --- æœ€è¿‘ 5 æ¬¡æäº¤ ---
+echo --- ×î½ü 5 ´ÎÌá½» ---
 git log --oneline -5
 echo.
-echo --- å½“å‰åˆ†æ”¯ ---
+echo --- µ±Ç°·ÖÖ§ ---
 git branch
 echo.
 pause
 goto menu
 
 REM ============================================================
-REM [9] ä»è¿œç«¯æ‹‰å–
+REM [9] ´ÓÔ¶¶ËÀ­È¡
 REM ============================================================
 :pull
 cls
 echo.
-echo ============ ä»è¿œç«¯æ‹‰å– ============
+echo ============ ´ÓÔ¶¶ËÀ­È¡ ============
 echo.
 git -c http.proxy=!PROXY! -c https.proxy=!PROXY! pull --rebase origin main
 if errorlevel 1 (
     echo.
-    echo [å¤±è´¥] æ‹‰å–æ²¡æˆåŠŸã€‚å¯èƒ½æ˜¯ä»£ç†é—®é¢˜ï¼Œæˆ–å­˜åœ¨å†²çªéœ€è¦æ‰‹åŠ¨è§£å†³ã€‚
+    echo [Ê§°Ü] À­È¡Ã»³É¹¦¡£¿ÉÄÜÊÇ´úÀíÎÊÌâ£¬»ò´æÔÚ³åÍ»ĞèÒªÊÖ¶¯½â¾ö¡£
 ) else (
     echo.
-    echo æ‹‰å–å®Œæˆã€‚
+    echo À­È¡Íê³É¡£
 )
 echo.
 pause
@@ -341,6 +340,6 @@ goto menu
 :end
 cls
 echo.
-echo å†è§ã€‚
+echo ÔÙ¼û¡£
 echo.
 exit /b 0
