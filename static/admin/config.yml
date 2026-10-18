@@ -773,6 +773,7 @@ collections:
       - label: 评论
         name: comments
         widget: list
+        required: false
         collapsed: true
         summary: "{{fields.name}}：{{fields.body}}"
         fields:
@@ -815,6 +816,7 @@ collections:
       - label: 评论
         name: comments
         widget: list
+        required: false
         collapsed: true
         summary: "{{fields.name}}：{{fields.body}}"
         fields:
