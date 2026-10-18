@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""sync_cover_pool.py —— 从 media 分支的封面原图生成两份清单
+"""sync_cover_pool.py —— 从 media 分支的封面原图生成/更新封面清单
 
 背景
 ----
@@ -11,15 +11,13 @@
 本脚本由 .github/workflows/sync-cover-pool.yml 在 media 分支 push 后调用，
 产出（只改这两处，避免手抄出错）：
 
-  1. data/cover_pool.yml
+  1. data/covers.yml
      站内路径清单，例如 /images/pool/covers/covers-01.avif，一行一条。
+     这是**唯一的封面池数据文件**：主题 helper/randomCover 直接读它给不填封面的
+     文章洗牌分配封面（data/covers.yml 覆盖主题自带的那份）。
   2. static/admin/config.yml
      只替换 # ===== COVER_OPTIONS_BEGIN ===== 与 # ===== COVER_OPTIONS_END =====
      之间的内容（后台「封面图」下拉框的选项），标记行以外一个字符都不动。
-
-可选：
-  --covers-yml  同时重写 data/covers.yml（随机封面池快照）。工作流默认不写它，
-                因为随机池是站长的手工取舍，不是每次 media 变动都要跟着变。
 
 用法
 ----
@@ -52,7 +50,6 @@ from pathlib import Path
 # 常量：路径、标记行、支持的扩展名
 # ---------------------------------------------------------------------------
 REPO_ROOT = Path(__file__).resolve().parents[2]
-COVER_POOL_YML = REPO_ROOT / "data" / "cover_pool.yml"
 COVERS_YML = REPO_ROOT / "data" / "covers.yml"
 CONFIG_YML = REPO_ROOT / "static" / "admin" / "config.yml"
 
@@ -161,31 +158,19 @@ def build_site_paths(names: list[str]) -> list[str]:
     return [SITE_COVERS_PREFIX + name for name in usable]
 
 
-def render_cover_pool_yaml(paths: list[str]) -> str:
-    lines = [
-        "# 文章封面候选清单（自动生成，不要手改）",
-        "#",
-        "# 来源：media 孤儿分支 images/pool/covers/ 下的全部原图（.webp / .avif，未压缩）",
-        "# 生成：.github/scripts/sync_cover_pool.py（由 .github/workflows/sync-cover-pool.yml",
-        "#       在 media 分支 push 后自动调用；同一份清单会写进 static/admin/config.yml",
-        "#       的 COVER_OPTIONS 标记区，作为后台「封面图」下拉框的选项）",
-        "#",
-        f"# 共 {len(paths)} 张。想加图：把原图提交到 media 分支的 images/pool/covers/，",
-        "# 工作流会自动重跑并提交新的清单，不需要手改本文件。",
-    ]
-    lines += [f"- {path}" for path in paths]
-    return "\n".join(lines) + "\n"
-
-
 def render_covers_yaml(paths: list[str]) -> str:
-    """data/covers.yml（主题 helper/randomCover 用的随机封面池）。"""
+    """data/covers.yml（随机封面池；主题 helper/randomCover 直接读它）。"""
     lines = [
         "# 文章封面池（主题的 helper/randomCover 从中洗牌分配，不填封面的文章自动使用）",
         "#",
+        "# ⚠️ 自动生成，不要手改：.github/scripts/sync_cover_pool.py 由",
+        "#    .github/workflows/sync-cover-pool.yml 在 media 分支 push 后调用，",
+        "#    同一份清单还会写进 static/admin/config.yml 的 COVER_OPTIONS 标记区",
+        "#    （后台「封面图」下拉框）。",
+        "#",
         "# 图片本身在 media 孤儿分支，构建时由 .github/workflows/hugo.yaml 拉到",
-        "# static/images/pool/ 再打包（见 media.lock）。本文件是清单快照：",
-        "# media 分支加图后，想让它进随机池就重跑一次",
-        "#   python3 .github/scripts/sync_cover_pool.py --from-dir <media 检出目录> --covers-yml",
+        "# static/images/pool/ 再打包（见 media.lock）。想加图：把原图提交到 media",
+        "# 分支的 images/pool/covers/，工作流会自动重跑并提交新的清单。",
         f"# 共 {len(paths)} 张。",
     ]
     lines += [f"- {path}" for path in paths]
@@ -229,7 +214,7 @@ def patch_config_yml(text: str, paths: list[str]) -> str:
 # ---------------------------------------------------------------------------
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="从 media 分支的封面原图生成 data/cover_pool.yml 与后台下拉选项",
+        description="从 media 分支的封面原图生成 data/covers.yml 与后台下拉选项",
     )
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument(
@@ -240,7 +225,6 @@ def parse_args(argv=None) -> argparse.Namespace:
     source.add_argument("--from-dir", metavar="目录", help="扫本地目录（media 检出根目录或 covers 目录）")
     parser.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", ""), help="owner/repo")
     parser.add_argument("--branch", default=os.environ.get("MEDIA_BRANCH", "media"), help="media 分支名")
-    parser.add_argument("--covers-yml", action="store_true", help="同时重写 data/covers.yml（随机封面池）")
     parser.add_argument("--check", action="store_true", help="只比对不写文件；有差异时退出码 1")
     return parser.parse_args(argv)
 
@@ -260,11 +244,9 @@ def build_outputs(args: argparse.Namespace) -> tuple[dict[Path, str], int]:
     paths = build_site_paths(names)
 
     outputs: dict[Path, str] = {
-        COVER_POOL_YML: render_cover_pool_yaml(paths),
+        COVERS_YML: render_covers_yaml(paths),
         CONFIG_YML: patch_config_yml(CONFIG_YML.read_text(encoding="utf-8"), paths),
     }
-    if args.covers_yml:
-        outputs[COVERS_YML] = render_covers_yaml(paths)
     return outputs, len(paths)
 
 

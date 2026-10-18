@@ -1,0 +1,48 @@
+/* ==========================================================================
+   wusi-head.css —— 站点级头部样式（从 config/_default/params.yml 的 injector.head_end 拆出）
+
+   加载位置：injector.head_end（紧接 /css/wusi-bg.css，和原来内联样式块的位置一致）。
+
+   内容：
+     1) 代码块配色微调：把被主题统一涂成注释灰的 Name 类（变量/常量/函数名）
+        和运算符重新分色（用主题自带的 --highlight-* 变量，亮/暗模式各自生效）；
+     2) 隐藏顶部导航右侧的 RSS 按钮（订阅源 /index.xml 仍然保留可用）；
+     3) iconfont 本地化：用同 family + 同描述符的 @font-face 覆盖主题
+        assets/css/iconfont.scss 里那份（主题那份指向 //at.alicdn.com）。
+        本文件在主题 main.css 之后加载，同族同款字面后定义者生效。
+   ========================================================================== */
+
+/* ===== 3) iconfont 本地化（覆盖主题的 at.alicdn.com 版本） =====
+   ⚠️ 文件名里的 4552607_ex15nbittbh 就是 config/_default/params.yml 的 icon_font，
+      换图标库时这里和 static/resources/iconfont/ 下的文件要一起换。 */
+@font-face {
+  font-family: "iconfont";
+  src: url("/resources/iconfont/font_4552607_ex15nbittbh.woff2") format("woff2");
+  font-display: swap;
+}
+
+/* 变量 / 宏 / 结构体成员：改用正文色，不再和注释同色 */
+.article-entry .chroma .n,
+.article-entry .chroma .nx,
+.article-entry .chroma .nn,
+.article-entry .chroma .fm,
+.article-entry .chroma .py {
+  color: var(--highlight-foreground);
+}
+/* 函数名、常量名 */
+.article-entry .chroma .nf,
+.article-entry .chroma .no {
+  color: var(--highlight-blue);
+}
+/* 运算符：与关键字一起构成代码骨架 */
+.article-entry .chroma .o {
+  color: var(--highlight-red);
+}
+/* 标点保持正文色 */
+.article-entry .chroma .p {
+  color: var(--highlight-foreground);
+}
+/* 隐藏顶部导航右侧的 RSS 按钮（订阅源 /index.xml 仍然保留可用） */
+#nav-rss-link {
+  display: none;
+}

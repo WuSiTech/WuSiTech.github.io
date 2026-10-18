@@ -16,7 +16,10 @@
      2) 先做 URL 解码（%20 → 空格）再统一成站点根路径；
      3) 路径里出现 static/ 的，从 static 往后的部分就是站点根路径；
      4) 剩下的依次按 static/、static/images/obsidian/ 找真实文件，命中哪个用哪个；
-     5) 全部加 loading=lazy / decoding=async（不影响图片本身的宽高属性）。 */ -}}
+     5) 全部加 loading=lazy / decoding=async（不影响图片本身的宽高属性）；
+     6) 按主题的要求把 <img> 包进 <a class="article-gallery-item" href="原图地址">，
+        主题 afterFooter 里的 PhotoSwipe 用 a.article-gallery-item 当灯箱相册（点图放大）。
+        ⚠️ 类名别改：主题模板里写死了 '.article-entry' + 'a.article-gallery-item'。 */ -}}
 {{- $src := .Destination -}}
 {{- $out := $src -}}
 {{- $external := or (hasPrefix $src "http://") (hasPrefix $src "https://") (hasPrefix $src "//") (hasPrefix $src "data:") -}}
@@ -44,4 +47,4 @@
   {{- end -}}
   {{- $out = replace $out " " "%20" -}}
 {{- end -}}
-<img src="{{ $out | safeURL }}" alt="{{ .Text }}" loading="lazy" decoding="async"{{ with .Title }} title="{{ . }}"{{ end }}>
+<a class="article-gallery-item" href="{{ $out | safeURL }}"><img src="{{ $out | safeURL }}" alt="{{ .Text }}" loading="lazy" decoding="async"{{ with .Title }} title="{{ . }}"{{ end }}></a>

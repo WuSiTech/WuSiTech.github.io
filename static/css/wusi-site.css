@@ -1,0 +1,176 @@
+/* ==========================================================================
+   wusi-site.css —— 站点级定制样式（从 config/_default/params.yml 的 injector.body_end 拆出）
+
+   加载位置：injector.body_end（和原来两段内联样式块的位置一致）。⚠️ 不要挪位置：
+   这些规则靠「在主题 CSS 之后」压掉主题样式，挪到 head 里层叠顺序就变了。
+
+   内容：
+     1) 页脚可读性 + 页面最底部整条通栏 #wusi-footer-bar 的样式
+        （原 footer-readable 样式块）
+     2) 头部标题去框、跟随背景明暗换字色
+        （原 header-readable 样式块）
+   ========================================================================== */
+
+/* ===== 1) 页脚 / 页底整条通栏 ===== */
+/* 页底文字压在随机背景上会看不清：给页脚一层半透明背景（真正背景由下面那条通栏统一提供） */
+#footer, .footer, footer, #wusi-domain-tip {
+  background: rgba(255,255,255,.72) !important;
+  color: #333 !important;
+  backdrop-filter: blur(3px);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 10px auto;
+}
+/* 宽度和主内容对齐（只对文档流里的页脚/域名提示生效；通栏条里的元素在下面单独改成满宽）：
+   主内容左右各留 16px —— 桌面是 #main/#sidebar 的 margin:0 16px，手机是 #main 的 padding:0 16px。 */
+#footer, #wusi-domain-tip {
+  width: calc(100% - 32px);
+  max-width: 1318px;
+  box-sizing: border-box;
+}
+#footer a, .footer a, footer a { color: #c0392b !important; }
+html[data-theme="dark"] #footer, html[data-theme="dark"] .footer, html[data-theme="dark"] footer,
+html[data-theme="dark"] #wusi-domain-tip {
+  background: rgba(30,33,38,.78) !important;
+  color: #ddd !important;
+}
+html[data-theme="dark"] #footer a, html[data-theme="dark"] .footer a, html[data-theme="dark"] footer a { color: #ff8b8b !important; }
+
+/* ===== 页脚：整条通栏贴在**页面最底部**（正常文档流里的最后一块，不是 position:fixed） =====
+   用户说明：「贴在底部 = 页面的最后，不是视口/框的底部」。
+   所以 #wusi-footer-bar 就是页面末尾的整条通栏（满宽、无圆角、半透明 + 毛玻璃背景），
+   里面的页脚（虚线 + 版权 + 字数/阅读时长）、域名提示、BLOG 状态徽章都变成
+   透明、满宽的"行"，由这一整条背景统一承载 —— 不再是一块块带圆角的浮动卡片，
+   也不固定在视口上；只有滚到页面最后才看到它。 */
+#wusi-footer-bar {
+  width: 100%;
+  box-sizing: border-box;
+  /* 半透明通栏 + 毛玻璃：.88 比原来的 .72 更不透明，背景图还能透出来一点，
+     但小字（版权 / 域名提示 / 徽章）不会被背景细节吃掉 */
+  background: rgba(255, 255, 255, .88);
+  -webkit-backdrop-filter: blur(14px) saturate(1.05);
+  backdrop-filter: blur(14px) saturate(1.05);
+  color: #333;
+}
+html[data-theme="dark"] #wusi-footer-bar {
+  background: rgba(26, 29, 34, .88);
+  color: #ddd;
+}
+/* 条内三块：透明、满宽、无圆角、无外边距（背景/毛玻璃由整条承载） */
+#wusi-footer-bar #footer,
+#wusi-footer-bar #wusi-domain-tip,
+#wusi-footer-bar .wusi-badges {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  box-sizing: border-box;
+}
+/* 虚线横贯整条（主题的 .footer-line 本来就是 width:200% + 横向滚动动画，放在通栏里正好） */
+#wusi-footer-bar .footer-line { margin: 8px 0 12px; }
+#wusi-footer-bar #footer { padding: 0; }
+#wusi-footer-bar #footer-info { padding: 0 16px; }
+/* 域名提示、BLOG 状态：通栏里的小字行，别再各自占一块背景 */
+#wusi-footer-bar #wusi-domain-tip {
+  margin: 0 !important;
+  padding: 8px 16px 0;
+  font-size: 12px;
+  line-height: 1.65;
+  /* 小字压在背景上最容易糊：不透明度拉满，颜色加深（暗色模式下面单独给亮色） */
+  opacity: 1;
+  color: #4a4a4a !important;
+}
+html[data-theme="dark"] #wusi-footer-bar #wusi-domain-tip {
+  color: #d2d2d2 !important;
+}
+/* 「BLOG状态」小字：亮/暗两套颜色，别再是低对比灰（颜色由 footer.html 的 class 承载） */
+#wusi-footer-bar .wusi-badges-label {
+  color: #5a5a5a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+html[data-theme="dark"] #wusi-footer-bar .wusi-badges-label {
+  color: #b9b9b9;
+}
+#wusi-footer-bar .wusi-badges {
+  gap: 8px;
+  padding: 8px 16px 12px;
+}
+/* 手机端把这一条压扁一点（字号/间距收小）；底部右侧要给固定的"回到顶部"圆钮让个位 */
+@media (max-width: 767px) {
+  #wusi-footer-bar .footer-line { margin: 4px 0 8px; }
+  #wusi-footer-bar #footer-info { padding: 0 12px; }
+  #wusi-footer-bar #wusi-domain-tip {
+    padding: 4px 80px 0 12px;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  #wusi-footer-bar .wusi-badges {
+    gap: 6px;
+    padding: 4px 80px 8px 12px;
+    /* 徽章图是 lazy 的、手机上两枚徽章会换行：先占好两行的高度，避免滚到底时高度跳一下 */
+    min-height: 48px;
+  }
+}
+
+/* ===== 2) 头部标题 ===== */
+/* 头部标题/副标题不再加半透明面板（用户要求"不用框"）：
+   文字颜色按背景图明暗自动切换 —— wusi-bg.js 用 canvas 采样标题区域的平均亮度，
+   给 <html> 加 wusi-hero-dark（背景偏黑 → 白字）或 wusi-hero-light（背景偏亮 → 黑字）。
+   采样完成前先按白字 + 深色阴影显示。 */
+#header-title {
+  background: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 0 !important;
+  /* 真正居中：主题是 position:absolute + width:95%，只写 margin:0 auto 对绝对定位
+     元素不生效；用 left/top 50% + translate 拉回来（fade-in-blur 只动 opacity/filter）。 */
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  /* 宽度和主内容对齐：主内容左右各留 16px（桌面 #main/#sidebar 的 margin、手机 #main 的
+     padding），所以 100% - 32px；宽屏时 #content 上限 1350px，减两侧 16px = 1318px。
+     ⚠️ 改 layout.max_width 时要同步改这个 1318。 */
+  width: calc(100% - 32px) !important;
+  max-width: 1318px;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: translate(-50%, -50%);
+  display: block;
+  box-sizing: border-box;
+}
+/* 默认（还没采样到亮度 / 采样失败）：白字 + 深色阴影 */
+#header-title h1, #header-title #logo h1, #header-title a,
+#subtitle-wrap, #subtitle, #subtitle a {
+  color: #fff !important;
+  text-shadow: 0 0 .5rem rgba(0, 0, 0, .85), 0 1px 4px rgba(0, 0, 0, .9) !important;
+  transition: color .3s ease;
+}
+/* 背景偏黑 → 白字（阴影加强；必须带上 #logo 那一级，否则被上面的规则按优先级压住） */
+html.wusi-hero-dark #header-title h1, html.wusi-hero-dark #header-title #logo h1,
+html.wusi-hero-dark #header-title a, html.wusi-hero-dark #subtitle-wrap,
+html.wusi-hero-dark #subtitle, html.wusi-hero-dark #subtitle a {
+  color: #fff !important;
+  text-shadow: 0 0 .5rem rgba(0, 0, 0, .9), 0 1px 4px rgba(0, 0, 0, .95), 0 0 2px rgba(0, 0, 0, .8) !important;
+}
+/* 背景偏亮 → 黑字 + 浅色阴影 */
+html.wusi-hero-light #header-title h1, html.wusi-hero-light #header-title #logo h1,
+html.wusi-hero-light #header-title a, html.wusi-hero-light #subtitle-wrap,
+html.wusi-hero-light #subtitle, html.wusi-hero-light #subtitle a {
+  color: #222 !important;
+  text-shadow: 0 1px 6px rgba(255, 255, 255, .95), 0 0 2px rgba(255, 255, 255, .95) !important;
+}
+/* Typed.js 的打字光标跟着文字颜色走 */
+html.wusi-hero-light .typed-cursor { color: #222 !important; }
+html.wusi-hero-dark .typed-cursor { color: #fff !important; }
+
+/* 768~959px 这段没有侧栏，主内容是 #main 的 padding:0 20px（左右共 40px），
+   上面按桌面写的 32px 会差 4px，这里单独对齐成 40px —— 手机（≤767）是 16px*2，
+   宽屏（≥960）是 #main/#sidebar 的 margin:0 16px（16px*2），都不用改。 */
+@media (min-width: 768px) and (max-width: 959px) {
+  #header-title { width: calc(100% - 40px) !important; }
+}

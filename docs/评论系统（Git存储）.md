@@ -443,7 +443,7 @@ git archive --format=zip -o comments-backup.zip HEAD static/comments
 
 | 现象 | 原因与处理 |
 | --- | --- |
-| 页面完全没有评论区 | ① 这个页面本来就是列表页/首页（`slug` 为空，脚本直接退出）② 主题自带的评论区已有内容，脚本会主动跳过（避免两套评论并存）③ `comments.js` 没被加载：确认 `config/_default/params.yml` 的 `injector.body_end` 里有那行 `<script src="/js/comments.js" defer></script>` |
+| 页面完全没有评论区 | ① 这个页面本来就是列表页/首页（`slug` 为空，脚本直接退出）② 主题自带的评论区已有内容，脚本会主动跳过（避免两套评论并存）③ `comments.js` 没被加载：它由 `static/js/wusi-site.js` 按页动态追加（只在 `/posts/` `/about/` `/friend/` `/download/` 且有 `.article-entry` 时），确认 `config/_default/params.yml` 的 `injector.body_end` 里有 `<script src="/js/wusi-site.js?v=1" defer></script>`，且 `static/js/wusi-site.js` 最后一段是评论守卫 |
 | 两个域名看到的评论不一致 / 换个域名评论就「没了」 | 读取顺序是「同源优先、跨域回落 wstk」（见第一节），两个域名构建时间不同就会短暂不一致（wstk 最多滞后 2 小时）。处理：① 检查 `https://wstk.pages.dev/comments/posts/<slug>.json` 响应头有没有 `access-control-allow-origin: *`（没有就是 `static/_headers` 没生效）② 需要立刻一致就去 Cloudflare 面板 Redeploy ③ 强制刷新（Ctrl+F5） |
 | 提交报 403「来源不在白名单内」 | 你从别的域名（比如 `http://localhost:1313`）打开的页面。把该来源加进 `ALLOWED_ORIGINS`/`ADMIN_ALLOWED_ORIGINS` 并重新部署 |
 | 提交报 502「GitHub ... 401 Bad credentials」 | **最常见**：`GITHUB_TOKEN` 过期。先在管理页顶部 / `curl "/api/admin?action=health"` 看剩余天数，再按「四、令牌过期与轮换」换令牌 + **重新部署** |

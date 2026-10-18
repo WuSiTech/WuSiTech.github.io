@@ -618,36 +618,13 @@ injector:
   head_end: |
     <!-- 全站随机固定背景（样式；数据/逻辑见 layouts/partials/head/init.html + static/js/wusi-bg.js） -->
     <link rel="stylesheet" href="/css/wusi-bg.css?v=2" />
-    <style>
-      /* 变量 / 宏 / 结构体成员：改用正文色，不再和注释同色 */
-      .article-entry .chroma .n,
-      .article-entry .chroma .nx,
-      .article-entry .chroma .nn,
-      .article-entry .chroma .fm,
-      .article-entry .chroma .py {
-        color: var(--highlight-foreground);
-      }
-      /* 函数名、常量名 */
-      .article-entry .chroma .nf,
-      .article-entry .chroma .no {
-        color: var(--highlight-blue);
-      }
-      /* 运算符：与关键字一起构成代码骨架 */
-      .article-entry .chroma .o {
-        color: var(--highlight-red);
-      }
-      /* 标点保持正文色 */
-      .article-entry .chroma .p {
-        color: var(--highlight-foreground);
-      }
-      /* 隐藏顶部导航右侧的 RSS 按钮（订阅源 /index.xml 仍然保留可用） */
-      #nav-rss-link {
-        display: none;
-      }
-    </style>
+    <!-- 站点级头部样式（代码块配色、隐藏 RSS 按钮）：原内联样式块已拆到 static/css/wusi-head.css，
+         仍从 head_end 引入，与主题 CSS 的层叠顺序不变 -->
+    <link rel="stylesheet" href="/css/wusi-head.css?v=1">
   body_begin: # Inject code snippet right after <body>
-  # 1) Fancybox 灯箱：配合 render-image.html 输出的 <a data-fancybox="gallery">，
-  #    点击文章图片时弹出放大层而不是跳转到图片地址。
+  # 1) Fancybox 资源与初始化：正文图片的放大现在由主题自带的 PhotoSwipe 处理
+  #    （render-image.html 会输出 a.article-gallery-item），页面里没有
+  #    [data-fancybox] 元素，这里的初始化是空转 —— 历史遗留，先保留不动。
   # 2) 头像立即加载：主题输出 <img class="lazyload" data-src="...">（没有 src），
   #    要等 lazysizes 运行后才有 src；CSS 里 .sidebar-author img{opacity:0}
   #    只有补上 .lazyloaded 才显示。这里在 DOM 就绪前同步设好 src 并切好 class。
@@ -656,197 +633,13 @@ injector:
     <link rel="stylesheet" href="/vendor/fancybox/fancybox-3.5.7.min.css" />
     <script src="/vendor/jquery/jquery-3.7.1.min.js"></script>
     <script src="/vendor/fancybox/fancybox-3.5.7.min.js"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', function () {
-        if (window.jQuery && jQuery.fn.fancybox) {
-          jQuery('[data-fancybox="gallery"]').fancybox({
-            buttons: ["zoom", "close"]
-          });
-        }
-      });
-    </script>
-    <script>
-      (function () {
-        var imgs = document.querySelectorAll(".sidebar-author img.lazyload[data-src]");
-        for (var i = 0; i < imgs.length; i++) {
-          var img = imgs[i];
-          if (img.getAttribute("src")) continue;
-          img.setAttribute("src", img.getAttribute("data-src"));
-          img.setAttribute("loading", "eager");
-          img.classList.remove("lazyload");
-          img.classList.add("lazyloaded");
-        }
-      })();
-    </script>
-    <!-- 自建评论系统：读 static/comments/<slug>.json，提交到 Cloudflare Pages Function（详见 docs/评论系统（Git存储）.md） -->
-    <script>(function(){var _p=location.pathname;if(!(_p.indexOf("/posts/")===0||_p.indexOf("/about/")===0||_p.indexOf("/friend/")===0||_p.indexOf("/download/")===0))return;var a=document.querySelector(".article-entry");if(!a)return;var s=document.createElement("script");s.src="/js/comments.js?v=15";s.defer=true;document.body.appendChild(s);})();</script>
+    <!-- 站点级定制 CSS/JS：原内联在这里的两段样式块和三段脚本已拆到
+         static/css/wusi-site.css 与 static/js/wusi-site.js（fancybox 初始化 / 侧栏头像立即加载 /
+         评论系统按页加载：只在 /posts/ /about/ /friend/ /download/ 且有 .article-entry 时加载）。
+         仍从同一位置引入，保证 CSS 层叠顺序和脚本执行顺序不变。 -->
+    <link rel="stylesheet" href="/css/wusi-site.css?v=1">
+    <script src="/js/wusi-site.js?v=1" defer></script>
       <!-- 站内本地搜索：索引 /index.json，零外部请求 -->
-      <!-- 注：原来这里有一条 /images/banner.webp 的 preload；
-           随机固定背景上线后 #header 里的 banner 图已被隐藏，不再需要预加载，故删除。 -->
-      <style id="wusi-footer-readable">
-        /* 页底文字压在随机背景上会看不清：给页脚一层半透明背景（真正背景由下面那条通栏统一提供） */
-        #footer, .footer, footer, #wusi-domain-tip {
-          background: rgba(255,255,255,.72) !important;
-          color: #333 !important;
-          backdrop-filter: blur(3px);
-          border-radius: 10px;
-          padding: 12px 16px;
-          margin: 10px auto;
-        }
-        /* 宽度和主内容对齐（只对文档流里的页脚/域名提示生效；通栏条里的元素在下面单独改成满宽）：
-           主内容左右各留 16px —— 桌面是 #main/#sidebar 的 margin:0 16px，手机是 #main 的 padding:0 16px。 */
-        #footer, #wusi-domain-tip {
-          width: calc(100% - 32px);
-          max-width: 1318px;
-          box-sizing: border-box;
-        }
-        #footer a, .footer a, footer a { color: #c0392b !important; }
-        html[data-theme="dark"] #footer, html[data-theme="dark"] .footer, html[data-theme="dark"] footer,
-        html[data-theme="dark"] #wusi-domain-tip {
-          background: rgba(30,33,38,.78) !important;
-          color: #ddd !important;
-        }
-        html[data-theme="dark"] #footer a, html[data-theme="dark"] .footer a, html[data-theme="dark"] footer a { color: #ff8b8b !important; }
-
-        /* ===== 页脚：整条通栏贴在**页面最底部**（正常文档流里的最后一块，不是 position:fixed） =====
-           用户说明：「贴在底部 = 页面的最后，不是视口/框的底部」。
-           所以 #wusi-footer-bar 就是页面末尾的整条通栏（满宽、无圆角、半透明 + 毛玻璃背景），
-           里面的页脚（虚线 + 版权 + 字数/阅读时长）、域名提示、BLOG 状态徽章都变成
-           透明、满宽的"行"，由这一整条背景统一承载 —— 不再是一块块带圆角的浮动卡片，
-           也不固定在视口上；只有滚到页面最后才看到它。 */
-        #wusi-footer-bar {
-          width: 100%;
-          box-sizing: border-box;
-          /* 半透明通栏 + 毛玻璃：.88 比原来的 .72 更不透明，背景图还能透出来一点，
-             但小字（版权 / 域名提示 / 徽章）不会被背景细节吃掉 */
-          background: rgba(255, 255, 255, .88);
-          -webkit-backdrop-filter: blur(14px) saturate(1.05);
-          backdrop-filter: blur(14px) saturate(1.05);
-          color: #333;
-        }
-        html[data-theme="dark"] #wusi-footer-bar {
-          background: rgba(26, 29, 34, .88);
-          color: #ddd;
-        }
-        /* 条内三块：透明、满宽、无圆角、无外边距（背景/毛玻璃由整条承载） */
-        #wusi-footer-bar #footer,
-        #wusi-footer-bar #wusi-domain-tip,
-        #wusi-footer-bar .wusi-badges {
-          width: 100% !important;
-          max-width: none !important;
-          margin: 0 !important;
-          border-radius: 0 !important;
-          background: none !important;
-          -webkit-backdrop-filter: none !important;
-          backdrop-filter: none !important;
-          box-shadow: none !important;
-          box-sizing: border-box;
-        }
-        /* 虚线横贯整条（主题的 .footer-line 本来就是 width:200% + 横向滚动动画，放在通栏里正好） */
-        #wusi-footer-bar .footer-line { margin: 8px 0 12px; }
-        #wusi-footer-bar #footer { padding: 0; }
-        #wusi-footer-bar #footer-info { padding: 0 16px; }
-        /* 域名提示、BLOG 状态：通栏里的小字行，别再各自占一块背景 */
-        #wusi-footer-bar #wusi-domain-tip {
-          margin: 0 !important;
-          padding: 8px 16px 0;
-          font-size: 12px;
-          line-height: 1.65;
-          /* 小字压在背景上最容易糊：不透明度拉满，颜色加深（暗色模式下面单独给亮色） */
-          opacity: 1;
-          color: #4a4a4a !important;
-        }
-        html[data-theme="dark"] #wusi-footer-bar #wusi-domain-tip {
-          color: #d2d2d2 !important;
-        }
-        /* 「BLOG状态」小字：亮/暗两套颜色，别再是低对比灰（颜色由 footer.html 的 class 承载） */
-        #wusi-footer-bar .wusi-badges-label {
-          color: #5a5a5a;
-          font-size: 12px;
-          white-space: nowrap;
-        }
-        html[data-theme="dark"] #wusi-footer-bar .wusi-badges-label {
-          color: #b9b9b9;
-        }
-        #wusi-footer-bar .wusi-badges {
-          gap: 8px;
-          padding: 8px 16px 12px;
-        }
-        /* 手机端把这一条压扁一点（字号/间距收小）；底部右侧要给固定的"回到顶部"圆钮让个位 */
-        @media (max-width: 767px) {
-          #wusi-footer-bar .footer-line { margin: 4px 0 8px; }
-          #wusi-footer-bar #footer-info { padding: 0 12px; }
-          #wusi-footer-bar #wusi-domain-tip {
-            padding: 4px 80px 0 12px;
-            font-size: 11px;
-            line-height: 1.5;
-          }
-          #wusi-footer-bar .wusi-badges {
-            gap: 6px;
-            padding: 4px 80px 8px 12px;
-            /* 徽章图是 lazy 的、手机上两枚徽章会换行：先占好两行的高度，避免滚到底时高度跳一下 */
-            min-height: 48px;
-          }
-        }
-      </style>
-      <style id="wusi-header-readable">
-        /* 头部标题/副标题不再加半透明面板（用户要求"不用框"）：
-           文字颜色按背景图明暗自动切换 —— wusi-bg.js 用 canvas 采样标题区域的平均亮度，
-           给 <html> 加 wusi-hero-dark（背景偏黑 → 白字）或 wusi-hero-light（背景偏亮 → 黑字）。
-           采样完成前先按白字 + 深色阴影显示。 */
-        #header-title {
-          background: none !important;
-          backdrop-filter: none !important;
-          -webkit-backdrop-filter: none !important;
-          border-radius: 0 !important;
-          /* 真正居中：主题是 position:absolute + width:95%，只写 margin:0 auto 对绝对定位
-             元素不生效；用 left/top 50% + translate 拉回来（fade-in-blur 只动 opacity/filter）。 */
-          left: 50% !important;
-          top: 50% !important;
-          right: auto !important;
-          /* 宽度和主内容对齐：主内容左右各留 16px（桌面 #main/#sidebar 的 margin、手机 #main 的
-             padding），所以 100% - 32px；宽屏时 #content 上限 1350px，减两侧 16px = 1318px。
-             ⚠️ 改 layout.max_width 时要同步改这个 1318。 */
-          width: calc(100% - 32px) !important;
-          max-width: 1318px;
-          margin: 0 !important;
-          padding: 0 !important;
-          transform: translate(-50%, -50%);
-          display: block;
-          box-sizing: border-box;
-        }
-        /* 默认（还没采样到亮度 / 采样失败）：白字 + 深色阴影 */
-        #header-title h1, #header-title #logo h1, #header-title a,
-        #subtitle-wrap, #subtitle, #subtitle a {
-          color: #fff !important;
-          text-shadow: 0 0 .5rem rgba(0, 0, 0, .85), 0 1px 4px rgba(0, 0, 0, .9) !important;
-          transition: color .3s ease;
-        }
-        /* 背景偏黑 → 白字（阴影加强；必须带上 #logo 那一级，否则被上面的规则按优先级压住） */
-        html.wusi-hero-dark #header-title h1, html.wusi-hero-dark #header-title #logo h1,
-        html.wusi-hero-dark #header-title a, html.wusi-hero-dark #subtitle-wrap,
-        html.wusi-hero-dark #subtitle, html.wusi-hero-dark #subtitle a {
-          color: #fff !important;
-          text-shadow: 0 0 .5rem rgba(0, 0, 0, .9), 0 1px 4px rgba(0, 0, 0, .95), 0 0 2px rgba(0, 0, 0, .8) !important;
-        }
-        /* 背景偏亮 → 黑字 + 浅色阴影 */
-        html.wusi-hero-light #header-title h1, html.wusi-hero-light #header-title #logo h1,
-        html.wusi-hero-light #header-title a, html.wusi-hero-light #subtitle-wrap,
-        html.wusi-hero-light #subtitle, html.wusi-hero-light #subtitle a {
-          color: #222 !important;
-          text-shadow: 0 1px 6px rgba(255, 255, 255, .95), 0 0 2px rgba(255, 255, 255, .95) !important;
-        }
-        /* Typed.js 的打字光标跟着文字颜色走 */
-        html.wusi-hero-light .typed-cursor { color: #222 !important; }
-        html.wusi-hero-dark .typed-cursor { color: #fff !important; }
-
-        /* 768~959px 这段没有侧栏，主内容是 #main 的 padding:0 20px（左右共 40px），
-           上面按桌面写的 32px 会差 4px，这里单独对齐成 40px —— 手机（≤767）是 16px*2，
-           宽屏（≥960）是 #main/#sidebar 的 margin:0 16px（16px*2），都不用改。 */
-        @media (min-width: 768px) and (max-width: 959px) {
-          #header-title { width: calc(100% - 40px) !important; }
-        }
-      </style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 全站随机固定背景：远端随机图 + 失败回落本地图池，固定不滚动（详见 static/js/wusi-bg.js） -->
       <script src="/js/wusi-bg.js?v=2" defer></script>
@@ -860,10 +653,6 @@ injector:
          窄屏收成左下角小条，同样避开圆钮；打印隐藏。
          换工作流文件名或链接时，这里与 fetch_badges.py 里的地址表要一起改。
          详见 docs/构建状态挂件.md -->
-    <!-- ===== BLOG状态：页面末尾（页脚之后）的正常排版元素，右对齐；不悬浮、不遮挡内容 ===== -->
-    <style>
-    </style>
-    </div>
   sidebar_begin: # Inject code snippet right after <aside>
   sidebar_end: # Inject code snippet right before </aside>
 

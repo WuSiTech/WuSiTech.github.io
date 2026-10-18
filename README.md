@@ -38,7 +38,8 @@ Hugo 静态博客，主题 [reimu](https://github.com/D-Sketon/hugo-theme-reimu)
 | 徽章本地镜像 | `static/badges/*.svg`，页面引用 `/badges/…`，由 `.github/scripts/fetch_badges.py` 在 CI 构建前刷新 |
 | 评论系统自建 | 前端 `static/js/comments.js`，后端 `functions/api/comment.js`，不引入任何第三方评论服务 |
 | 后台本体是仓库里的文件 | `static/admin/index.html` + `static/admin/sveltia-cms.js`（本地 bundle，不拉 CDN） |
-| 图片灯箱依赖本地化 | `static/vendor/jquery/`、`static/vendor/fancybox/`，由 `config/_default/params.yml` 的 `injector.body_end` 引入 |
+| 图片灯箱依赖本地化 | 主题自带 PhotoSwipe（`static/resources/photoswipe@5.4.4/`）负责正文图片放大；Fancybox（`static/vendor/jquery/`、`static/vendor/fancybox/`）仍由 `config/_default/params.yml` 的 `injector.body_end` 引入，但页面里已没有 `[data-fancybox]` 元素（历史遗留，先保留） |
+| iconfont 本地化 | 字体在 `static/resources/iconfont/`；preload 在站点级覆盖 [layouts/partials/head.html](layouts/partials/head.html)，`@font-face` 覆盖在 `static/css/wusi-head.css`（不再请求 `at.alicdn.com`） |
 
 按需项：主题的看板娘 `live2d` 默认关闭（`config/_default/params.yml` 里 `live2d.enable = false`）；
 一旦打开，资源会去 `fastly.jsdelivr.net` 与 `fghrsh/live2d_api`（国内可能不通），需要时再单独本地化。
@@ -78,7 +79,7 @@ Hugo 静态博客，主题 [reimu](https://github.com/D-Sketon/hugo-theme-reimu)
 
 封面原图（374 张 `.webp`/`.avif`，约 113MB，**不压缩**）和随机背景的本地兜底图（10 张）
 **不在 main 分支**，而是单独放在 `media` 孤儿分支（不继承 main 的提交历史）。
-main 上只留清单：`data/covers.yml`、`data/cover_pool.yml` 和 `media.lock`。
+main 上只留清单：`data/covers.yml`（唯一的封面池清单）和 `media.lock`。
 
 | 谁 | 怎么拿到图片 |
 | --- | --- |
@@ -86,12 +87,12 @@ main 上只留清单：`data/covers.yml`、`data/cover_pool.yml` 和 `media.lock
 | 本地 | `python tools/fetch_media_pool.py`（国内网络加 `--proxy http://127.0.0.1:7890`）。图片落在 `static/images/pool/`，该目录已在 `.gitignore` 里 |
 
 - **加图 / 换图**：把原图提交到 `media` 分支的 `images/pool/covers/`（保持原格式、原文件名，不压缩）。
-  推送后 `sync-cover-pool.yml` 会自动重算 `data/cover_pool.yml` 和后台「封面图」下拉框选项，
+  推送后 `sync-cover-pool.yml` 会自动更新 `data/covers.yml`（随机封面池）和后台「封面图」下拉框选项，
   并触发一次站点构建；新图随之下线。
 - `media.lock`：建池时 media 分支的提交哈希（想找回/回滚某版图片时按它检出）。
-- `data/covers.yml`：**随机封面池快照**（没填封面的文章从里面洗牌取图）。它的内容是全量 374 张；
-  media 加图后想让它也进随机池，在 main 上跑一次
-  `python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录> --covers-yml`。
+- `data/covers.yml`：**唯一的封面池数据**（没填封面的文章从里面洗牌取图，主题 `helpers/randomCover.html` 直接读它）。
+  内容 = media 分支全量 374 张的站内路径；**自动生成，不要手改**（工作流会重写并提交）。
+  本地想手动同步一次：`python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录>`。
 - 完整说明（目录结构、加图步骤、和 main 的约定）见
   [docs/图片池（media 分支）.md](docs/图片池（media%20分支）.md)。
 
@@ -156,7 +157,7 @@ main 上只留清单：`data/covers.yml`、`data/cover_pool.yml` 和 `media.lock
 | 文件 | 管什么 | 谁在改 |
 | ---- | ------ | ------ |
 | `config/_default/hugo.yml` | 站点基础：`baseURL` / `title` / `theme` / `mainSections` / `enableRobotsTXT` / 代码高亮 | 手动 |
-| `config/_default/params.yml` | 约 720 行的主配置：`widgets`、`injector`（注入 CSS/JS）、`comment`、`footer`、`sidebar`、`live2d` 等全部主题参数 | 手动（**刻意不放进后台**：CMS 保存会按表单字段重写整个文件，没声明的键会被丢掉） |
+| `config/_default/params.yml` | 约 620 行的主配置：`widgets`、`injector`（**只引用** CSS/JS 文件，不再有内联样式/业务脚本）、`comment`、`footer`、`sidebar`、`live2d` 等全部主题参数 | 手动（**刻意不放进后台**：CMS 保存会按表单字段重写整个文件，没声明的键会被丢掉） |
 | `config/_default/params.toml` | 作者信息 / `[[menu]]` / `home_categories`（首页分类卡片） | 后台「站点设置」集合 |
 | `i18n/zh-CN.yml` | 导航栏文字（键 → 显示文字） | 后台「站点文案」集合 |
 | 仓库根 `hugo.toml` | 与 `config/_default/hugo.yml` 内容重复的一份；**同名键以 `config/_default/` 下的为准**（`hugo config` 可验证），改配置请改 `config/_default/` 里的 | 已冗余，留作历史 |
@@ -168,6 +169,9 @@ main 上只留清单：`data/covers.yml`、`data/cover_pool.yml` 和 `media.lock
 - 后台「站点设置」只写 `params.toml`，`params.yml` 的内容在后台看不到是正常的；
 - `injector.head_end` / `body_end` 里是**纯文本**（主题用 `| safeHTML` 原样输出），
   Hugo **不执行**其中的 `{{ … }}` 模板语法 —— 写进去只会原样出现在页面源码里。
+- 站点自己的样式/脚本**不放**在这两个字段里：`static/css/wusi-site.css`、`static/css/wusi-head.css`、
+  `static/js/wusi-site.js` 都是独立文件、由 `injector` 里一行 `<link>` / `<script src>` 引入
+  （2026-10 从内联块拆出来的，注入位置没变）。要改样式/交互优先改这几个文件，别再往 `params.yml` 里塞内联代码。
 
 ## 工具脚本（`tools/`）
 
@@ -186,7 +190,7 @@ main 上只留清单：`data/covers.yml`、`data/cover_pool.yml` 和 `media.lock
 | `tools/cms-oauth-worker/worker.js` | 后台 GitHub OAuth 登录中转（Cloudflare Worker）；自测在 `tools/cms-oauth-worker/test.mjs`（12 项） | `node tools/cms-oauth-worker/test.mjs` |
 | `tools/git-comments/test.mjs` | 自建评论 Function 的自测（28 项，假 fetch，不联网） | `node tools/git-comments/test.mjs` |
 | `.github/scripts/fetch_badges.py` | 把 README 顶部两张徽章镜像到 `static/badges/`（CI 构建前跑，本地可带 `--proxy`） | `python .github/scripts/fetch_badges.py --out-dir static/badges` |
-| `.github/scripts/sync_cover_pool.py` | 从 media 分支的封面原图生成 `data/cover_pool.yml` 与后台下拉选项标记区；`--covers-yml` 同时重写随机封面池 | `python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录> --covers-yml` |
+| `.github/scripts/sync_cover_pool.py` | 从 media 分支的封面原图生成 `data/covers.yml`（唯一封面池）并替换后台下拉选项标记区 | `python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录>` |
 
 ## CI 工作流（`.github/workflows/`）
 
@@ -195,7 +199,7 @@ main 上只留清单：`data/covers.yml`、`data/cover_pool.yml` 和 `media.lock
 | `hugo.yaml` | Build and deploy | push 到 `main` / 定时（每 2 小时）/ 手动 | 镜像徽章 → **拉图片池（media 分支，缓存优先）** → 装 Dart Sass 1.104.0 + Hugo Extended 0.166.0 → `hugo --minify --baseURL <Pages URL>` → 上传 artifact → 部署 GitHub Pages → 定时任务里再触发 Cloudflare Pages Deploy Hook |
 | `tools.yml` | Tools and config checks | push 到 `main` 且改动命中 `tools/**` `data/**` `config/**` `static/admin/**` `static/badges/**` `static/resources/**` `static/css/**` `static/js/**` `layouts/**` `.github/scripts/**` `.github/workflows/**` 或本文件；任意 PR；手动 | 三个 job：**Python 工具自测**（`py_compile` 全仓库 Python 文件、6 个脚本的 `--help` CLI 冒烟、`test_check_twikoo.py`、`test_auto_webp.py`、`localize_vendor.py --dry-run --strict`）、**后台登录中转自测**（`node tools/cms-oauth-worker/test.mjs`）、**Hugo 构建检查**（拉图片池 → 装 Hugo → 构建 → `python3 tools/check_site.py --dir public`） |
 | `webp.yml` | Auto WebP | push 到 `main` 且 `static/images/**` 变更；手动（`range` 填 `all` 或任意 git 范围，处理存量图） | 把本次新增/修改的位图转 WebP、改写引用、删原图，用带 `[skip ci]` 的提交推回，再 `gh workflow run hugo.yaml` 补一次部署（否则 `[skip ci]` 会把部署一起跳过） |
-| `sync-cover-pool.yml` | 同步封面池 | push 到 `media`（工作流文件在 media 分支上也有一份）/ 手动 | 用 Git Tree API 列 media 分支的封面原图 → 重写 `data/cover_pool.yml` 和 `static/admin/config.yml` 的 `COVER_OPTIONS` 标记区 → 自动提交回 `main` → 再显式 `gh workflow run hugo.yaml` 触发一次构建（media 的 push 和 `GITHUB_TOKEN` 的提交都不会自动触发部署，不显式触发新图片就上不了线） |
+| `sync-cover-pool.yml` | 同步封面池 | push 到 `media`（工作流文件在 media 分支上也有一份）/ 手动 | 用 Git Tree API 列 media 分支的封面原图 → 更新 `data/covers.yml` 和 `static/admin/config.yml` 的 `COVER_OPTIONS` 标记区 → 自动提交回 `main` → 再显式 `gh workflow run hugo.yaml` 触发一次构建（media 的 push 和 `GITHUB_TOKEN` 的提交都不会自动触发部署，不显式触发新图片就上不了线） |
 
 三个构建类工作流的关系：`hugo.yaml` 只管构建部署；`tools.yml` 是**护栏**（不部署，专门在改工具 / 配置 / 前端资源时把关）；
 `webp.yml` 是图片兜底，跑完主动触发一次 `hugo.yaml`；`sync-cover-pool.yml` 管「media 加图 → 后台下拉框跟着更新」。
@@ -212,6 +216,7 @@ main 上只留清单：`data/covers.yml`、`data/cover_pool.yml` 和 `media.lock
 
 | 文档 | 讲什么 |
 | ---- | ------ |
+| [站点定制说明.md](docs/站点定制说明.md) | **总地图**：哪个文件覆盖了主题的什么、为什么改、主题升级时要注意什么；背景/图片钩子/评论/后台 OAuth/media 图片池/Obsidian 工作流各一节；还有「如何验证改动没坏」的清单 |
 | [后台与评论部署指南.md](docs/后台与评论部署指南.md) | 写作后台（Sveltia CMS）的两条登录路线、Cloudflare Worker 部署、后台维护；**评论部分是旧的 Twikoo + Netlify + MongoDB Atlas 方案**，现已被下面那篇取代 |
 | [评论系统（Git存储）.md](docs/评论系统（Git存储）.md) | 当前评论方案：架构与数据流向、一次性部署（令牌 + 环境变量）、本地调试（`wrangler pages dev`）、审核流程、备份与已知限制 |
 | [图片与媒体库操作说明.md](docs/图片与媒体库操作说明.md) | 后台媒体库怎么删图 / 「移动」图片为什么必须用脚本 / 图片转 WebP 的三条路径与自查命令 |
@@ -338,9 +343,10 @@ Cloudflare Dashboard → Workers & Pages → 该项目 → Settings → Builds &
 - `content/about.md`、`content/friend.md`、`content/archives/_index.md`：固定页面
 - `config/_default/hugo.yml`、`params.yml`、`params.toml`：见上「配置分工」
 - `i18n/zh-CN.yml`：导航栏文案（后台「站点文案」集合）
-- `layouts/partials/footer.html`、`layouts/partials/sidebar.html`：站点级覆盖（页脚徽章 / 文章页 widget）
+- `layouts/partials/footer.html`、`layouts/partials/sidebar.html`、`layouts/partials/head.html`、
+  `layouts/partials/head/init.html`：站点级覆盖（页脚徽章 / 文章页 widget / iconfont 本地化 / 背景数据注入）
 - `layouts/posts/section.html`：`/posts/` 栏目列表页（主题没有通用 section 模板）
-- `layouts/_default/_markup/render-image.html`：文章图片渲染（懒加载 + 灯箱）
+- `layouts/_default/_markup/render-image.html`：文章图片渲染（路径归一化 + 懒加载 + PhotoSwipe 灯箱锚点）
 - `layouts/robots.txt`：robots.txt 模板
 - `functions/api/comment.js`：评论提交接口（Cloudflare Pages Function）
 - `static/comments/`：评论数据（每篇文章一个 JSON，另有 `README.md` 说明）
@@ -350,8 +356,8 @@ Cloudflare Dashboard → Workers & Pages → 该项目 → Settings → Builds &
 - `static/admin/`：写作后台（Sveltia CMS，入口 `/admin/`）
 - `static/resources/`：主题 vendor 库的本地副本（**必须保留跟踪**）
 - `static/_headers`：Cloudflare Pages 响应头（评论跨域）
-- `data/vendor.yml`、`data/covers.yml`、`data/friends.yml`：覆盖主题的 data 文件（**整文件覆盖**，不是深合并）
-- `data/cover_pool.yml`：media 分支封面清单（自动生成，供后台下拉框 / 工具读取）
+- `data/vendor.yml`、`data/covers.yml`、`data/friends.yml`、`data/remote_backgrounds.yml`：覆盖/新增的 data 文件
+  （`covers.yml`、`friends.yml` 是覆盖主题那份，**整文件覆盖**、不是深合并；`covers.yml` 自动生成不要手改）
 - `media.lock`：media 分支的提交哈希快照（图片池版本，见上「图片池」）
 - `docs/`：文档（见上索引）
 - `tools/`：脚本（见上表格）
@@ -360,9 +366,11 @@ Cloudflare Dashboard → Workers & Pages → 该项目 → Settings → Builds &
 ## 注意事项与已知限制
 
 - **覆盖了主题模板**：`layouts/partials/footer.html`（页脚 + BLOG状态徽章）、
-  `layouts/partials/sidebar.html`（文章页也显示 widgets），另外还补了 `layouts/posts/section.html`
-  （`/posts/` 栏目列表页）和 `layouts/_default/_markup/render-image.html`（懒加载 + Fancybox 灯箱）。
-  主题升级后要逐个对照新版同步，否则这几处改动会"失效"回主题默认行为。
+  `layouts/partials/sidebar.html`（文章页也显示 widgets）、`layouts/partials/head.html`（整份拷贝，只改 iconfont preload 为本地）、
+  `layouts/partials/head/init.html`（注入 `window.__WUSI_BG__`），另外还补了 `layouts/posts/section.html`
+  （`/posts/` 栏目列表页）和 `layouts/_default/_markup/render-image.html`（路径归一化 + PhotoSwipe 灯箱锚点）。
+  主题升级后要逐个对照新版同步，否则这几处改动会"失效"回主题默认行为。逐文件说明见
+  [docs/站点定制说明.md](docs/站点定制说明.md)。
 - 主题是 **git submodule**，不要直接改 `themes/reimu/` 里的文件；一律用站点级覆盖。
 - `static/js/comments.js` 的行为：优先用页面的 `og:url` 推导文章 slug，评论块插到 `.article-entry`
   之后；如果页面上已经有主题内置评论区且有内容，它会**直接不做事**（避免出现两套评论区）。

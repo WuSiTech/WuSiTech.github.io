@@ -14,7 +14,7 @@
 
 | 分支 | 内容 |
 | --- | --- |
-| `main` | 站点源码 + **清单**（`data/covers.yml`、`data/cover_pool.yml`）+ `media.lock` |
+| `main` | 站点源码 + **清单**（`data/covers.yml`）+ `media.lock` |
 | `media` | **只放图片**：`images/pool/covers/`（374 张封面原图）、`images/pool/bg/`（10 张背景兜底图）、同步工作流 |
 
 `media` 是**孤儿分支**（用 `git checkout --orphan` 建的，不继承 main 历史），
@@ -72,12 +72,12 @@ python tools/fetch_media_pool.py --force            # 删掉重拉
 
 ## 清单是怎么自动同步的
 
-`data/covers.yml`（随机封面池）和 `static/admin/config.yml` 里后台「封面图」下拉框的 374 个选项，
-都是从 media 分支的图片清单来的，靠两个东西维护：
+`data/covers.yml`（**唯一的封面池数据**，主题 `helpers/randomCover.html` 直接读它）和
+`static/admin/config.yml` 里后台「封面图」下拉框的 374 个选项，都是从 media 分支的图片清单来的，靠两个东西维护：
 
 1. **`.github/workflows/sync-cover-pool.yml`**（也放在 media 分支上，否则 push media 不会触发）：
    media 分支一 push，就用 Git Tree API 列出 `images/pool/covers/` 下所有 `.webp`/`.avif`，
-   生成 `data/cover_pool.yml`，并**只替换** `static/admin/config.yml` 里
+   更新 `data/covers.yml`，并**只替换** `static/admin/config.yml` 里
    `# ===== COVER_OPTIONS_BEGIN =====` 与 `# ===== COVER_OPTIONS_END =====` 之间那段，
    然后自动提交回 main；最后显式 `gh workflow run hugo.yaml` 触发一次构建部署
    （media 的 push 不会触发 `hugo.yaml`，`GITHUB_TOKEN` 推的提交也不会自动触发其他工作流，
@@ -85,15 +85,13 @@ python tools/fetch_media_pool.py --force            # 删掉重拉
 2. **`.github/scripts/sync_cover_pool.py`**：上面工作流调的就是它；本地也能用：
 
 ```bash
-# 在 main 上，把一份 media 检出目录的图片清单同步过来
+# 在 main 上，把一份 media 检出目录的图片清单同步过来（会同时更新 data/covers.yml 和后台下拉框）
 python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录>
-python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录> --covers-yml  # 连 data/covers.yml 一起重写
-python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录> --check       # 只校验是否最新（不写文件）
+python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录> --check   # 只校验是否最新（不写文件）
 ```
 
-- `data/cover_pool.yml`：全量清单，供后台/工具读取（自动维护）；
-- `data/covers.yml`：**随机封面池快照**（没填 `cover` 的文章从里面洗牌取图）。它不会跟着
-  media 每次变动自动更新——随机池算是站长的取舍；想让新图也进随机池就跑一次上面带 `--covers-yml` 的命令。
+- `data/covers.yml`：**唯一的封面池数据**（没填 `cover` 的文章从里面洗牌取图）。**自动生成，不要手改**；
+  media 加图后工作流会自动重写它并提交，新图会直接进随机池（不再需要手动 `--covers-yml`，该参数已删除）。
 - `media.lock`：建池时 media 分支的提交哈希。它不是构建输入（构建永远取 media 最新提交），
   只用来查「当时用的是哪一版图片」，回滚时按它检出即可。
 
@@ -115,9 +113,8 @@ cd - && git worktree remove /tmp/media
 
 推完 media 之后：
 
-1. `同步封面池` 工作流自动更新 main 的 `data/cover_pool.yml` 和后台下拉框；
-2. 它随后显式请求一次 `hugo.yaml`，新图片随之下线；
-3. 想让新图也进随机封面池，再在 main 上跑一次带 `--covers-yml` 的脚本。
+1. `同步封面池` 工作流自动更新 main 的 `data/covers.yml` 和后台下拉框；
+2. 它随后显式请求一次 `hugo.yaml`，新图片随之下线（也自动进随机封面池，不用再手动跑脚本）。
 
 ⚠️ **不要 force push / rebase 重写 media 历史**：`media.lock` 和 CI 缓存键都按提交哈希记。
 
@@ -131,6 +128,6 @@ python tools/fetch_media_pool.py --check
 python .github/scripts/sync_cover_pool.py --from-dir static/images/pool/covers --check
 
 # 后台下拉框选项数量（应为 374）
-grep -c '^- /images/pool/covers/' data/cover_pool.yml
+grep -c '^- /images/pool/covers/' data/covers.yml
 grep -c 'COVER_OPTIONS' static/admin/config.yml   # 应为 2（一对标记行）
 ```

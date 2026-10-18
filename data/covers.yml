@@ -1,9 +1,13 @@
 # 文章封面池（主题的 helper/randomCover 从中洗牌分配，不填封面的文章自动使用）
 #
+# ⚠️ 自动生成，不要手改：.github/scripts/sync_cover_pool.py 由
+#    .github/workflows/sync-cover-pool.yml 在 media 分支 push 后调用，
+#    同一份清单还会写进 static/admin/config.yml 的 COVER_OPTIONS 标记区
+#    （后台「封面图」下拉框）。
+#
 # 图片本身在 media 孤儿分支，构建时由 .github/workflows/hugo.yaml 拉到
-# static/images/pool/ 再打包（见 media.lock）。本文件是清单快照：
-# media 分支加图后，想让它进随机池就重跑一次
-#   python3 .github/scripts/sync_cover_pool.py --from-dir <media 检出目录> --covers-yml
+# static/images/pool/ 再打包（见 media.lock）。想加图：把原图提交到 media
+# 分支的 images/pool/covers/，工作流会自动重跑并提交新的清单。
 # 共 374 张。
 - /images/pool/covers/covers-01.avif
 - /images/pool/covers/covers-02.avif

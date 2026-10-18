@@ -4,9 +4,10 @@ name: 同步封面池
 # media 分支只放图片（374 张封面原图 + 10 张背景图），main 分支构建时由
 # .github/workflows/hugo.yaml 把图片池拉到 static/images/pool 再打包，见 media.lock。
 #
-# 这个工作流负责「media 一变，后台封面下拉框就跟着变」：
+# 这个工作流负责「media 一变，封面池和后台封面下拉框就跟着变」：
 #   1. 用 GitHub Git Tree API 列出 media 分支 images/pool/covers/ 下的全部 .webp/.avif
-#   2. 生成 data/cover_pool.yml（站内路径清单）
+#   2. 生成/更新 data/covers.yml（站内路径清单，也是**唯一**的封面池数据文件：
+#      主题 helper/randomCover 直接读它，不再有第二份 cover_pool.yml）
 #   3. 替换 static/admin/config.yml 里 COVER_OPTIONS_BEGIN / COVER_OPTIONS_END
 #      两条标记行之间的内容（后台「封面图」下拉框的选项），标记区以外不动
 #   4. 用 GITHUB_TOKEN 把这两处改动提交回 main
@@ -64,7 +65,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           echo "committed=false" >> "${GITHUB_OUTPUT}"
           # 只暂存这两处（绝不用 git add -A）
-          git add data/cover_pool.yml static/admin/config.yml
+          git add data/covers.yml static/admin/config.yml
           if git diff --cached --quiet; then
             echo "清单没有变化，跳过提交"
             exit 0
@@ -107,7 +108,7 @@ jobs:
             echo '```'
             git status --short | head -20
             echo '```'
-            if [ -f data/cover_pool.yml ]; then
-              echo "data/cover_pool.yml 行数：$(grep -c '^- /images/pool/covers/' data/cover_pool.yml || true)"
+            if [ -f data/covers.yml ]; then
+              echo "data/covers.yml 行数：$(grep -c '^- /images/pool/covers/' data/covers.yml || true)"
             fi
           } >> "${GITHUB_STEP_SUMMARY}"
