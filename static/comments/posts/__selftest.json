@@ -1,0 +1,17 @@
+{
+  "slug": "posts/__selftest",
+  "comments": [
+    {
+      "id": "c_1792304863141_d81ba2",
+      "name": "系统自检",
+      "email": "",
+      "website": "",
+      "body": "【系统自检】v15 部署验收，稍后删除",
+      "ts": "2026-10-18T06:27:43.141Z",
+      "ua": "Mozilla/5.0 (compatible; wusi-selftest/1.0)",
+      "hidden": false,
+      "author": false,
+      "replyTo": ""
+    }
+  ]
+}
