@@ -162,3 +162,25 @@
 {{- if .Site.Params.player.aplayer.enable -}}
   {{- partial "helpers/cdnCss.html" (dict "name" "aplayer" "ctx" .) -}}
 {{- end -}}
+{{- /* 数学公式：只有 front matter 写了 math: true 的页面才加载 KaTeX（约 300KB），
+       其他页面完全不加载。资源走主题的 cdnJs 助手（构建时本地化，不请求外部 CDN）。 */ -}}
+{{- if .Params.math -}}
+{{- partial "helpers/cdnJs.html" (dict "name" "katex" "ctx" .) -}}
+{{- partial "helpers/cdnJs.html" (dict "name" "katex_auto_render" "ctx" .) -}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.renderMathInElement) {
+    window.renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '\\[', right: '\\]', display: true }
+      ],
+      throwOnError: false
+    });
+  }
+});
+</script>
+{{- end -}}
+<!-- katex_per_page -->
