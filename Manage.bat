@@ -1,240 +1,346 @@
 @echo off
+chcp 65001 >nul
 setlocal enabledelayedexpansion
+cd /d "%~dp0"
 
 REM ============================================================
-REM  Hugo ²©¿Í¹ÜÀí½Å±¾
-REM  °ÑÕâ¸ö bat ·ÅÔÚ Hugo ÏîÄ¿¸ùÄ¿Â¼£¨ºÍ hugo.toml Í¬¼¶£©
+REM  Hugo å‘å¸ƒç®¡ç†è„šæœ¬ï¼ˆç«™ç‚¹æ ¹ç›®å½•è¿è¡Œï¼‰
+REM  å‘å¸ƒæµç¨‹ï¼š[4] æ„å»ºè‡ªæ£€ -> åªæš‚å­˜æ–‡ç« å’Œå›¾ç‰‡ -> æäº¤ -> æ‹‰å– -> ä»£ç†æ¨é€
+REM  ä¸ docs\obsidian-push.bat è¡Œä¸ºä¸€è‡´ï¼ŒåŒºåˆ«æ˜¯è¿™é‡Œå¤šäº†å®Œæ•´çš„èœå•åŠŸèƒ½ã€‚
 REM ============================================================
 
-title Hugo ²©¿Í¹ÜÀí
+REM ---------- å·¥å…·å®šä½ï¼šä¼˜å…ˆ PATHï¼Œå…¶æ¬¡å¸¸è§å®‰è£…è·¯å¾„ ----------
+set "HUGO=hugo"
+where hugo >nul 2>nul
+if errorlevel 1 (
+  if exist "%LOCALAPPDATA%\Microsoft\WinGet\Packages\Hugo.Hugo.Extended_Microsoft.Winget.Source_8wekyb3d8bbwe\hugo.exe" (
+    set "HUGO=%LOCALAPPDATA%\Microsoft\WinGet\Packages\Hugo.Hugo.Extended_Microsoft.Winget.Source_8wekyb3d8bbwe\hugo.exe"
+  )
+)
+set "PY=python"
+where python >nul 2>nul
+if errorlevel 1 (
+  if exist "%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe" (
+    set "PY=%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
+  ) else (
+    set "PY="
+  )
+)
+
+REM ---------- ä»£ç†ï¼šgit æœ¬åœ°é…ç½® -> æ³¨å†Œè¡¨ -> é»˜è®¤ 7890 ----------
+set "PROXY="
+for /f "delims=" %%a in ('git config --local --get http.proxy 2^>nul') do set "PROXY=%%a"
+if not defined PROXY set "PROXY=http://127.0.0.1:7890"
 
 :menu
 cls
 echo.
 echo ============================================
-echo             Hugo ²©¿Í¹ÜÀí
+echo             Hugo å‘å¸ƒç®¡ç†
 echo ============================================
 echo.
-echo   [1] ĞÂ½¨ÎÄÕÂ
-echo   [2] ±¾µØÔ¤ÀÀ (hugo server)
-echo   [3] ¹¹½¨¾²Ì¬ÎÄ¼ş (hugo --minify)
-echo   [4] ÍÆËÍµ½ GitHub (×Ô¶¯²¿Êğ)
-echo   [5] Ò»¼ü·¢²¼ (ĞÂ½¨ + Ô¤ÀÀ)
-echo   [6] ÇåÀí¹¹½¨²úÎï (public/)
-echo   [7] ¸üĞÂÖ÷Ìâ×ÓÄ£¿é
-echo   [8] ²é¿´²©¿Í×´Ì¬ (git status)
+echo   [1] æ–°å»ºæ–‡ç« 
+echo   [2] æœ¬åœ°é¢„è§ˆ (hugo server -D)
+echo   [3] åªæ„å»ºé™æ€æ–‡ä»¶ (hugo --minify)
+echo   [4] å‘å¸ƒåˆ° GitHubï¼ˆæ„å»ºè‡ªæ£€ + æäº¤ + æ¨é€ï¼‰
+echo   [5] ä¸€é”®å†™ä½œï¼ˆæ–°å»º + é¢„è§ˆï¼‰
+echo   [6] æ¸…ç†æ„å»ºäº§ç‰© (public/)
+echo   [7] æ›´æ–°ä¸»é¢˜å­æ¨¡å—
+echo   [8] æŸ¥çœ‹ä»“åº“çŠ¶æ€
+echo   [9] ä»è¿œç«¯æ‹‰å–æ›´æ–° (git pull --rebase)
 echo.
-echo   [0] ÍË³ö
+echo   [0] é€€å‡º
 echo.
 echo ============================================
-set /p choice=ÇëÑ¡Ôñ²Ù×÷: 
+set /p choice=è¯·é€‰æ‹©æ“ä½œ: 
 
 if "%choice%"=="1" goto newpost
 if "%choice%"=="2" goto preview
 if "%choice%"=="3" goto build
-if "%choice%"=="4" goto push
+if "%choice%"=="4" goto publish
 if "%choice%"=="5" goto newpreview
 if "%choice%"=="6" goto clean
 if "%choice%"=="7" goto updatetheme
 if "%choice%"=="8" goto status
+if "%choice%"=="9" goto pull
 if "%choice%"=="0" goto end
 echo.
-echo ÎŞĞ§Ñ¡Ôñ£¬ÇëÖØĞÂÊäÈë¡£
+echo æ— æ•ˆé€‰é¡¹ï¼Œè¯·é‡æ–°è¾“å…¥ã€‚
 pause
 goto menu
 
 REM ============================================================
-REM [1] ĞÂ½¨ÎÄÕÂ
+REM [1] æ–°å»ºæ–‡ç« 
 REM ============================================================
 :newpost
 cls
 echo.
-echo ============ ĞÂ½¨ÎÄÕÂ ============
+echo ============ æ–°å»ºæ–‡ç«  ============
 echo.
-set /p postname=ÇëÊäÈëÎÄÕÂÎÄ¼şÃû£¨Ó¢ÎÄ/Æ´Òô£¬²»´ø .md£©: 
+set /p postname=è¯·è¾“å…¥æ–‡ç« æ–‡ä»¶åï¼ˆè‹±æ–‡/æ‹¼éŸ³ï¼Œä¸è¦å¸¦ .mdï¼‰: 
 if "%postname%"=="" (
-    echo ÎÄ¼şÃû²»ÄÜÎª¿Õ¡£
+    echo æ–‡ä»¶åä¸èƒ½ä¸ºç©ºã€‚
     pause
     goto menu
 )
 echo.
-echo ÕıÔÚ´´½¨ÎÄÕÂ: content/posts/%postname%.md
-hugo new content content/posts/%postname%.md
+echo æ­£åœ¨åˆ›å»ºï¼šcontent/posts/%postname%.md
+"%HUGO%" new content "content/posts/%postname%.md"
 if errorlevel 1 (
     echo.
-    echo ´´½¨Ê§°Ü£¬Çë¼ì²é Hugo ÊÇ·ñÒÑ°²×°¡¢Â·¾¶ÊÇ·ñÕıÈ·¡£
+    echo åˆ›å»ºå¤±è´¥ï¼Œè¯·ç¡®è®¤ Hugo æ˜¯å¦å®‰è£…ã€è·¯å¾„æ˜¯å¦æ­£ç¡®ã€‚
 ) else (
     echo.
-    echo ´´½¨³É¹¦£¡Çë´ò¿ªÎÄ¼ş£¬°Ñ draft = true ¸Ä³É false ÔÙ·¢²¼¡£
-    echo ÎÄ¼şÂ·¾¶: content\posts\%postname%.md
+    echo åˆ›å»ºæˆåŠŸã€‚æŠŠ front matter é‡Œçš„ draft æ”¹æˆ false å†å‘å¸ƒã€‚
+    echo æ–‡ä»¶è·¯å¾„ï¼šcontent\posts\%postname%.md
 )
 echo.
 pause
 goto menu
 
 REM ============================================================
-REM [2] ±¾µØÔ¤ÀÀ
+REM [2] æœ¬åœ°é¢„è§ˆ
 REM ============================================================
 :preview
 cls
 echo.
-echo ============ ±¾µØÔ¤ÀÀ ============
+echo ============ æœ¬åœ°é¢„è§ˆ ============
 echo.
-echo Æô¶¯±¾µØ·şÎñÆ÷£¬ä¯ÀÀÆ÷´ò¿ª http://localhost:1313
-echo °´ Ctrl+C ¿ÉÒÔÍ£Ö¹·şÎñÆ÷¡£
+echo åœ¨æµè§ˆå™¨æ‰“å¼€ http://localhost:1313 ï¼ŒæŒ‰ Ctrl+C åœæ­¢ã€‚
 echo.
-hugo server -D
+"%HUGO%" server -D
 pause
 goto menu
 
 REM ============================================================
-REM [3] ¹¹½¨¾²Ì¬ÎÄ¼ş
+REM [3] æ„å»ºé™æ€æ–‡ä»¶
 REM ============================================================
 :build
 cls
 echo.
-echo ============ ¹¹½¨¾²Ì¬ÎÄ¼ş ============
+echo ============ æ„å»ºé™æ€æ–‡ä»¶ ============
 echo.
-hugo --minify
+"%HUGO%" --minify --cleanDestinationDir
 if errorlevel 1 (
     echo.
-    echo ¹¹½¨Ê§°Ü¡£
+    echo æ„å»ºå¤±è´¥ï¼Œä¸Šé¢æœ‰æŠ¥é”™ã€‚
 ) else (
     echo.
-    echo ¹¹½¨³É¹¦£¬ÎÄ¼şÔÚ public\ Ä¿Â¼¡£
+    echo æ„å»ºæˆåŠŸï¼Œäº§ç‰©åœ¨ public\ ç›®å½•ã€‚
 )
 echo.
 pause
 goto menu
 
 REM ============================================================
-REM [4] ÍÆËÍµ½ GitHub
+REM [4] å‘å¸ƒåˆ° GitHubï¼ˆæ„å»ºè‡ªæ£€ + æäº¤ + æ¨é€ï¼‰
 REM ============================================================
-:push
+:publish
 cls
 echo.
-echo ============ ÍÆËÍµ½ GitHub ============
+echo ============ å‘å¸ƒåˆ° GitHub ============
 echo.
-echo µ±Ç°¸Ä¶¯£º
-git status -s
+echo [ä»£ç†] !PROXY!
+echo        ï¼ˆç«¯å£ä¸å¯¹å°±æ‰§è¡Œï¼šgit config --local http.proxy http://127.0.0.1:æ–°ç«¯å£ï¼‰
 echo.
-set /p commitmsg=ÇëÊäÈë±¾´ÎÌá½»ËµÃ÷£¨Ö±½Ó»Ø³µÓÃÄ¬ÈÏ£©: 
-if "%commitmsg%"=="" set commitmsg=¸üĞÂ²©¿Í
 
-echo.
-echo ÕıÔÚÌí¼ÓÎÄ¼ş...
-git add .
-
-echo ÕıÔÚÌá½»...
-git commit -m "%commitmsg%"
-
-echo ÕıÔÚÍÆËÍ...
-git push
-
+echo [1/4] æ„å»ºè‡ªæ£€ï¼šhugo --minify
+"%HUGO%" --minify --cleanDestinationDir
 if errorlevel 1 (
     echo.
-    echo ÍÆËÍÊ§°Ü£¬Çë¼ì²éÍøÂç»òÔ¶³Ì²Ö¿âÅäÖÃ¡£
+    echo [åœæ­¢] æ„å»ºå¤±è´¥ï¼Œæ²¡æœ‰æäº¤ä»»ä½•ä¸œè¥¿ã€‚
+    pause
+    goto menu
+)
+
+if "!PY!"=="" (
+    echo.
+    echo [è·³è¿‡] æ²¡æ‰¾åˆ° pythonï¼Œè·³è¿‡äº§ç‰©æ ¡éªŒã€‚
+    goto stage
+)
+echo.
+echo [2/4] äº§ç‰©æ ¡éªŒï¼štools\check_site.py
+"!PY!" tools\check_site.py
+if errorlevel 1 (
+    echo.
+    echo [åœæ­¢] ç«™ç‚¹äº§ç‰©æ ¡éªŒæ²¡é€šè¿‡ï¼ˆä¸Šé¢æœ‰æ˜ç»†ï¼‰ï¼Œæ²¡æœ‰æäº¤ä»»ä½•ä¸œè¥¿ã€‚
+    pause
+    goto menu
+)
+
+:stage
+echo.
+echo [3/4] æš‚å­˜æ”¹åŠ¨ï¼ˆåªç¢°æ–‡ç« å’Œå›¾ç‰‡ï¼Œä¸ç”¨ git add .ï¼‰
+git add -u content static
+if exist "content\posts" git add content\posts
+if exist "static\images\obsidian" git add static\images\obsidian
+if exist "static\images\posts" git add static\images\posts
+echo.
+echo ---- å°†è¦æäº¤çš„å†…å®¹ ----
+git status --short
+echo ------------------------
+echo.
+
+git diff --cached --quiet
+if not errorlevel 1 (
+    echo æ²¡æœ‰éœ€è¦æäº¤çš„æ”¹åŠ¨ï¼Œç›´æ¥å°è¯•æ¨é€ã€‚
+    goto dopush
+)
+
+set "msg="
+set /p msg=æäº¤è¯´æ˜ï¼ˆç›´æ¥å›è½¦ = ã€Œæ›´æ–°æ–‡ç« ã€ï¼‰:
+if not defined msg set "msg=æ›´æ–°æ–‡ç« "
+echo.
+echo [4/4] æäº¤...
+git commit -m "!msg!"
+if errorlevel 1 (
+    echo.
+    echo [åœæ­¢] æäº¤å¤±è´¥ï¼Œæ²¡æœ‰æ¨é€ã€‚
+    pause
+    goto menu
+)
+
+:dopush
+echo.
+echo å…ˆæ‹‰å–è¿œç«¯ï¼ˆrebaseï¼Œé¿å…è¦†ç›–åˆ«äººçš„æ”¹åŠ¨ï¼‰...
+git pull --rebase origin main
+
+echo.
+echo æ­£åœ¨æ¨é€ï¼ˆèµ°ä»£ç†ï¼‰...
+git -c http.proxy=!PROXY! -c https.proxy=!PROXY! push origin HEAD
+if errorlevel 1 (
+    echo.
+    echo ä»£ç†æ¨é€å¤±è´¥ï¼Œå°è¯•ç›´è¿...
+    git push origin HEAD
+)
+if errorlevel 1 (
+    echo.
+    echo [å¤±è´¥] æ¨é€æ²¡æˆåŠŸã€‚è¯·æ£€æŸ¥ï¼š
+    echo        1. ä»£ç†è½¯ä»¶æ˜¯å¦åœ¨è¿è¡Œï¼Œç«¯å£æ˜¯ä¸æ˜¯ !PROXY!
+    echo        2. GitHub å‡­æ®æ˜¯å¦å¤±æ•ˆ
+    echo        3. æœ‰å†²çªï¼šå…ˆåœ¨ç»ˆç«¯æ‰§è¡Œ git pull --rebase origin main å¹¶è§£å†³å†²çª
 ) else (
     echo.
-    echo ÍÆËÍ³É¹¦£¡GitHub Actions ÕıÔÚ×Ô¶¯²¿Êğ¡£
-    echo ´óÔ¼ 1~2 ·ÖÖÓºó·ÃÎÊÄãµÄ²©¿Í¼´¿É¿´µ½¸üĞÂ¡£
+    echo [æˆåŠŸ] å·²æ¨é€ã€‚1~2 åˆ†é’Ÿå GitHub Actions è‡ªåŠ¨æ„å»ºä¸Šçº¿ï¼š
+    echo        https://github.com/WuSiTech/WuSiTech.github.io/actions
 )
 echo.
 pause
 goto menu
 
 REM ============================================================
-REM [5] Ò»¼ü·¢²¼ (ĞÂ½¨ + Ô¤ÀÀ)
+REM [5] ä¸€é”®å†™ä½œï¼ˆæ–°å»º + é¢„è§ˆï¼‰
 REM ============================================================
 :newpreview
 cls
 echo.
-echo ============ Ò»¼ü·¢²¼ ============
+echo ============ ä¸€é”®å†™ä½œ ============
 echo.
-set /p postname=ÇëÊäÈëÎÄÕÂÎÄ¼şÃû£¨Ó¢ÎÄ/Æ´Òô£¬²»´ø .md£©: 
+set /p postname=è¯·è¾“å…¥æ–‡ç« æ–‡ä»¶åï¼ˆè‹±æ–‡/æ‹¼éŸ³ï¼Œä¸è¦å¸¦ .mdï¼‰: 
 if "%postname%"=="" (
-    echo ÎÄ¼şÃû²»ÄÜÎª¿Õ¡£
+    echo æ–‡ä»¶åä¸èƒ½ä¸ºç©ºã€‚
     pause
     goto menu
 )
-echo.
-hugo new content content/posts/%postname%.md
+"%HUGO%" new content "content/posts/%postname%.md"
 if errorlevel 1 (
-    echo ´´½¨Ê§°Ü¡£
+    echo åˆ›å»ºå¤±è´¥ã€‚
     pause
     goto menu
 )
 echo.
-echo ÎÄÕÂ´´½¨³É¹¦£¬ÕıÔÚ´ò¿ª±¾µØÔ¤ÀÀ...
-echo.
-hugo server -D
+echo åˆ›å»ºæˆåŠŸï¼Œæ­£åœ¨æ‰“å¼€æœ¬åœ°é¢„è§ˆ...
+"%HUGO%" server -D
 pause
 goto menu
 
 REM ============================================================
-REM [6] ÇåÀí¹¹½¨²úÎï
+REM [6] æ¸…ç†æ„å»ºäº§ç‰©
 REM ============================================================
 :clean
 cls
 echo.
-echo ============ ÇåÀí¹¹½¨²úÎï ============
+echo ============ æ¸…ç†æ„å»ºäº§ç‰© ============
 echo.
 if exist "public" (
-    echo ÕıÔÚÉ¾³ı public\ Ä¿Â¼...
+    echo æ­£åœ¨åˆ é™¤ public\ ...
     rmdir /s /q "public"
-    echo ÒÑÉ¾³ı¡£
+    echo å·²åˆ é™¤ã€‚
 ) else (
-    echo public\ Ä¿Â¼²»´æÔÚ£¬ÎŞĞèÇåÀí¡£
+    echo public\ ä¸å­˜åœ¨ï¼Œæ— éœ€æ¸…ç†ã€‚
 )
 echo.
 pause
 goto menu
 
 REM ============================================================
-REM [7] ¸üĞÂÖ÷Ìâ×ÓÄ£¿é
+REM [7] æ›´æ–°ä¸»é¢˜å­æ¨¡å—
 REM ============================================================
 :updatetheme
 cls
 echo.
-echo ============ ¸üĞÂÖ÷Ìâ×ÓÄ£¿é ============
+echo ============ æ›´æ–°ä¸»é¢˜å­æ¨¡å— ============
 echo.
-echo ÕıÔÚÀ­È¡Ö÷Ìâ×îĞÂ°æ±¾...
+echo æ³¨æ„ï¼šæœ¬ç«™åœ¨ layouts\ ä¸‹æœ‰ä¸»é¢˜è¦†ç›–æ–‡ä»¶ï¼Œå‡çº§åå¯èƒ½éœ€è¦å¯¹ä¸€ä¸‹ã€‚
+echo è¯¦è§ docs\ç«™ç‚¹å®šåˆ¶è¯´æ˜.md
+echo.
+set /p ok=ç¡®è®¤ç»§ç»­ï¼Ÿ(y/N): 
+if /i not "!ok!"=="y" goto menu
 git submodule update --remote --merge
 if errorlevel 1 (
     echo.
-    echo ¸üĞÂÊ§°Ü¡£
+    echo æ›´æ–°å¤±è´¥ã€‚
 ) else (
     echo.
-    echo ¸üĞÂÍê³É¡£¿ÉÒÔÔËĞĞ [2] ²é¿´Ğ§¹û£¬È·ÈÏÎŞÎóºó [4] ÍÆËÍ¡£
+    echo æ›´æ–°å®Œæˆã€‚ç”¨ [2] é¢„è§ˆç¡®è®¤æ²¡é—®é¢˜å†ç”¨ [4] å‘å¸ƒã€‚
 )
 echo.
 pause
 goto menu
 
 REM ============================================================
-REM [8] ²é¿´²©¿Í×´Ì¬
+REM [8] æŸ¥çœ‹ä»“åº“çŠ¶æ€
 REM ============================================================
 :status
 cls
 echo.
-echo ============ ²©¿Í×´Ì¬ ============
+echo ============ ä»“åº“çŠ¶æ€ ============
 echo.
-echo --- Git ×´Ì¬ ---
+echo --- Git çŠ¶æ€ ---
 git status
 echo.
-echo --- ×î½ü 5 ´ÎÌá½» ---
+echo --- æœ€è¿‘ 5 æ¬¡æäº¤ ---
 git log --oneline -5
 echo.
-echo --- µ±Ç°·ÖÖ§ ---
+echo --- å½“å‰åˆ†æ”¯ ---
 git branch
 echo.
 pause
 goto menu
 
 REM ============================================================
+REM [9] ä»è¿œç«¯æ‹‰å–
+REM ============================================================
+:pull
+cls
+echo.
+echo ============ ä»è¿œç«¯æ‹‰å– ============
+echo.
+git -c http.proxy=!PROXY! -c https.proxy=!PROXY! pull --rebase origin main
+if errorlevel 1 (
+    echo.
+    echo [å¤±è´¥] æ‹‰å–æ²¡æˆåŠŸã€‚å¯èƒ½æ˜¯ä»£ç†é—®é¢˜ï¼Œæˆ–å­˜åœ¨å†²çªéœ€è¦æ‰‹åŠ¨è§£å†³ã€‚
+) else (
+    echo.
+    echo æ‹‰å–å®Œæˆã€‚
+)
+echo.
+pause
+goto menu
+
 :end
 cls
 echo.
-echo ÔÙ¼û£¡
+echo å†è§ã€‚
 echo.
 exit /b 0
