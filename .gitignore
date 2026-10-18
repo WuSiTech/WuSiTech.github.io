@@ -27,3 +27,8 @@ __pycache__/
 *.py[cod]
 
 # 注意：static/resources/ 是主题的本地 vendor 库，必须保留跟踪，不要 ignore。
+
+# ============ Obsidian ============
+.obsidian/workspace*.json
+.obsidian/cache
+.obsidian/plugins/obsidian-git/data.json
