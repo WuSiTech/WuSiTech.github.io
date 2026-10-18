@@ -1,8 +1,15 @@
 author = "WuSi"
-email = ""
+email = "wusitech@qq.com"
 description = "一只路过的fumo"
 avatar = "avatar.webp"
-social = []
+
+[[social]]
+name = "email"
+url = "mailto:wusitech@qq.com"
+
+[[social]]
+name = "github"
+url = "https://github.com/WuSiTech"
 
 [[menu]]
 name = "home"
