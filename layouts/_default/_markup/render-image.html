@@ -1,8 +1,16 @@
-{{- /* 图片渲染钩子：
-       1) 把 Obsidian 粘贴生成的 static/xxx 或 /static/xxx 路径改成站点根路径 /xxx；
-       2) 统一加 loading=lazy + decoding=async，外链图片也走同一套。
-       这样在 Obsidian 里直接粘贴图片（存到 static/images/obsidian/）就能正常显示，不用手改路径。 */ -}}
+{{- /* 图片渲染钩子（站点级）：
+   Obsidian 里粘贴图片会自动存到 static/images/obsidian/，正文里生成的链接形如
+     ![](static/images/obsidian/xxx.png)   或   ![](/static/images/obsidian/xxx.png)
+   这里统一处理成站点根路径，让 Markdown 里怎么写都能正常显示：
+     1) 去掉 static/ 前缀（Hugo 的 static 目录就是站点根）
+     2) 相对路径补成以 / 开头（否则浏览器会按当前文章路径解析）
+   同时统一加懒加载属性。外链（http/https//）原样保留。 */ -}}
 {{- $u := .Destination -}}
-{{- if hasPrefix $u "static/" -}}{{- $u = strings.TrimPrefix "static" $u -}}{{- end -}}
-{{- if hasPrefix $u "/static/" -}}{{- $u = strings.TrimPrefix "/static" $u -}}{{- end -}}
+{{- if hasPrefix $u "/static/" -}}
+  {{- $u = strings.TrimPrefix "/static" $u -}}
+{{- else if hasPrefix $u "static/" -}}
+  {{- $u = strings.TrimPrefix "static" $u -}}
+{{- else if not (or (hasPrefix $u "http://") (hasPrefix $u "https://") (hasPrefix $u "//") (hasPrefix $u "/") (hasPrefix $u "data:")) -}}
+  {{- $u = printf "/%s" $u -}}
+{{- end -}}
 <img src="{{ $u | safeURL }}" alt="{{ .Text }}" loading="lazy" decoding="async"{{ with .Title }} title="{{ . }}"{{ end }}>
