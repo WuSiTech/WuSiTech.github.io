@@ -25,17 +25,3 @@
 
 /* ===== 3) 评论系统按页加载 ===== */
 (function(){var _p=location.pathname;if(!(_p.indexOf("/posts/")===0||_p.indexOf("/about/")===0||_p.indexOf("/friend/")===0||_p.indexOf("/download/")===0))return;var a=document.querySelector(".article-entry");if(!a)return;var s=document.createElement("script");s.src="/js/comments.js?v=15";s.defer=true;document.body.appendChild(s);})();
-/* ===== 预加载遮罩兜底（loader-cap）=====
-   主题的"少女祈祷中"遮罩要等 window.load 才消失，而首页背景图有 200~300KB，
-   会把遮罩拖到 2~3 秒。这里加一个硬上限：最多等 1.5 秒就收起遮罩，
-   让内容先出来，背景图随后异步淡入。 */
-(function () {
-  var loader = document.getElementById('loader');
-  if (!loader) { return; }
-  var cap = setTimeout(function () {
-    if (loader.classList.contains('loading')) {
-      loader.classList.remove('loading');
-    }
-  }, 1500);
-  window.addEventListener('load', function () { clearTimeout(cap); }, { once: true });
-})();
