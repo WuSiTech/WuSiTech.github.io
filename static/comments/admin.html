@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>评论管理</title>
+<!--
+  轻量评论管理页（纯静态，无框架、无外部依赖）
+  ------------------------------------------------------------------
+  线上地址：https://wstk.pages.dev/comments/admin.html
+  源文件：  static/comments/admin.html
+
+  它做三件事：列出全部评论（含待审核/已隐藏）→ 放行 / 隐藏 / 删除 →
+  以博主身份回复。所有操作都调 /api/admin（functions/api/admin.js），
+  由 Function 用 GITHUB_TOKEN 把改动 commit 到 Git，数据始终在仓库里。
+
+  登录：页面里输入的密码与环境变量 ADMIN_TOKEN 比对，只存在
+  sessionStorage（关掉标签页就没了），不会写进仓库、不会进 URL。
+
+  第一次使用前必须在 Cloudflare Pages 项目里配置：
+    ADMIN_TOKEN  （Secret，管理密码，建议 32 位随机串）
+    ADMIN_NAME   （可选，博主回复显示的昵称，默认「博主」）
+  然后**重新部署**一次，/api/admin 才会存在。
+  详见 docs/评论系统（Git存储）.md 的「管理页」一节。
+-->
+<style>
+  :root{
+    --bg:#f6f7f9; --fg:#24292f; --muted:#6b7280; --line:#dfe3e8; --card:#fff;
+    --accent:#2f7d5d; --accent-2:#2563eb; --danger:#c2410c; --warn:#a16207;
+    --warn-bg:#fff8e1; --err-bg:#fdecea; --ok-bg:#e8f5e9; --radius:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#16181d; --fg:#e6e8eb; --muted:#9aa1ab; --line:#343a44; --card:#1f232a;
+      --accent:#5cc99a; --accent-2:#7aa7ff; --danger:#ff8a65; --warn:#ffd54f;
+      --warn-bg:#3a2f0f; --err-bg:#3a1f1c; --ok-bg:#14301f;
+    }
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  a{color:var(--accent-2)}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.92em}
+  button{font:inherit;cursor:pointer}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 80px}
+
+  /* 顶栏 */
+  .topbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0 14px;border-bottom:1px solid var(--line)}
+  .topbar h1{margin:0;font-size:18px;font-weight:600}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto;align-items:center}
+  .chip{background:var(--card);border:1px solid var(--line);border-radius:999px;
+    padding:2px 10px;color:var(--muted);font-size:12px;white-space:nowrap}
+  .chip b{color:var(--fg);font-weight:600}
+  .btn{border:1px solid var(--line);background:var(--card);color:var(--fg);
+    border-radius:8px;padding:6px 12px;font-size:13px}
+  .btn:hover{border-color:var(--muted)}
+  .btn[disabled]{opacity:.5;cursor:default}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn-primary:hover{filter:brightness(1.05)}
+  .btn-danger{color:var(--danger);border-color:var(--danger)}
+  .btn-sm{padding:3px 9px;font-size:12px;border-radius:6px}
+
+  /* 登录 / 提示卡片 */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  #loginCard{max-width:520px;margin:48px auto;padding:26px}
+  #loginCard h2{margin:0 0 6px;font-size:17px}
+  #loginCard p{margin:6px 0;color:var(--muted);font-size:13px}
+  .field{display:flex;gap:10px;margin:16px 0 10px}
+  .field input{flex:1;min-width:0;padding:9px 11px;border:1px solid var(--line);
+    border-radius:8px;background:transparent;color:inherit;font:inherit;outline:none}
+  .field input:focus{border-color:var(--accent)}
+  .remember{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;margin-bottom:12px}
+  .login-msg{font-size:13px;margin-top:10px}
+  .login-msg.is-err{color:var(--danger)}
+  .steps{margin:12px 0 0;padding-left:18px;color:var(--muted);font-size:13px}
+  .steps li{margin:3px 0}
+  details.help{margin-top:14px;color:var(--muted);font-size:13px}
+  details.help summary{cursor:pointer}
+
+  /* 横幅 */
+  .banner{display:none;margin:14px 0 0;border-radius:8px;padding:10px 12px;font-size:13px;border:1px solid transparent}
+  .banner.show{display:block}
+  .banner.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+  .banner.err{background:var(--err-bg);border-color:var(--danger);color:var(--danger)}
+  .banner.ok{background:var(--ok-bg);border-color:var(--accent);color:var(--accent)}
+  .banner a{color:inherit;text-decoration:underline}
+
+  /* 工具条 */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 8px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tab{border:1px solid var(--line);background:var(--card);border-radius:999px;
+    padding:4px 12px;font-size:13px;color:var(--muted)}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .tab .n{font-weight:600}
+  #search{flex:1 1 220px;min-width:160px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:8px;background:var(--card);color:inherit;font:inherit;outline:none}
+  #search:focus{border-color:var(--accent)}
+  .summary{color:var(--muted);font-size:13px;margin:6px 0 12px}
+
+  /* 分组 */
+  .group{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    margin:14px 0;overflow:hidden}
+  .group-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+    padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(127,127,127,.04)}
+  .group-head .slug{font-weight:600}
+  .group-head .meta{color:var(--muted);font-size:12px}
+  .group-head .spacer{flex:1}
+  .group-body{padding:4px 14px 12px}
+  .group-err{color:var(--danger);font-size:13px;padding:10px 0}
+
+  /* 单条评论 */
+  .c{padding:10px 0;border-bottom:1px dashed var(--line)}
+  .c:last-child{border-bottom:0}
+  .c.depth-1{padding-left:16px}
+  .c.depth-2{padding-left:32px}
+  .c.depth-3{padding-left:48px}
+  .c.depth-4{padding-left:64px}
+  .c-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+  .c-head .name{font-weight:600}
+  .badge{font-size:11px;line-height:1.6;border-radius:4px;padding:0 6px;white-space:nowrap}
+  .badge.pending{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+  .badge.author{background:var(--accent);color:#fff}
+  .badge.ok{background:var(--ok-bg);color:var(--accent)}
+  .c-head .time,.c-head .replyto{color:var(--muted);font-size:12px}
+  .c-body{margin-top:4px;white-space:pre-wrap;word-break:break-word}
+  .c-meta{color:var(--muted);font-size:11px;margin-top:4px;word-break:break-all}
+  .c-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .c-form{margin-top:8px}
+  .c-form textarea{width:100%;min-height:74px;padding:8px 10px;border:1px solid var(--line);
+    border-radius:8px;background:transparent;color:inherit;font:inherit;resize:vertical;outline:none}
+  .c-form textarea:focus{border-color:var(--accent)}
+  .c-form .row{display:flex;gap:8px;margin-top:6px;align-items:center}
+  .c-form .hint{color:var(--muted);font-size:12px}
+  .confirm{color:var(--danger);font-size:13px;margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+  /* toast */
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:rgba(20,22,26,.92);color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;
+    opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;max-width:88vw;z-index:50}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.err{background:rgba(160,40,20,.95)}
+  .busy #groups{opacity:.55;pointer-events:none}
+  .empty{color:var(--muted);text-align:center;padding:36px 10px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 未登录：只显示登录卡片 -->
+  <section id="loginCard" class="card" hidden>
+    <h2>评论管理</h2>
+    <p>数据在 Git 仓库里；放行 / 删除 / 回复都会提交一次 commit，等一次构建后页面上生效。</p>
+    <form id="loginForm">
+      <div class="field">
+        <input id="tokenInput" type="password" autocomplete="current-password"
+               placeholder="管理密码（Cloudflare 环境变量 ADMIN_TOKEN）" required>
+        <button class="btn btn-primary" type="submit" id="loginBtn">进入</button>
+      </div>
+      <label class="remember"><input id="rememberBox" type="checkbox"> 记住（只存本标签页，关掉即失效）</label>
+    </form>
+    <div id="loginMsg" class="login-msg"></div>
+    <details class="help">
+      <summary>第一次用 / 打不开？看这里</summary>
+      <ol class="steps">
+        <li>Cloudflare → Workers &amp; Pages → 项目 <code>wstk</code> → Settings → Environment variables</li>
+        <li>加 <code>ADMIN_TOKEN</code>（类型选 Secret，建议 32 位以上随机串；不要和 GITHUB_TOKEN 混用）</li>
+        <li>可选加 <code>ADMIN_NAME</code>（博主回复的昵称，默认「博主」）</li>
+        <li>Deployments → 最新一次 → <b>Redeploy</b>（wstk 不跟随 push 自动构建，必须手动重新部署）</li>
+        <li>接口自检：<code id="healthHint"></code></li>
+      </ol>
+      <p>完整说明见仓库 <a id="docLink" target="_blank" rel="noopener">docs/评论系统（Git存储）.md</a>。</p>
+    </details>
+  </section>
+
+  <!-- 登录后 -->
+  <section id="panel" hidden>
+    <header class="topbar">
+      <h1>评论管理</h1>
+      <span class="chip" id="chipMode">模式</span>
+      <span class="chip" id="chipToken">令牌</span>
+      <span class="chip" id="chipRepo" title="仓库 / 分支"></span>
+      <span class="chips">
+        <button class="btn" id="btnRefresh" type="button">刷新</button>
+        <button class="btn" id="btnSite" type="button">打开站点</button>
+        <button class="btn" id="btnLogout" type="button">退出</button>
+      </span>
+    </header>
+
+    <div id="banner" class="banner"></div>
+
+    <div class="toolbar">
+      <div class="tabs" id="tabs">
+        <button class="tab on" data-filter="all" type="button">全部 <span class="n" id="nAll">0</span></button>
+        <button class="tab" data-filter="pending" type="button">待审核 <span class="n" id="nPending">0</span></button>
+        <button class="tab" data-filter="approved" type="button">已通过 <span class="n" id="nApproved">0</span></button>
+        <button class="tab" data-filter="author" type="button">博主 <span class="n" id="nAuthor">0</span></button>
+      </div>
+      <input id="search" type="search" placeholder="搜索昵称 / 正文 / id / 页面路径">
+    </div>
+    <p class="summary" id="summary"></p>
+
+    <div id="groups"></div>
+    <p class="empty" id="emptyTip" hidden>没有符合条件的评论。</p>
+  </section>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+(function () {
+  /* ---------------------------------------------------------------- */
+  /* 基础配置                                                          */
+  /* ---------------------------------------------------------------- */
+
+  var DEFAULT_ENDPOINT = 'https://wstk.pages.dev/api/admin';
+  var STORE_KEY = 'gc_admin_token';
+  var DOC_URL = 'https://github.com/WuSiTech/WuSiTech.github.io/blob/main/docs/评论系统（Git存储）.md';
+  var MAX_BODY = 2000;
+
+  function queryParam(name) {
+    try {
+      var m = new RegExp('[?&]' + name + '=([^&]+)').exec(location.search);
+      return m ? decodeURIComponent(m[1]) : '';
+    } catch (e) { return ''; }
+  }
+
+  // 测本地 wrangler / hugo server 时可以用 ?api=http://localhost:8788/api/admin 覆盖
+  var ENDPOINT = queryParam('api') || (typeof window !== 'undefined' && window.GIT_COMMENTS_ADMIN_ENDPOINT) || DEFAULT_ENDPOINT;
+
+  var state = {
+    token: '',
+    remember: false,
+    files: [],
+    meta: null,
+    filter: 'all',
+    query: '',
+    busy: false,
+    replyOpen: {},   // "path|id" -> true，回复框是否展开
+    confirmOpen: {}  // "path|id" -> true，删除是否已进入二次确认
+  };
+
+  /* ---------------------------------------------------------------- */
+  /* 小工具                                                            */
+  /* ---------------------------------------------------------------- */
+
+  function $(id) { return document.getElementById(id); }
+
+  function h(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
+  function toast(text, isError) {
+    var box = $('toast');
+    box.textContent = text;
+    box.className = 'show' + (isError ? ' err' : '');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { box.className = ''; }, 3200);
+  }
+
+  function tsOf(c) {
+    var d = new Date((c && c.ts) || '');
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+
+  function fmtTime(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso || '');
+    try { return d.toLocaleString(); } catch (e) { return d.toISOString(); }
+  }
+
+  function fmtDay(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso || '');
+    try { return d.toLocaleDateString(); } catch (e) { return d.toISOString().slice(0, 10); }
+  }
+
+  function setBusy(on) {
+    state.busy = !!on;
+    document.body.className = on ? 'busy' : '';
+    $('btnRefresh').disabled = !!on;
+  }
+
+  function tryStore(token) {
+    try {
+      if (token) sessionStorage.setItem(STORE_KEY, token);
+      else sessionStorage.removeItem(STORE_KEY);
+    } catch (e) { /* 无痕模式禁用 storage：忽略，不影响本次使用 */ }
+  }
+
+  function loadStored() {
+    try { return sessionStorage.getItem(STORE_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* 接口                                                              */
+  /* ---------------------------------------------------------------- */
+
+  function api(action, payload) {
+    var body = {};
+    Object.keys(payload || {}).forEach(function (k) { body[k] = payload[k]; });
+    body.action = action;
+    var url = ENDPOINT + (ENDPOINT.indexOf('?') < 0 ? '?' : '&') + 'action=' + encodeURIComponent(action);
+    return fetch(url, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'content-type': 'application/json', 'x-admin-token': state.token },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var data = {};
+        if (text) { try { data = JSON.parse(text); } catch (e) { data = {}; } }
+        return { res: res, data: data };
+      });
+    });
+  }
+
+  function showLogin(message) {
+    $('panel').hidden = true;
+    $('loginCard').hidden = false;
+    $('loginMsg').textContent = message || '';
+    $('loginMsg').className = 'login-msg' + (message ? ' is-err' : '');
+    var input = $('tokenInput');
+    if (input) { input.focus(); }
+  }
+
+  function showPanel() {
+    $('loginCard').hidden = true;
+    $('panel').hidden = false;
+  }
+
+  /** 把接口错误翻译成人能看懂的提示；同时处理「密码错 / 接口没启用 / GitHub 令牌过期」三种全局问题 */
+  function handleFailure(out, prefix) {
+    var res = (out && out.res) || {};
+    var data = (out && out.data) || {};
+    var code = data.code || '';
+    var msg = data.error || ('HTTP ' + (res.status || '?'));
+
+    if (code === 'BAD_ADMIN_TOKEN' || res.status === 401) {
+      state.token = '';
+      tryStore('');
+      showLogin('管理密码不正确，请重新输入。');
+      return;
+    }
+    if (code === 'ADMIN_DISABLED' || res.status === 503) {
+      state.token = '';
+      tryStore('');
+      showLogin(msg || '管理接口还没启用：先在 Cloudflare 里配置 ADMIN_TOKEN，然后重新部署。');
+      return;
+    }
+    if (code === 'TOO_MANY_ATTEMPTS' || res.status === 429) {
+      showBanner('err', '密码错误次数太多，被临时限制，请 10 分钟后再试。');
+      return;
+    }
+    if (code === 'GITHUB_TOKEN_INVALID') {
+      showBanner('err', msg + ' —— 处理步骤见 ' + DOC_URL + ' 的「令牌轮换」一节。', true);
+      return;
+    }
+    if (code === 'ORIGIN_NOT_ALLOWED') {
+      showBanner('err', msg);
+      return;
+    }
+    showBanner('err', (prefix ? prefix + '：' : '') + msg);
+    toast((prefix ? prefix + '：' : '') + msg, true);
+  }
+
+  function showBanner(level, text) {
+    var box = $('banner');
+    box.className = 'banner show ' + level;
+    box.textContent = '';
+    box.appendChild(document.createTextNode(text));
+    var a = document.createElement('a');
+    a.href = DOC_URL;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = '（部署与令牌文档）';
+    box.appendChild(document.createTextNode(' '));
+    box.appendChild(a);
+  }
+
+  function hideBanner() {
+    $('banner').className = 'banner';
+    $('banner').textContent = '';
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* 登录 / 退出                                                       */
+  /* ---------------------------------------------------------------- */
+
+  /** 登录阶段的失败：全部显示在登录卡片里（此时管理面板还没展示，横幅看不见） */
+  function loginFailure(out) {
+    var res = (out && out.res) || {};
+    var data = (out && out.data) || {};
+    var code = data.code || '';
+    var msg = data.error || ('HTTP ' + (res.status || '?'));
+    if (code === 'BAD_ADMIN_TOKEN' || res.status === 401) {
+      msg = '管理密码不正确（页面里输入的密码必须与环境变量 ADMIN_TOKEN 完全一致）。';
+      state.token = '';
+      tryStore('');
+    }
+    if (code === 'ADMIN_DISABLED' || res.status === 503) {
+      state.token = '';
+      tryStore('');
+    }
+    $('loginMsg').textContent = msg;
+    $('loginMsg').className = 'login-msg is-err';
+  }
+
+  function login(token, remember) {
+    state.token = token;
+    state.remember = !!remember;
+    $('loginMsg').textContent = '正在验证…';
+    $('loginMsg').className = 'login-msg';
+    setBusy(true);
+    return api('health').then(function (out) {
+      setBusy(false);
+      if (out.res.ok && out.data.ok) {
+        if (state.remember) tryStore(token);
+        state.meta = out.data.meta || null;
+        showPanel();
+        renderMeta();
+        return loadList();
+      }
+      loginFailure(out);
+    }).catch(function () {
+      setBusy(false);
+      $('loginMsg').textContent = '网络错误：连不上管理接口（' + ENDPOINT + '）';
+      $('loginMsg').className = 'login-msg is-err';
+    });
+  }
+
+  function logout() {
+    state.token = '';
+    state.files = [];
+    state.meta = null;
+    tryStore('');
+    $('tokenInput').value = '';
+    showLogin('');
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* 元信息 / 横幅                                                     */
+  /* ---------------------------------------------------------------- */
+
+  function renderMeta() {
+    var meta = state.meta || {};
+    var modeText = meta.mode === 'pr'
+      ? 'PR 审核模式'
+      : (meta.pending ? '直接入库 · 新评论默认待审核' : '直接入库 · 提交即公开');
+    $('chipMode').innerHTML = '';
+    $('chipMode').appendChild(document.createTextNode('模式 '));
+    var b1 = h('b', '', modeText);
+    $('chipMode').appendChild(b1);
+    $('chipRepo').textContent = (meta.repo || '') + ' @ ' + (meta.branch || '');
+
+    // 令牌有效期（GitHub 会通过响应头告诉 Functions）
+    var chip = $('chipToken');
+    chip.textContent = '令牌';
+    if (meta.tokenDaysLeft === null || meta.tokenDaysLeft === undefined) {
+      chip.textContent = '令牌有效期未知（可手动记录）';
+    } else if (meta.tokenDaysLeft < 0) {
+      chip.textContent = '令牌已过期！';
+    } else {
+      chip.textContent = '令牌还有 ' + meta.tokenDaysLeft + ' 天（' + fmtDay(meta.tokenExpirationIso || '') + ' 到期）';
+    }
+
+    var warnings = [];
+    if (meta.tokenDaysLeft !== null && meta.tokenDaysLeft !== undefined) {
+      if (meta.tokenDaysLeft < 0) {
+        warnings.push(['err', 'GITHUB_TOKEN 已经过期：提交评论、审核、回复都会失败（GitHub 401）。请去 GitHub 重新生成令牌，更新 Cloudflare 的 GITHUB_TOKEN 后重新部署。']);
+      } else if (meta.tokenDaysLeft <= 14) {
+        warnings.push(['warn', 'GITHUB_TOKEN 只剩 ' + meta.tokenDaysLeft + ' 天（' + fmtDay(meta.tokenExpirationIso || '') + ' 到期）。建议现在就轮换：重新生成令牌 → 更新 Cloudflare 变量 → 重新部署。']);
+      }
+    }
+    if (warnings.length) showBanner(warnings[0][0], warnings[0][1]);
+    else hideBanner();
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* 列表 / 过滤                                                       */
+  /* ---------------------------------------------------------------- */
+
+  function loadList() {
+    setBusy(true);
+    return api('list').then(function (out) {
+      setBusy(false);
+      if (!out.res.ok || !out.data.ok) return handleFailure(out, '加载评论失败');
+      state.files = out.data.files || [];
+      if (out.data.meta) { state.meta = out.data.meta; renderMeta(); }
+      renderAll();
+    }).catch(function () {
+      setBusy(false);
+      showBanner('err', '网络错误：拉不到评论列表（' + ENDPOINT + '）。');
+    });
+  }
+
+  function allComments() {
+    var out = [];
+    (state.files || []).forEach(function (file) {
+      (file.comments || []).forEach(function (c) { out.push({ file: file, c: c }); });
+    });
+    return out;
+  }
+
+  function matchesFilter(c) {
+    var f = state.filter;
+    if (f === 'pending') return c && c.hidden === true;
+    if (f === 'approved') return c && c.hidden !== true;
+    if (f === 'author') return c && c.author === true;
+    return true;
+  }
+
+  function matchesQuery(file, c) {
+    var q = state.query.trim().toLowerCase();
+    if (!q) return true;
+    var hay = [
+      file && file.slug,
+      c && c.name,
+      c && c.body,
+      c && c.id,
+      c && c.email,
+      c && c.website
+    ].join('\n').toLowerCase();
+    return hay.indexOf(q) >= 0;
+  }
+
+  function renderAll() {
+    // 计数（永远按全部评论算，和过滤无关）
+    var all = allComments();
+    var counts = { all: all.length, pending: 0, approved: 0, author: 0 };
+    all.forEach(function (item) {
+      var c = item.c || {};
+      if (c.hidden === true) counts.pending += 1; else counts.approved += 1;
+      if (c.author === true) counts.author += 1;
+    });
+    $('nAll').textContent = counts.all;
+    $('nPending').textContent = counts.pending;
+    $('nApproved').textContent = counts.approved;
+    $('nAuthor').textContent = counts.author;
+
+    // 分组
+    var groups = $('groups');
+    groups.textContent = '';
+    var shown = 0;
+    (state.files || []).forEach(function (file) {
+      var visible = (file.comments || []).filter(function (c) {
+        return matchesFilter(c) && matchesQuery(file, c);
+      });
+      if (!visible.length) return;
+      shown += visible.length;
+      groups.appendChild(renderGroup(file, visible));
+    });
+
+    $('emptyTip').hidden = shown > 0;
+    $('summary').textContent = '共 ' + counts.all + ' 条评论 · 待审核 ' + counts.pending +
+      ' 条 · 当前显示 ' + shown + ' 条' + (state.busy ? ' · 处理中…' : '');
+
+    // 有错误文件时提示
+    var broken = (state.files || []).filter(function (f) { return f.error; });
+    if (broken.length) {
+      showBanner('warn', '有 ' + broken.length + ' 个评论文件读不出来（多半是 JSON 坏了或被手工改坏）：' +
+        broken.map(function (f) { return f.path; }).join('、'));
+    }
+
+    document.title = (counts.pending ? '（' + counts.pending + ' 待审）' : '') + '评论管理';
+  }
+
+  /** 把一篇评论文件里的评论排成线程（主评论在前、回复按时间从旧到新、线程之间新的在前） */
+  function threadOrder(comments) {
+    var byId = {};
+    comments.forEach(function (c) { if (c && c.id) byId[c.id] = c; });
+    var kids = {};
+    comments.forEach(function (c) {
+      var p = (c && c.replyTo && byId[c.replyTo]) ? c.replyTo : '__root__';
+      (kids[p] = kids[p] || []).push(c);
+    });
+    Object.keys(kids).forEach(function (k) {
+      kids[k].sort(function (a, b) { return tsOf(a) - tsOf(b); });
+    });
+    var roots = (kids['__root__'] || []).slice().sort(function (a, b) { return tsOf(b) - tsOf(a); });
+    var out = [];
+    var seen = {};
+    roots.forEach(function (root) {
+      (function walk(c, depth) {
+        seen[c.id] = true;
+        out.push({ c: c, depth: depth });
+        (kids[c.id] || []).forEach(function (x) { walk(x, depth + 1); });
+      })(root, 0);
+    });
+    // 兜底：replyTo 指向别人、但那一串又不在 roots 里的（比如手工改出的环），
+    // 统一按顶层评论补在最后，宁可显示得难看一点，也别让评论凭空消失
+    comments.forEach(function (c) {
+      if (c && !seen[c.id]) {
+        seen[c.id] = true;
+        out.push({ c: c, depth: 0 });
+      }
+    });
+    return out;
+  }
+
+  function renderGroup(file, visible) {
+    var group = h('section', 'group');
+
+    var head = h('div', 'group-head');
+    var slug = h('span', 'slug', file.slug || file.path);
+    head.appendChild(slug);
+
+    var pending = (file.comments || []).filter(function (c) { return c && c.hidden === true; }).length;
+    var meta = h('span', 'meta', '共 ' + (file.comments || []).length + ' 条' + (pending ? ' · 待审核 ' + pending + ' 条' : ''));
+    head.appendChild(meta);
+    head.appendChild(h('span', 'spacer', ''));
+
+    var openA = document.createElement('a');
+    openA.className = 'btn btn-sm';
+    openA.href = '/' + String(file.slug || '').replace(/\/$/, '') + '/';
+    openA.target = '_blank';
+    openA.rel = 'noopener';
+    openA.textContent = '打开页面';
+    head.appendChild(openA);
+
+    if (pending) {
+      var approveAll = h('button', 'btn btn-sm', '全部通过（' + pending + '）');
+      approveAll.type = 'button';
+      approveAll.addEventListener('click', function () { approveAllInFile(file); });
+      head.appendChild(approveAll);
+    }
+    group.appendChild(head);
+
+    var body = h('div', 'group-body');
+    if (file.error) {
+      body.appendChild(h('div', 'group-err', '这个文件读不出来：' + file.error));
+      group.appendChild(body);
+      return group;
+    }
+
+    // 未过滤（全部）时按线程缩进显示；过滤 / 搜索时按时间平铺，避免看到「孤立的回复」
+    var ordered;
+    if (state.filter === 'all' && !state.query.trim()) {
+      ordered = threadOrder(file.comments || []);
+    } else {
+      ordered = visible.slice().sort(function (a, b) { return tsOf(b) - tsOf(a); })
+        .map(function (c) { return { c: c, depth: 0 }; });
+    }
+    // 过滤模式下 visible 已经是子集，上面 ordered 用 visible；全部模式下也只保留 visible 里的
+    var visibleSet = {};
+    visible.forEach(function (c) { if (c && c.id) visibleSet[c.id] = true; });
+    ordered.forEach(function (item) {
+      if (!visibleSet[item.c.id]) return;
+      body.appendChild(renderComment(file, item.c, item.depth));
+    });
+
+    group.appendChild(body);
+    return group;
+  }
+
+  function depthClass(depth) {
+    var d = Math.min(Math.max(depth, 0), 4);
+    return d > 0 ? 'c depth-' + d : 'c';
+  }
+
+  function renderComment(file, c, depth) {
+    var row = h('div', depthClass(depth));
+    var key = file.path + '|' + c.id;
+
+    var head = h('div', 'c-head');
+    head.appendChild(h('span', 'name', c.name || '匿名'));
+    var badges = h('span', '', '');
+    if (c.author === true) badges.appendChild(h('span', 'badge author', '博主'));
+    if (c.hidden === true) badges.appendChild(h('span', 'badge pending', '待审核'));
+    else badges.appendChild(h('span', 'badge ok', '已通过'));
+    head.appendChild(badges);
+    head.appendChild(h('span', 'time', fmtTime(c.ts)));
+
+    // 回复关系：找父评论的昵称
+    if (c.replyTo) {
+      var parent = null;
+      (file.comments || []).forEach(function (x) { if (x && x.id === c.replyTo) parent = x; });
+      head.appendChild(h('span', 'replyto', '回复 @' + (parent ? (parent.name || '匿名') : c.replyTo)));
+    }
+    row.appendChild(head);
+    row.appendChild(h('div', 'c-body', c.body || ''));
+
+    var metaText = '#' + (c.id || '?') + (c.ua ? ' · ' + String(c.ua).slice(0, 100) : '') +
+      (c.website ? ' · ' + c.website : '') + (c.email ? ' · ' + c.email : '');
+    var meta = h('div', 'c-meta', metaText);
+    row.appendChild(meta);
+
+    /* 操作按钮 */
+    var acts = h('div', 'c-acts');
+    if (c.hidden === true) {
+      var pass = h('button', 'btn btn-sm btn-primary', '通过');
+      pass.type = 'button';
+      pass.addEventListener('click', function () { setHidden(file, c, false); });
+      acts.appendChild(pass);
+    } else {
+      var hideBtn = h('button', 'btn btn-sm', '隐藏');
+      hideBtn.type = 'button';
+      hideBtn.addEventListener('click', function () { setHidden(file, c, true); });
+      acts.appendChild(hideBtn);
+    }
+
+    var replyBtn = h('button', 'btn btn-sm', '回复');
+    replyBtn.type = 'button';
+    replyBtn.addEventListener('click', function () {
+      state.replyOpen[key] = !state.replyOpen[key];
+      state.confirmOpen[key] = false;
+      renderAll();
+    });
+    acts.appendChild(replyBtn);
+
+    var delBtn = h('button', 'btn btn-sm btn-danger', '删除');
+    delBtn.type = 'button';
+    delBtn.addEventListener('click', function () {
+      state.confirmOpen[key] = true;
+      state.replyOpen[key] = false;
+      renderAll();
+    });
+    acts.appendChild(delBtn);
+    row.appendChild(acts);
+
+    /* 回复框 */
+    if (state.replyOpen[key]) {
+      var replies = countDescendants(file.comments || [], c.id);
+      var form = h('div', 'c-form');
+      var ta = document.createElement('textarea');
+      ta.maxLength = MAX_BODY;
+      ta.placeholder = '以「' + ((state.meta && state.meta.adminName) || '博主') + '」身份回复 @' + (c.name || '匿名') + '（纯文本，最多 ' + MAX_BODY + ' 字）';
+      form.appendChild(ta);
+      var row2 = h('div', 'row');
+      var send = h('button', 'btn btn-sm btn-primary', '提交回复');
+      send.type = 'button';
+      var cancel = h('button', 'btn btn-sm', '取消');
+      cancel.type = 'button';
+      cancel.addEventListener('click', function () {
+        state.replyOpen[key] = false;
+        renderAll();
+      });
+      send.addEventListener('click', function () { submitReply(file, c, ta.value, send); });
+      row2.appendChild(send);
+      row2.appendChild(cancel);
+      row2.appendChild(h('span', 'hint', '回复会作为一条 author=true 的评论提交到仓库'));
+      form.appendChild(row2);
+      row.appendChild(form);
+      setTimeout(function () { try { ta.focus(); } catch (e) {} }, 0);
+      if (replies) { /* 占位：以后可在这里显示「这条下面还有 N 条回复」 */ }
+    }
+
+    /* 删除二次确认 */
+    if (state.confirmOpen[key]) {
+      var descendants = countDescendants(file.comments || [], c.id);
+      var box = h('div', 'confirm');
+      box.appendChild(document.createTextNode(
+        descendants
+          ? '这条下面还有 ' + descendants + ' 条回复。删除会连它们一起删掉（不可恢复）。'
+          : '删除后不可恢复（Git 历史里仍可找回）。'
+      ));
+      var yes = h('button', 'btn btn-sm btn-danger', descendants ? '连回复一起删除' : '确认删除');
+      yes.type = 'button';
+      yes.addEventListener('click', function () { removeComment(file, c, true); });
+      box.appendChild(yes);
+      if (descendants) {
+        var only = h('button', 'btn btn-sm', '只删这条（回复挂到上一层）');
+        only.type = 'button';
+        only.addEventListener('click', function () { removeComment(file, c, false); });
+        box.appendChild(only);
+      }
+      var no = h('button', 'btn btn-sm', '取消');
+      no.type = 'button';
+      no.addEventListener('click', function () {
+        state.confirmOpen[key] = false;
+        renderAll();
+      });
+      box.appendChild(no);
+      row.appendChild(box);
+    }
+
+    return row;
+  }
+
+  /** 某条评论下面有多少条回复（递归，防环） */
+  function countDescendants(comments, id) {
+    var children = {};
+    comments.forEach(function (c) {
+      if (!c || !c.replyTo) return;
+      (children[c.replyTo] = children[c.replyTo] || []).push(c);
+    });
+    var seen = {};
+    var count = 0;
+    var stack = [id];
+    while (stack.length) {
+      var cur = stack.pop();
+      (children[cur] || []).forEach(function (kid) {
+        if (!kid || !kid.id || seen[kid.id]) return;
+        seen[kid.id] = true;
+        count += 1;
+        stack.push(kid.id);
+      });
+    }
+    return count;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* 操作                                                              */
+  /* ---------------------------------------------------------------- */
+
+  function applyFile(newFile) {
+    if (!newFile || !newFile.path) return;
+    for (var i = 0; i < state.files.length; i++) {
+      if (state.files[i].path === newFile.path) {
+        state.files[i] = {
+          path: newFile.path,
+          slug: newFile.slug,
+          sha: newFile.sha,
+          comments: newFile.comments || [],
+          error: ''
+        };
+        return;
+      }
+    }
+    state.files.push({ path: newFile.path, slug: newFile.slug, sha: newFile.sha, comments: newFile.comments || [] });
+  }
+
+  function setHidden(file, comment, hidden) {
+    if (state.busy) return;
+    setBusy(true);
+    api('setHidden', { path: file.path, id: comment.id, hidden: hidden }).then(function (out) {
+      setBusy(false);
+      if (!out.res.ok || !out.data.ok) return handleFailure(out, hidden ? '隐藏失败' : '通过失败');
+      if (out.data.meta) { state.meta = out.data.meta; }
+      applyFile(out.data.file);
+      renderMeta();
+      renderAll();
+      toast(hidden ? '已隐藏，构建后页面上会消失' : '已通过，构建后页面上会出现');
+    }).catch(function () {
+      setBusy(false);
+      toast('网络错误，操作没发出去', true);
+    });
+  }
+
+  function removeComment(file, comment, withReplies) {
+    if (state.busy) return;
+    setBusy(true);
+    api('delete', { path: file.path, id: comment.id, withReplies: withReplies }).then(function (out) {
+      setBusy(false);
+      if (!out.res.ok || !out.data.ok) return handleFailure(out, '删除失败');
+      if (out.data.meta) { state.meta = out.data.meta; }
+      applyFile(out.data.file);
+      renderMeta();
+      renderAll();
+      var n = (out.data.removed || []).length;
+      toast(n > 1 ? '已删除 ' + n + ' 条（含回复），构建后生效' : '已删除，构建后生效');
+    }).catch(function () {
+      setBusy(false);
+      toast('网络错误，操作没发出去', true);
+    });
+  }
+
+  function submitReply(file, parent, body, btn) {
+    var text = String(body || '').trim();
+    if (!text) { toast('回复内容不能为空', true); return; }
+    if (state.busy) return;
+    setBusy(true);
+    if (btn) btn.disabled = true;
+    api('reply', { path: file.path, id: parent.id, body: text }).then(function (out) {
+      setBusy(false);
+      if (btn) btn.disabled = false;
+      if (!out.res.ok || !out.data.ok) return handleFailure(out, '回复失败');
+      if (out.data.meta) { state.meta = out.data.meta; }
+      applyFile(out.data.file);
+      state.replyOpen[file.path + '|' + parent.id] = false;
+      renderMeta();
+      renderAll();
+      toast('回复已提交，构建后显示');
+    }).catch(function () {
+      setBusy(false);
+      if (btn) btn.disabled = false;
+      toast('网络错误，回复没发出去', true);
+    });
+  }
+
+  function approveAllInFile(file) {
+    if (state.busy) return;
+    var ids = (file.comments || []).filter(function (c) { return c && c.hidden === true; }).map(function (c) { return c.id; });
+    if (!ids.length) return;
+    if (typeof window.confirm === 'function' && !window.confirm('确定放行这个页面下的 ' + ids.length + ' 条待审核评论？')) return;
+    setBusy(true);
+    var chain = Promise.resolve();
+    var done = 0;
+    ids.forEach(function (id) {
+      chain = chain.then(function () {
+        return api('setHidden', { path: file.path, id: id, hidden: false }).then(function (out) {
+          if (out.res.ok && out.data.ok) { done += 1; applyFile(out.data.file); }
+        });
+      });
+    });
+    chain.then(function () {
+      setBusy(false);
+      renderAll();
+      toast('已放行 ' + done + ' / ' + ids.length + ' 条');
+    }).catch(function () {
+      setBusy(false);
+      renderAll();
+      toast('批量放行时出错，已成功的部分已生效', true);
+    });
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* 事件绑定                                                          */
+  /* ---------------------------------------------------------------- */
+
+  $('docLink').href = DOC_URL;
+  $('healthHint').textContent = ENDPOINT;
+
+  $('loginForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var token = $('tokenInput').value.trim();
+    if (!token) return;
+    login(token, $('rememberBox').checked);
+  });
+
+  $('btnRefresh').addEventListener('click', function () { loadList(); });
+  $('btnLogout').addEventListener('click', function () { logout(); });
+  $('btnSite').addEventListener('click', function () { window.open('/', '_blank'); });
+
+  $('tabs').addEventListener('click', function (ev) {
+    var btn = ev.target;
+    while (btn && btn !== $('tabs') && !btn.getAttribute('data-filter')) btn = btn.parentNode;
+    if (!btn || btn === $('tabs')) return;
+    var filter = btn.getAttribute('data-filter');
+    state.filter = filter;
+    var tabs = $('tabs').getElementsByClassName('tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].className = 'tab' + (tabs[i].getAttribute('data-filter') === filter ? ' on' : '');
+    }
+    renderAll();
+  });
+
+  var searchTimer = null;
+  $('search').addEventListener('input', function (ev) {
+    var value = ev.target.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () { state.query = value; renderAll(); }, 120);
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* 启动                                                              */
+  /* ---------------------------------------------------------------- */
+
+  (function boot() {
+    var stored = loadStored();
+    if (stored && stored.length > 0) {
+      $('rememberBox').checked = true;
+      // 本标签页之前登录过：直接带密码体检 + 拉列表，失败会自动回到登录页
+      login(stored, true);
+      return;
+    }
+    showLogin('');
+  })();
+})();
+</script>
+</body>
+</html>

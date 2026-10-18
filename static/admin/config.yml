@@ -819,6 +819,7 @@ collections:
         summary: "{{fields.name}}：{{fields.body}}"
         fields:
           - { label: 内部 ID, name: id, widget: hidden, required: false }
+          - { label: 回复哪条（父评论 id）, name: replyTo, widget: hidden, required: false }
           - { label: 昵称, name: name, widget: string }
           - { label: 邮箱（不公开）, name: email, widget: hidden, required: false }
           - { label: 网址, name: website, widget: hidden, required: false }

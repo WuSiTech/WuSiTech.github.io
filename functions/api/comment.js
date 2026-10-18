@@ -28,16 +28,18 @@
  *   GITHUB_BRANCH   默认 main
  *   COMMENT_MODE    pr / direct，默认 pr
  *   COMMENT_PENDING 仅对 direct 生效，true / false，默认 true（待站长审核）
- *   ALLOWED_ORIGINS 逗号分隔，默认 https://wusitech.github.io,https://wstk.pages.dev
+ *   ALLOWED_ORIGINS 逗号分隔，默认 https://wstek.win,https://www.wstek.win,https://wusitech.github.io,https://wstk.pages.dev
+ *                   （注意：项目里没有设置这个变量时用的就是代码里的默认白名单，
+ *                     所以新域名/预览域名不在这里面会报 403，而不是 401）
  *
  * 核心逻辑写成可注入依赖的纯函数 handleComment(request, env, deps)，
  * 方便 tools/git-comments/test.mjs 用假的 fetch 完整跑一遍（见该文件）。
  */
 
-const DEFAULT_ALLOWED_ORIGINS = 'https://wstek.win,https://www.wstek.win,https://wusitech.github.io,https://wstk.pages.dev';
-const DEFAULT_REPO = 'WuSiTech/WuSiTech.github.io';
-const DEFAULT_BRANCH = 'main';
-const API = 'https://api.github.com';
+export const DEFAULT_ALLOWED_ORIGINS = 'https://wstek.win,https://www.wstek.win,https://wusitech.github.io,https://wstk.pages.dev';
+export const DEFAULT_REPO = 'WuSiTech/WuSiTech.github.io';
+export const DEFAULT_BRANCH = 'main';
+export const API = 'https://api.github.com';
 
 const MAX_SLUG_LEN = 200;
 const MAX_NAME_LEN = 40;
@@ -61,7 +63,7 @@ export function __resetRateLimit() {
   rateBuckets.clear();
 }
 
-function splitEnv(value) {
+export function splitEnv(value) {
   return (value || '')
     .split(',')
     .map((s) => s.trim())
@@ -95,12 +97,12 @@ function bytesToBase64(bytes) {
   return btoa(binary);
 }
 
-function encodeBase64Utf8(text) {
+export function encodeBase64Utf8(text) {
   return bytesToBase64(new TextEncoder().encode(text));
 }
 
 /** base64 → UTF-8 文本；GitHub 返回的内容里会带换行，先去掉 */
-function decodeBase64Utf8(base64) {
+export function decodeBase64Utf8(base64) {
   const clean = String(base64 || '').replace(/[\r\n\s]/g, '');
   if (!clean) return '';
   const binary = atob(clean);
@@ -156,6 +158,18 @@ function normalizeWebsite(value) {
   return s;
 }
 
+/**
+ * 父评论 id（嵌套回复用）。空字符串 = 顶层评论。
+ * 只接受 c_ 开头、后面 1~62 位字母/数字/下划线/连字符（正常 id 形如 c_1792074100611_00cf22）。
+ * 不合法时**静默清空**而不是报 400：旧前端、手工导入、脚本提交都可能带奇怪的 replyTo，
+ * 与其让整条评论提交失败，不如让它显示成顶层评论（数据不丢，站长还能再改）。
+ */
+export function normalizeReplyTo(value) {
+  if (typeof value !== 'string') return '';
+  const s = stripControl(value).trim();
+  return /^c_[A-Za-z0-9_-]{1,62}$/.test(s) ? s : '';
+}
+
 /* ------------------------------------------------------------------ */
 /* 响应                                                                */
 /* ------------------------------------------------------------------ */
@@ -199,13 +213,13 @@ function fail(request, env, status, error) {
  *   - 'false'（大小写不敏感）→ false
  * 也就是说：只有明确写成 false / FALSE / False 才会「提交即公开」。
  */
-function pendingEnabled(env) {
+export function pendingEnabled(env) {
   const raw = env.COMMENT_PENDING;
   if (raw === undefined || raw === null) return true;
   return String(raw).trim().toLowerCase() !== 'false';
 }
 
-function repoConfig(env) {
+export function repoConfig(env) {
   return {
     repo: env.GITHUB_REPO || DEFAULT_REPO,
     branch: env.GITHUB_BRANCH || DEFAULT_BRANCH,
@@ -215,7 +229,7 @@ function repoConfig(env) {
   };
 }
 
-function ghHeaders(env) {
+export function ghHeaders(env) {
   return {
     authorization: 'Bearer ' + env.GITHUB_TOKEN,
     accept: 'application/vnd.github+json',
@@ -226,7 +240,7 @@ function ghHeaders(env) {
 }
 
 /** 抛出带中文说明的 GitHub 错误（信息里带上 GitHub 自己的 message） */
-class GitHubError extends Error {
+export class GitHubError extends Error {
   constructor(step, status, message) {
     super(`GitHub ${step} 失败（HTTP ${status}）：${message}`);
     this.step = step;
@@ -430,6 +444,7 @@ export async function handleComment(request, env, deps) {
     return ok(request, env, {
       mode: cfg.mode,
       ...(cfg.mode === 'direct' ? { pending: cfg.pending } : {}),
+      id: '',
       message: '评论已提交',
     });
   }
@@ -449,7 +464,8 @@ export async function handleComment(request, env, deps) {
 
   const email = stripControl(typeof raw.email === 'string' ? raw.email : '').trim().slice(0, MAX_OPTIONAL_LEN);
   const website = normalizeWebsite(raw.website);
-  const replyTo = typeof raw.replyTo === 'string' ? stripControl(raw.replyTo).trim().slice(0, 64) : '';
+  // 嵌套回复：前端把被回复评论的 id 放进 replyTo，后端原样存进评论对象（replyTo 见 normalizeReplyTo）
+  const replyTo = normalizeReplyTo(raw.replyTo);
   const ua = shortUa(request.headers.get('user-agent') || '');
 
   // 6) 正文里的链接数量（粗略防广告）
@@ -476,15 +492,17 @@ export async function handleComment(request, env, deps) {
     timestamp: tsMs,
     iso: new Date(tsMs).toISOString(),
   };
-  // 字段必须与 static/admin/config.yml 里 comments 集合声明的完全一致：
-  // 严格包含且只包含这 9 个键，顺序也保持一致（多一个或少一个，后台保存该文件时
-  // 都会把多出来的字段丢掉，所以这里不能省字段、也不能顺手加字段）。
+  // 字段必须与 static/admin/config.yml 里 comments / page_comments 两个集合声明的
+  // 10 个键完全一致：严格包含且只包含这 10 个，顺序也保持一致
+  // （id, replyTo, name, email, website, body, ts, ua, hidden, author）。
+  // 多一个或少一个，后台（Sveltia）保存该文件时都会把多出来的字段丢掉 / 把缺的读成空值。
+  //   - replyTo：回复哪条评论（父评论 id），'' = 顶层评论；嵌套关系完全靠它
   //   - hidden：true 时前端不渲染这一条
   //   - author：true 时前端在昵称旁边显示「博主」标记
   // 新评论的 hidden 由模式决定（author 一律 false，这两个开关之后都由后台人工调整）：
   //   - direct + pending（默认）：hidden=true。评论【仍然照常写进 JSON】，数据一点不丢，
   //     只是前端 comments.js 会把 hidden===true 的条目过滤掉（不渲染）。
-  //     站长在后台 /admin/ → 评论 里把「隐藏」关掉并保存后，等一次构建部署
+  //     站长在管理页（/comments/admin.html）放行后，等一次构建部署
   //     （约 1 分钟）这条评论才会出现在页面上。
   //   - direct + 不 pending：hidden=false，等一次构建（约 1 分钟）直接显示。
   //   - pr：hidden=false。评论停在分支上等人合并，PR 本身就是待审状态，
@@ -492,6 +510,7 @@ export async function handleComment(request, env, deps) {
   const hidden = cfg.mode === 'direct' && cfg.pending;
   const comment = {
     id: `c_${tsMs}_${suffix}`,
+    replyTo,
     name,
     email,
     website,
@@ -500,7 +519,6 @@ export async function handleComment(request, env, deps) {
     ua,
     hidden,
     author: false,
-    replyTo,
   };
 
   const path = `static/comments/${slug}.json`;
@@ -513,6 +531,8 @@ export async function handleComment(request, env, deps) {
       return ok(request, env, {
         mode: 'direct',
         pending: cfg.pending,
+        // 返回新评论 id：前端提交成功后可据此轮询，确认这条评论真的出现在构建产物里
+        id: comment.id,
         message: cfg.pending
           ? '评论已提交，待站长审核后显示'
           : '评论已提交，约 1 分钟后显示',
@@ -527,6 +547,7 @@ export async function handleComment(request, env, deps) {
     return ok(request, env, {
       mode: 'pr',
       pr: pr.html_url || '',
+      id: comment.id,
       message: '评论已提交，审核合并后显示',
     });
   } catch (err) {

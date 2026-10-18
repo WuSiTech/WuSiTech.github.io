@@ -15,11 +15,12 @@ const REPO = 'WuSiTech/WuSiTech.github.io';
 const BRANCH = 'main';
 
 /**
- * static/admin/config.yml 里 comments 集合声明的 9 个字段。
- * Function 写出来的每条评论必须【恰好】是这 9 个键：多一个（后台保存时会丢）
+ * static/admin/config.yml 里 comments 与 page_comments 两个集合声明的 10 个字段。
+ * Function 写出来的每条评论必须【恰好】是这 10 个键：多一个（后台保存时会丢）
  * 或少一个（后台读不到值）都算失败。
+ * 顺序也要一致（id, replyTo, name, …）：replyTo 是嵌套回复的父子指针。
  */
-const COMMENT_FIELDS = ['id', 'name', 'email', 'website', 'body', 'ts', 'ua', 'hidden', 'author'];
+const COMMENT_FIELDS = ['id', 'replyTo', 'name', 'email', 'website', 'body', 'ts', 'ua', 'hidden', 'author'];
 
 /** 键集合是否与 COMMENT_FIELDS 完全一致（长度 + 每个键都在，顺序不强制） */
 function sameFieldSet(comment) {
@@ -250,6 +251,7 @@ const GOOD = {
     doc.comments.length === 1 &&
     c &&
     c.name === '访客小明' &&
+    c.replyTo === '' &&
     c.website === 'https://example.com/me' &&
     typeof c.ts === 'string' &&
     /^c_\d+_[0-9a-f]{6}$/.test(c.id) &&
@@ -260,10 +262,10 @@ const GOOD = {
     `status=${res.status} mode=${data.mode} comments=${doc ? doc.comments.length : 'n/a'}`,
   );
 
-  // 字段集合必须与 static/admin/config.yml 的 9 个字段完全对齐，
+  // 字段集合必须与 static/admin/config.yml 的 10 个字段完全对齐，
   // 否则后台保存这个 JSON 时会把没声明的字段（或声明了但没写的字段）弄丢
   check(
-    '1b. 新评论字段集合与 CMS 声明完全一致（9 个，不多不少）',
+    '1b. 新评论字段集合与 CMS 声明完全一致（10 个，不多不少）',
     sameFieldSet(c),
     fieldDetail(c),
   );
@@ -278,7 +280,7 @@ const GOOD = {
       `author=${JSON.stringify(c && c.author)}(${typeof (c && c.author)})`,
   );
   check(
-    '1d. 新评论键顺序与 Function/CMS 约定一致（id…author）',
+    '1d. 新评论键顺序与 Function/CMS 约定一致（id, replyTo, name … author）',
     !!c && Object.keys(c).join(',') === COMMENT_FIELDS.join(','),
     c ? `keys=[${Object.keys(c).join(',')}]` : '没有评论对象',
   );
@@ -790,6 +792,90 @@ function fileComments(gh, path = 'static/comments/posts/stm32f4-interrupt.json')
     details.push(`"${value}"→${data6.pending}`);
   }
   check('15f. COMMENT_PENDING 取值解析（仅 false 关闭，其余按默认 true）', allOk, details.join(' '));
+}
+
+/* ------------------------------------------------------------------ */
+/* 16) replyTo：嵌套回复的父子指针必须真的写进 JSON（v15 前端修复的配套） */
+/* ------------------------------------------------------------------ */
+{
+  // 16a. 带合法 replyTo 的评论：原样存进仓库，字段顺序不变
+  const parent = {
+    id: 'c_1_aaaaaa',
+    replyTo: '',
+    name: '老访客',
+    email: '',
+    website: '',
+    body: '主评论',
+    ts: '2026-01-01T00:00:00.000Z',
+    ua: '',
+    hidden: false,
+    author: false,
+  };
+  const gh = makeGithub({
+    files: {
+      'static/comments/posts/stm32f4-interrupt.json': {
+        content:
+          JSON.stringify({ slug: 'posts/stm32f4-interrupt', comments: [parent] }, null, 2) + '\n',
+        sha: 'sha_old',
+        branch: BRANCH,
+      },
+    },
+  });
+  const res = await handleComment(
+    req({ ...GOOD, replyTo: 'c_1_aaaaaa' }),
+    envOf({ COMMENT_MODE: 'direct', COMMENT_PENDING: 'false' }),
+    depsFor(gh),
+  );
+  const data = await res.json();
+  const list = fileComments(gh);
+  const added = list && list[1];
+  check(
+    '16a. 合法 replyTo 原样写进仓库（回复不再被拍平成顶层评论）',
+    res.status === 200 &&
+      !!added &&
+      added.replyTo === 'c_1_aaaaaa' &&
+      Object.keys(added).join(',') === COMMENT_FIELDS.join(','),
+    `status=${res.status} replyTo=${JSON.stringify(added && added.replyTo)}`,
+  );
+  check(
+    '16b. 提交成功响应里带新评论 id（前端据此轮询确认显示）',
+    !!data && data.ok === true && !!data.id && !!added && data.id === added.id,
+    `id=${JSON.stringify(data.id)}`,
+  );
+
+  // 16c. 非法 replyTo 一律清空成 ''，但不影响评论提交
+  const cases = [
+    ['../etc/passwd', '路径穿越'],
+    ['c_', '只有前缀'],
+    ['hello', '不是 c_ 开头'],
+    ['c_' + 'a'.repeat(80), '超长'],
+    [12345, '不是字符串'],
+  ];
+  let allOk = true;
+  const details = [];
+  for (const [value, label] of cases) {
+    const gh2 = makeGithub();
+    const res2 = await handleComment(
+      req({ ...GOOD, replyTo: value }),
+      envOf({ COMMENT_MODE: 'direct' }),
+      depsFor(gh2),
+    );
+    const c = (fileComments(gh2) || [])[0];
+    const pass = res2.status === 200 && !!c && c.replyTo === '';
+    if (!pass) allOk = false;
+    details.push(`${label}:${res2.status}/${JSON.stringify(c && c.replyTo)}`);
+  }
+  check('16c. 非法 replyTo 静默清空，评论照常提交', allOk, details.join(' '));
+
+  // 16d. 不带 replyTo 的旧前端：照常写入，replyTo 为 ''
+  const gh3 = makeGithub();
+  const res3 = await handleComment(req(GOOD), envOf({ COMMENT_MODE: 'direct' }), depsFor(gh3));
+  const c3 = (fileComments(gh3) || [])[0];
+  check(
+    '16d. 没传 replyTo 时写成空字符串（保持 10 字段）',
+    res3.status === 200 && !!c3 && c3.replyTo === '' && sameFieldSet(c3),
+    fieldDetail(c3),
+  );
 }
 
 const failed = results.filter((r) => !r.pass);

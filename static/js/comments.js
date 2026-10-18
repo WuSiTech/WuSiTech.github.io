@@ -2,10 +2,17 @@
 /**
  * 自建评论系统前端（原生 JS，无依赖）
  * ----------------------------------------------------------------------------
+ * 版本：v15（2026-10-18）
+ *   - 修复「点回复后提交的评论没有带 replyTo」——这会让所有回复都变成顶层评论，
+ *     嵌套关系（父子指针）永远存不进仓库。这是本版最重要的一处修复。
+ *   - 修复连点两条评论的「回复」时正文里 @昵称 前缀越堆越多
+ *   - 修复分页按钮描边用了不存在的 CSS 变量（--gc-border）
+ *   - 提交成功后（direct + 不需审核）按新评论 id 轮询，构建部署完成会自动刷新并提示
+ *   - 回复状态条：显示「正在回复 @XX」并可一键取消
+ *
  * 「读」：取静态文件 /comments/<slug>.json（由 Hugo 从 static/comments/ 发布）。
- *        列表**固定从 Cloudflare 域名 wstk.pages.dev 读**：在 wstk.pages.dev 上就同域读
- *        （省一次跨域），其它域名（如 wusitech.github.io）跨域读那边那一份，跨域失败再回退同域。
- *        详见下面 GC_DATA_BASE 的注释。
+ *        读取顺序是**同源优先、跨域回落**：先读自己域名下的那份（github.io 随 push 构建、最新），
+ *        取不到再回落 https://wstk.pages.dev 的那份（详见下面 GC_DATA_BASE 的注释）。
  * 「写」：POST 到 Cloudflare Pages Function /api/comment，
  *        由它调用 GitHub API 把评论写进仓库（默认 COMMENT_MODE=direct + COMMENT_PENDING=true，
  *        即「直接入库 + 默认隐藏」，站长在后台放行后才会出现在页面上）
@@ -22,21 +29,20 @@
   var MAX_BODY = 2000;
 
   /**
-   * 评论列表的数据源（**固定** Cloudflare 域名，不是同域）
+   * 跨域回落的数据源（默认 Cloudflare 域名）
    * ------------------------------------------------------------------
-   * 为什么要固定：同一份代码部署在两个域名上（Cloudflare Pages 的 wstk.pages.dev 和
-   * GitHub Pages 的 wusitech.github.io），两边各自构建各自部署，先后必然不一致，
-   * 于是会出现「一个域名已经是新数据、另一个还是旧数据」——访客换个域名打开就会以为
-   * 「我的评论没了」。评论列表和提交都锚定 Cloudflare 那一边，两个域名看到的就是同一份数据。
+   * 同一份代码部署在两个域名上（Cloudflare Pages 的 wstk.pages.dev 和 GitHub Pages 的
+   * wusitech.github.io），两边各自构建、先后必然不一致（wstk 只在定时任务里构建，最多滞后 2 小时）。
+   * 所以列表按「同源优先、跨域回落」读：
+   *   1) 先读当前域名下的 /comments/<slug>.json —— github.io 随 push 构建，通常最新；
+   *   2) 同源失败（404 / 跨域被拦 / JSON 坏了）再读 `${GC_DATA_BASE}/comments/<slug>.json`。
+   * 这样两个域名都不会因为对方没构建完而把评论显示成「没有了」。
    *
    * 跨域读要对方允许：static/_headers 里给 /comments/* 加了
    * `Access-Control-Allow-Origin: *`（Cloudflare Pages 会在构建产物根目录读这个文件；
    * GitHub Pages 会忽略它，没有任何副作用）。
    *
-   * 兜底：主来源失败（跨域被拦 / 非 200 / JSON 坏了）时换另一个来源再试一次
-   * （非 wstk 域名会回退到同域 /comments/<slug>.json），两个都失败才显示「还没有评论」。
-   *
-   * 本机预览（hugo server / wrangler pages dev）想读本地那份数据，就在引入本脚本**之前**加一行：
+   * 本机预览（hugo server / wrangler pages dev）想固定读本地那份数据，就在引入本脚本**之前**加一行：
    *   window.GIT_COMMENTS_DATA_BASE = 'http://localhost:1313';
    * （写成页面里的内联脚本，或直接在浏览器控制台执行后刷新。）
    */
@@ -112,11 +118,17 @@
     'border-radius:4px;padding:1px 6px;font-size:.75em;line-height:1.5;font-weight:400}',
     '#git-comments .gc-time{color:var(--gc-muted);font-size:.85em}',
     '#git-comments .gc-replying{color:var(--gc-muted);font-size:.82em;margin-left:6px}',
+    '#git-comments .gc-reply-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;',
+    'color:var(--gc-muted);font-size:.88em}',
+    '#git-comments .gc-reply-cancel{background:none;border:0;padding:0;color:var(--gc-accent);',
+    'cursor:pointer;font-size:.9em}',
+    '#git-comments .gc-reply-cancel:hover{text-decoration:underline}',
+    '#git-comments .gc-reply-item{border-left:2px solid var(--gc-line);padding-left:12px}',
     '#git-comments .gc-reply-btn{margin-left:8px;background:none;border:0;padding:0;color:var(--gc-accent);cursor:pointer;font-size:.82em}',
     '#git-comments .gc-reply-btn:hover{text-decoration:underline}',
     '#git-comments .gc-up{color:var(--gc-accent);font-weight:600}',
     '#git-comments .gc-pager{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:14px}',
-    '#git-comments .gc-pager button{padding:4px 12px;border-radius:6px;border:1px solid var(--gc-border);background:transparent;color:inherit;cursor:pointer}',
+    '#git-comments .gc-pager button{padding:4px 12px;border-radius:6px;border:1px solid var(--gc-line);background:transparent;color:inherit;cursor:pointer}',
     '#git-comments .gc-pager button:disabled{opacity:.4;cursor:default}',
     '#git-comments .gc-site{color:var(--gc-accent);font-size:.85em;text-decoration:none}',
     '#git-comments .gc-body{margin-top:6px;white-space:pre-wrap;word-break:break-word}',
@@ -165,13 +177,66 @@
 
   /* ---- 回复功能：扁平存储 + replyTo 父子指针 → 递归渲染成任意深度 ---- */
   var replyToId = '';
-  var gcPage = 1;
   var replyToName = '';
+  // 点「回复」时自动塞进正文开头的「@昵称 」。换回复目标/取消/提交成功时要精确去掉这一段，
+  // 不能简单去掉所有 "@xxx"，否则会把用户自己打的内容也删了。
+  var mentionPrefix = '';
+  var gcPage = 1;
 
-  function gcIndexOf(comments) {
-    var byId = {};
-    (comments || []).forEach(function (c) { if (c && c.id) byId[c.id] = c; });
-    return byId;
+  /** 正文输入框（回复时要把 @昵称 塞进同一个 textarea） */
+  function gcBodyInput() {
+    return document.querySelector('#git-comments textarea');
+  }
+
+  /** 回复状态条（「正在回复 @XX 取消」） */
+  function gcReplyBar() {
+    return document.querySelector('#git-comments .gc-reply-bar');
+  }
+
+  /** 去掉上一次自动加的 @昵称 前缀（只认我们自己加的那一段） */
+  function gcStripMention() {
+    var ta = gcBodyInput();
+    if (ta && mentionPrefix && ta.value.indexOf(mentionPrefix) === 0) {
+      ta.value = ta.value.slice(mentionPrefix.length);
+    }
+    mentionPrefix = '';
+  }
+
+  /**
+   * 点某条评论的「回复」：
+   *   1) 记住被回复评论的 id（提交时放进 payload.replyTo，后端据此建立父子关系）
+   *   2) 把「@昵称 」塞到正文最前面（可以继续编辑，也可以删掉）
+   *   3) 显示回复状态条，让用户知道自己在回复谁
+   * 之前这里只改了输入框文字、提交时却没把 replyTo 发给后端 —— 所以回复永远存成顶层评论。
+   */
+  function gcStartReply(c) {
+    var id = String((c && c.id) || '');
+    if (!id) { return; }
+    gcStripMention();
+    replyToId = id;
+    replyToName = String((c && c.name) || '匿名');
+    mentionPrefix = '@' + replyToName + ' ';
+    var ta = gcBodyInput();
+    if (ta) {
+      ta.value = mentionPrefix + ta.value;
+      try { ta.focus(); } catch (e) { /* 老浏览器忽略 */ }
+      try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) { /* 同上 */ }
+    }
+    var bar = gcReplyBar();
+    if (bar) {
+      bar.style.display = '';
+      var label = bar.querySelector('.gc-reply-bar-text');
+      if (label) { label.textContent = '正在回复 @' + replyToName; }
+    }
+  }
+
+  /** 取消回复：清目标 + 清掉自动加的 @ 前缀 */
+  function gcCancelReply() {
+    gcStripMention();
+    replyToId = '';
+    replyToName = '';
+    var bar = gcReplyBar();
+    if (bar) { bar.style.display = 'none'; }
   }
 
   function gcNode(c, depth, byId) {
@@ -185,45 +250,14 @@
     if (parent) { head.appendChild(el('span', 'gc-replying', '回复 @' + String(parent.name || '匿名'))); }
     var btn = el('button', 'gc-reply-btn', '回复');
     btn.type = 'button';
-    btn.addEventListener('click', function () {
-      replyToId = String(c.id || '');
-      replyToName = String(c.name || '匿名');
-      var ta = document.querySelector('#git-comments textarea');
-      if (ta) {
-        if (ta.value.indexOf('@' + replyToName) !== 0) { ta.value = '@' + replyToName + ' ' + ta.value; }
-        ta.focus();
-      }
-    });
+    btn.addEventListener('click', function () { gcStartReply(c); });
     head.appendChild(btn);
     li.appendChild(head);
     li.appendChild(el('div', 'gc-body', String(c.body || '')));
     return li;
   }
 
-  function renderListTree(listNode, comments) {
-    var all = (comments || []).filter(function (c) { return c && c.hidden !== true; });
-    var byId = gcIndexOf(all);
-    var children = { __root__: [] };
-    all.forEach(function (c) {
-      var p = (c.replyTo && byId[c.replyTo]) ? c.replyTo : '__root__';
-      (children[p] = children[p] || []).push(c);
-    });
-    var done = {};
-    function walk(pid, depth) {
-      (children[pid] || []).forEach(function (c) {
-        if (done[c.id]) { return; }
-        done[c.id] = true;
-        listNode.appendChild(gcNode(c, depth, byId));
-        walk(c.id, depth + 1);
-      });
-    }
-    walk('__root__', 0);
-    all.forEach(function (c) {
-      if (!done[c.id]) { done[c.id] = true; listNode.appendChild(gcNode(c, 0, byId)); }
-    });
-  }
-
-  /* 用新实现覆盖原来的扁平渲染（原函数改名保留） */
+  /* 线程 + 分页渲染（gcNode 之上的唯一实现） */
   function renderListPatched(listNode, comments) {
     /* 线程 + 分页渲染
      *   - 线程 = 主评论 + 它的所有回复（递归）；回复永远紧跟主评论
@@ -297,33 +331,6 @@
   }
   function renderList(listNode, comments) { renderListPatched(listNode, comments); }
 
-  function renderListFlat(listNode, comments) {
-    listNode.textContent = '';
-    for (var i = 0; i < comments.length; i++) {
-      var c = comments[i] || {};
-      var li = el('li', 'gc-item');
-      var head = el('div', 'gc-head');
-      head.appendChild(el('span', 'gc-name', String(c.name || '匿名')));
-      if (c.author === true) {
-        // 博主标记：徽章文字只用 textContent 写入（el 里就是这么做的），
-        // 不拼 innerHTML，避免破坏「用户输入永远当文本」的约定
-        head.appendChild(el('span', 'gc-badge', '博主'));
-      }
-      head.appendChild(el('span', 'gc-time', formatTime(c.ts)));
-      if (c.website) {
-        var a = el('a', 'gc-site', String(c.website));
-        a.href = String(c.website);
-        a.target = '_blank';
-        a.rel = 'nofollow noopener';
-        head.appendChild(a);
-      }
-      li.appendChild(head);
-      // 一律用 textContent，绝不拼 innerHTML —— 评论内容是用户输入
-      li.appendChild(el('div', 'gc-body', String(c.body || '')));
-      listNode.appendChild(li);
-    }
-  }
-
   function build(endpoint, slug) {
     var section = document.createElement('section');
     section.id = 'git-comments';
@@ -386,10 +393,22 @@
 
     var bodyInput = document.createElement('textarea');
     bodyInput.name = 'body';
+    bodyInput.className = 'gc-body-input';
     bodyInput.maxLength = MAX_BODY;
     bodyInput.placeholder = '说点什么吧（纯文本，最多 ' + MAX_BODY + ' 字）';
     bodyInput.required = true;
     form.appendChild(bodyInput);
+
+    // 回复状态条：点了某条评论的「回复」后出现，显示「正在回复 @XX」并允许取消
+    var replyBar = el('div', 'gc-reply-bar', '');
+    replyBar.style.display = 'none';
+    var replyBarText = el('span', 'gc-reply-bar-text', '');
+    var replyCancel = el('button', 'gc-reply-cancel', '取消回复');
+    replyCancel.type = 'button';
+    replyCancel.addEventListener('click', gcCancelReply);
+    replyBar.appendChild(replyBarText);
+    replyBar.appendChild(replyCancel);
+    form.appendChild(replyBar);
 
     var actions = el('div', 'gc-actions');
     var submit = el('button', 'gc-submit', '发表评论');
@@ -418,6 +437,28 @@
     function showMsg(text, isError) {
       msg.textContent = text;
       msg.className = 'gc-msg ' + (isError ? 'is-err' : 'is-ok');
+    }
+
+    /* 提交成功后「确认真的显示了」：
+     *   direct + 不需审核时，评论已经写进仓库，但页面读的 JSON 要等一次构建部署才更新。
+     *   这里按后端返回的新评论 id 定时重拉列表，出现后自动刷新并提示；
+     *   在 wstk.pages.dev 上（只有在定时任务里才构建）轮询没意义，直接不轮询。
+     */
+    var expectId = '';
+    var pollTimers = [];
+
+    function clearPolls() {
+      for (var i = 0; i < pollTimers.length; i++) { clearTimeout(pollTimers[i]); }
+      pollTimers = [];
+    }
+
+    function startConfirmPoll(id) {
+      clearPolls();
+      expectId = String(id);
+      var delays = [15000, 45000, 90000, 150000];
+      delays.forEach(function (ms) {
+        pollTimers.push(setTimeout(function () { load(); }, ms));
+      });
     }
 
     /** 取一份评论 JSON；非 200（404 / 403 / 5xx）一律当失败，交给调用方换来源重试 */
@@ -467,6 +508,18 @@
           }
           // 计数只看过滤后真正渲染出来的条数
           count.textContent = '（共 ' + comments.length + ' 条）';
+          // 提交成功后等构建：如果这条新评论已经出现在 JSON 里，就提示用户并停止轮询
+          if (expectId) {
+            var found = false;
+            for (var i = 0; i < all.length; i++) {
+              if (all[i] && String(all[i].id || '') === expectId) { found = true; break; }
+            }
+            if (found) {
+              expectId = '';
+              clearPolls();
+              showMsg('评论已显示在下方', false);
+            }
+          }
         })
         .catch(function () {
           // 两个来源都失败：这篇文章还没人评论（或 JSON 坏了），按「还没有评论」处理
@@ -488,6 +541,8 @@
         website: siteInput.value,
         body: bodyInput.value,
         hp: hp.value,
+        // 关键：把被回复评论的 id 一起提交，后端据此建立父子关系（嵌套回复靠它）
+        replyTo: replyToId,
       };
 
       submit.disabled = true;
@@ -512,16 +567,22 @@
         })
         .then(function (out) {
           if (out.res.ok && out.data && out.data.ok) {
-            var okMsg = out.data.message || '评论已提交';
-        // 提交成功的提示也按站点区分：wstk 要等定时构建，措辞与提示文案保持一致
-        if (location.hostname && location.hostname.indexOf('pages.dev') >= 0) {
-          okMsg = '评论已提交，最晚 2 小时后显示（想立即看到可去 wusitech.github.io）';
-        }
-        showMsg(okMsg, false);
-            bodyInput.value = ''; replyToId = ''; replyToName = '';
-            if (out.data.mode === 'direct') {
-              // 直接入库模式：稍微等一会儿再拉一次，通常是构建还没跑完
-              setTimeout(load, 3000);
+            var data = out.data || {};
+            var onPagesDev = location.hostname && location.hostname.indexOf('pages.dev') >= 0;
+            var okMsg = data.message || '评论已提交';
+            // 提交成功的提示也按站点区分：wstk 要等定时构建，措辞与提示文案保持一致
+            if (onPagesDev) {
+              okMsg = '评论已提交，最晚 2 小时后显示（想立即看到可去 wusitech.github.io）';
+            }
+            showMsg(okMsg, false);
+            // 清空正文并退出回复状态（自动加的「@昵称 」前缀也会一并去掉）
+            bodyInput.value = '';
+            gcCancelReply();
+            // 提交成功后自动确认评论真的出现了：
+            //   - wstk.pages.dev 只在定时任务里构建，2 小时内不会出现在 JSON 里，轮询没意义
+            //   - 其它域名（github.io）push 即构建，通常 1~2 分钟，按 id 轮询确认后刷新
+            if (data.mode === 'direct' && data.pending === false && !onPagesDev && data.id) {
+              startConfirmPoll(data.id);
             }
           } else {
             var text = (out.data && out.data.error) || '提交失败（HTTP ' + out.res.status + '）';
