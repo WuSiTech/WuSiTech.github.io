@@ -9,5 +9,7 @@
   "showLineNumber": true,
   "readableLineLength": true,
   "defaultViewMode": "source",
-  "userIgnoreFilters": ["public/"]
+  "userIgnoreFilters": [
+    "public/"
+  ]
 }
