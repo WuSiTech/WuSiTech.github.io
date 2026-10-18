@@ -1,15 +1,16 @@
 {
-  "attachmentFolderPath": "static/images/obsidian",
-  "newLinkFormat": "absolute",
-  "useMarkdownLinks": true,
-  "newFileLocation": "folder",
-  "newFileFolderPath": "content/posts",
-  "alwaysUpdateLinks": true,
-  "livePreview": true,
-  "showLineNumber": true,
-  "readableLineLength": true,
-  "defaultViewMode": "source",
-  "userIgnoreFilters": [
-    "public/"
-  ]
+    "attachmentFolderPath":  "static/images/obsidian",
+    "newLinkFormat":  "absolute",
+    "useMarkdownLinks":  true,
+    "newFileLocation":  "folder",
+    "newFileFolderPath":  "content/posts",
+    "alwaysUpdateLinks":  true,
+    "livePreview":  true,
+    "showLineNumber":  true,
+    "readableLineLength":  true,
+    "defaultViewMode":  "source",
+    "userIgnoreFilters":  [
+                              "public/",
+                              "static/images/pool/"
+                          ]
 }
