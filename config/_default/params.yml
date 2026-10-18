@@ -617,7 +617,7 @@ injector:
   # 这里用主题自带的 --highlight-* 变量重新分配，亮/暗模式各自生效。
   head_end: |
     <!-- 全站随机固定背景（样式；数据/逻辑见 layouts/partials/head/init.html + static/js/wusi-bg.js） -->
-    <link rel="stylesheet" href="/css/wusi-bg.css" />
+    <link rel="stylesheet" href="/css/wusi-bg.css?v=2" />
     <style>
       /* 变量 / 宏 / 结构体成员：改用正文色，不再和注释同色 */
       .article-entry .chroma .n,
@@ -641,6 +641,7 @@ injector:
         color: var(--highlight-foreground);
       }
       /* 隐藏顶部导航右侧的 RSS 按钮（订阅源 /index.xml 仍然保留可用） */
+      #nav-rss-link {
         display: none;
       }
     </style>
@@ -716,13 +717,15 @@ injector:
         #wusi-footer-bar {
           width: 100%;
           box-sizing: border-box;
-          background: rgba(255, 255, 255, .72);
-          -webkit-backdrop-filter: blur(8px);
-          backdrop-filter: blur(8px);
+          /* 半透明通栏 + 毛玻璃：.88 比原来的 .72 更不透明，背景图还能透出来一点，
+             但小字（版权 / 域名提示 / 徽章）不会被背景细节吃掉 */
+          background: rgba(255, 255, 255, .88);
+          -webkit-backdrop-filter: blur(14px) saturate(1.05);
+          backdrop-filter: blur(14px) saturate(1.05);
           color: #333;
         }
         html[data-theme="dark"] #wusi-footer-bar {
-          background: rgba(30, 33, 38, .72);
+          background: rgba(26, 29, 34, .88);
           color: #ddd;
         }
         /* 条内三块：透明、满宽、无圆角、无外边距（背景/毛玻璃由整条承载） */
@@ -749,7 +752,21 @@ injector:
           padding: 8px 16px 0;
           font-size: 12px;
           line-height: 1.65;
-          opacity: .72;
+          /* 小字压在背景上最容易糊：不透明度拉满，颜色加深（暗色模式下面单独给亮色） */
+          opacity: 1;
+          color: #4a4a4a !important;
+        }
+        html[data-theme="dark"] #wusi-footer-bar #wusi-domain-tip {
+          color: #d2d2d2 !important;
+        }
+        /* 「BLOG状态」小字：亮/暗两套颜色，别再是低对比灰（颜色由 footer.html 的 class 承载） */
+        #wusi-footer-bar .wusi-badges-label {
+          color: #5a5a5a;
+          font-size: 12px;
+          white-space: nowrap;
+        }
+        html[data-theme="dark"] #wusi-footer-bar .wusi-badges-label {
+          color: #b9b9b9;
         }
         #wusi-footer-bar .wusi-badges {
           gap: 8px;
@@ -832,7 +849,7 @@ injector:
       </style>
       <script src="/js/search.js?v=12" defer></script>
       <!-- 全站随机固定背景：远端随机图 + 失败回落本地图池，固定不滚动（详见 static/js/wusi-bg.js） -->
-      <script src="/js/wusi-bg.js?v=1" defer></script>
+      <script src="/js/wusi-bg.js?v=2" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
       <script src="/js/loader-tip.js?v=1" defer></script>
     <!-- ===== 页底「BLOG状态」固定条（引用仓库里的本地徽章，不请求任何外部资源） =====

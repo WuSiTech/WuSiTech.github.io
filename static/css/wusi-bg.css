@@ -1,5 +1,5 @@
 /* ==========================================================================
-   全站随机固定背景 —— 站点级扩展样式（不改 themes/）
+   全站随机固定背景 + 可读性 —— 站点级扩展样式（不改 themes/）
    配套脚本：static/js/wusi-bg.js
    数据来源：data/remote_backgrounds.yml（远端图源）+ static/images/pool/bg/（本地兜底）
 
@@ -9,6 +9,11 @@
    两层不透明底色，把任何垫在下面的背景都盖掉了。
    所以本文件把 html/body/#wrap/#container 的底色全部放开，只留下 html 的底色当没图时的兜底，
    再让 #wusi-bg（position:fixed）当真正的不滚动背景层。
+
+   另外负责「文字压在背景上要看得清」：
+   · 内容卡片（文章卡 / 正文卡 / 侧栏 widget）半透明 + 毛玻璃，背景能透出来，正文不受影响；
+   · 文章末尾「上一篇/下一篇」在没有封面图时垫一层深色底，白字不再直接压在随机背景上；
+   · 页脚通栏 / 头部标题的透明度与配色在 config/_default/params.yml 的 injector 里（同属站点级样式）。
    ========================================================================== */
 
 /* 没图 / 图还没加载出来时的兜底底色（放在最底层，不会被盖住） */
@@ -33,7 +38,30 @@ body,
   background-color: var(--color-background);
 }
 
-#wusi-bg .wusi-bg-layer {
+/* 背景图直接是 <img>：一张图只请求一次（旧实现 new Image() 探测 + CSS background 会下载两遍），
+   object-fit: cover 铺满视口，position:fixed 由父层 #wusi-bg 承担，所以不随页面滚动。 */
+#wusi-bg img.wusi-bg-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  will-change: opacity;
+  /* 暗色主题的 img { filter: brightness(70%) } 是给内容图用的，别作用到背景图，
+     否则背景会暗两次（主题遮罩再叠一次） */
+  filter: none !important;
+}
+
+#wusi-bg img.wusi-bg-layer.is-on {
+  opacity: 1;
+}
+
+/* 兼容旧缓存里的 div 层（HTML 缓存 / 旧脚本） */
+#wusi-bg .wusi-bg-layer:not(img) {
   position: absolute;
   inset: 0;
   background-position: center center;
@@ -41,15 +69,15 @@ body,
   background-repeat: no-repeat;
   opacity: 0;
   transition: opacity 0.8s ease;
-  will-change: opacity;
 }
 
-#wusi-bg .wusi-bg-layer.is-on {
+#wusi-bg .wusi-bg-layer:not(img).is-on {
   opacity: 1;
 }
 
 /* 背景压暗/提亮一层，保证亮色主题下页面留白处的文字也看得清。
-   暗色主题下更狠一些，避免大图太刺眼。 */
+   暗色主题下更狠一些，避免大图太刺眼。
+   ⚠️ 头部标题文字颜色的采样阈值在 wusi-bg.js 里，改这里的数值要同步改。 */
 #wusi-bg::after {
   content: "";
   position: absolute;
@@ -67,7 +95,131 @@ html[data-theme="dark"] #wusi-bg::after {
   transition: opacity 0.2s ease;
 }
 
-/* 主题把 banner 画在 #header 里的 <img> 上（可能被 <picture> 包着），   默认这张图会随页面滚动、并且带一层白色渐变遮罩。
+/* ==========================================================================
+   内容卡片：半透明 + 毛玻璃（亮/暗两套）
+   背景图能透出来，但毛玻璃把背景细节糊掉，正文仍然清晰；
+   鼠标悬停在卡片上时再透一点，方便欣赏背景（过渡 0.35s）。
+   ========================================================================== */
+:root {
+  --color-wrap: rgba(255, 255, 255, 0.9);
+  --wusi-card-blur: 10px;
+}
+
+html[data-theme="dark"] {
+  --wusi-dark-wrap: rgba(39, 43, 48, 0.92);
+}
+
+/* 暗色主题的卡片底色：
+   主题自己的写法是 [data-theme="dark"]:root（两个选择器），
+   这里必须用 html[data-theme="dark"]:root 才压得住它，否则卡片还是纯色 #272b30。 */
+html[data-theme="dark"]:root {
+  --color-wrap: var(--wusi-dark-wrap);
+}
+
+.post-wrap,
+.article-inner,
+.widget-wrap,
+#article-nav,
+.sidebar-top {
+  -webkit-backdrop-filter: blur(var(--wusi-card-blur)) saturate(1.05);
+  backdrop-filter: blur(var(--wusi-card-blur)) saturate(1.05);
+}
+
+.post-wrap,
+.article-inner,
+.widget-wrap {
+  transition:
+    background-color 0.35s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* 悬停更透一点（默认 .9 → .82），毛玻璃保证文字依旧清楚 */
+  .post-wrap:hover,
+  .widget-wrap:hover {
+    background-color: rgba(255, 255, 255, 0.82);
+  }
+  .article-inner:hover {
+    background-color: rgba(255, 255, 255, 0.87);
+  }
+  html[data-theme="dark"] .post-wrap:hover,
+  html[data-theme="dark"] .widget-wrap:hover {
+    background-color: rgba(39, 43, 48, 0.84);
+  }
+  html[data-theme="dark"] .article-inner:hover {
+    background-color: rgba(39, 43, 48, 0.89);
+  }
+}
+
+/* ==========================================================================
+   文章末尾「上一篇 / 下一篇」(#article-nav)
+   主题的设计是「封面图压暗 + 白字」，但封面图是 lazysizes 懒加载的：
+   滚到页面底部时图还没加载 / 图挂了，白字就直接压在随机背景上 → 看不清。
+   这里给整条 nav 垫一层深色底（有图时图盖在上面，看不出来），并加强文字阴影兜底。
+   ========================================================================== */
+#article-nav {
+  background: rgba(18, 20, 24, 0.5);
+  overflow: hidden;
+}
+
+#article-nav .article-nav-link-wrap {
+  background: rgba(18, 20, 24, 0.16);
+}
+
+#article-nav .article-nav-caption,
+#article-nav .article-nav-title {
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 12px rgba(0, 0, 0, 0.75);
+}
+
+/* ==========================================================================
+   移动端：背景层 / 卡片 / 页脚的少量适配
+   （页脚通栏、BLOG 状态徽章的间距在 config/_default/params.yml 里；
+     这里只补「卡片贴边」「毛玻璃降级」这类和背景层直接相关的东西）
+   ========================================================================== */
+@media (max-width: 767px) {
+  /* 移动端 GPU 弱，毛玻璃半径收小一点，滚动更稳 */
+  :root {
+    --wusi-card-blur: 6px;
+  }
+  /* 背景层只占视口内容区，避免个别浏览器把 fixed 层算进文档宽度 */
+  #wusi-bg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* 不支持 backdrop-filter 的浏览器：把卡片调到接近不透明，保证正文可读 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --color-wrap: rgba(255, 255, 255, 0.97);
+  }
+  html[data-theme="dark"]:root {
+    --color-wrap: rgba(39, 43, 48, 0.98);
+  }
+  .post-wrap:hover,
+  .article-inner:hover,
+  .widget-wrap:hover {
+    background-color: var(--color-wrap) !important;
+  }
+}
+
+/* 打印：不打印背景层，白底黑字 */
+@media print {
+  #wusi-bg {
+    display: none !important;
+  }
+  body,
+  #wrap,
+  #container {
+    background: #fff !important;
+  }
+}
+
+/* 主题把 banner 画在 #header 里的 <img> 上（可能被 <picture> 包着），
+   默认这张图会随页面滚动、并且带一层白色渐变遮罩。
    普通页面：整屏背景由 #wusi-bg 承担，这张图要藏起来，否则会和背景层叠在一起；
    有 banner 的页面（文章页，html 上有 wusi-page-banner 类）：把这张图本身变成
    整屏固定背景，一图两用 —— 不用再额外下载一遍同一张图。 */

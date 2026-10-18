@@ -3,24 +3,28 @@
    样式：static/css/wusi-bg.css
    页面数据：layouts/partials/head/init.html 注入 window.__WUSI_BG__
              （banner = 当前页 front matter **显式写的 banner**，没写就是空；
-              remote = 远端图源；local = 本地兜底）
+               remote = 远端图源；local = 本地兜底）
 
    行为（按优先级）：
      1. 当前页显式写了 banner → 直接用主题已经渲染好的 #header 头图当整屏固定背景
         （样式表把那张图 position:fixed 铺满视口，一图两用，不会重复下载）；
         这里只负责"图挂了就退回随机背景"和状态上报；
-     2. 没写 banner（注意：cover 封面不算！）→ 和普通页面一样，从图源里随机取一张；
-     3. 远端 300ms 还没好 → 先铺一张本地图池的兜底图，远端成功后淡入覆盖，
-        失败/超时（4s）则保留本地兜底图；
-     4. 所有图都失败 → 只留主题底色，页面依然正常。
+     2. 没写 banner（注意：cover 封面不算！）→ 从图源里随机取一张；
+     3. **先立刻铺本地图池的兜底图**（不再是等 300ms），远端图加载好后再淡入覆盖，
+        这样首屏不会先闪一下纯色底；远端失败/超时（4s）就保留本地图；
+     4. 远端图 404 会记进 localStorage，下次选图时跳过（同一张坏图不反复拖慢首屏）；
+     5. 所有图都失败 → 只留主题底色，页面依然正常。
 
-   为什么这样写：背景层必须 position:fixed 且 z-index 低于 #wrap（见 wusi-bg.css 注释）；
-   探测用 new Image()，图片下载不阻塞 HTML/CSS/字体，首屏不会被背景拖慢。
+   为什么用 <img> 铺层而不是 CSS background-image：
+     旧实现先用 new Image() 探测、再设 background-image，同一张图会被下载两次
+     （探测一次、CSS 背景一次），远端图大时首屏要等两轮。现在探测和显示是同一个
+     <img> 元素：一次请求，onload 后直接淡入；CORS 探测还顺便给"头部文字颜色采样"复用。
 
    调试参数（仅调试用，正常访问不带）：
      ?wusi_bg=local   强制走本地兜底
      ?wusi_bg=remote  强制走远端
      ?wusi_bg=fail    模拟远端失败（验证回落到本地）
+     ?bgimg=<url>     强制指定一张背景图（验证头部文字颜色/回退等）
    ========================================================================== */
 (function () {
   "use strict";
@@ -31,59 +35,191 @@
   }
 
   var REMOTE_TIMEOUT = 4000; // 远端图探测超时（毫秒）→ 判定失败、保留本地兜底
-  var LOCAL_DELAY = 300; // 远端这么久还没结果，就先铺本地兜底，避免一直空着
+  var REMOTE_AUTO_TRIES = 2; // 自动模式下最多试几个远端候选（404 很快，换一张比直接回落好）
+  var BAD_KEY = "wusi_bg_bad_v1"; // 远端坏图记忆（localStorage）
+  var BAD_TTL = 7 * 24 * 60 * 60 * 1000; // 坏图记忆保留 7 天
+  var LAST_KEY = "wusi_bg_last"; // 上一次用过的图（sessionStorage）
+  var HIST_REMOTE_KEY = "wusi_bg_hist_remote"; // 最近用过的远端图（避免连着几次撞同一张）
+  var HIST_LOCAL_KEY = "wusi_bg_hist_local";
+  var HIST_REMOTE_SIZE = 8;
+  var HIST_LOCAL_SIZE = 4;
 
   var remote = Array.isArray(cfg.remote) ? cfg.remote : [];
   var local = Array.isArray(cfg.local) ? cfg.local : [];
   var banner = typeof cfg.banner === "string" ? cfg.banner : "";
+
   var mode = "";
-  try {
-    mode = new URLSearchParams(location.search).get("wusi_bg") || "";
-  } catch (e) {
-    mode = "";
-  }
-  // 调试用：?bgimg=<url> 强制指定一张背景图（验证头部文字颜色/回退等用）
   var forceImage = "";
   try {
-    forceImage = new URLSearchParams(location.search).get("bgimg") || "";
+    var search = new URLSearchParams(location.search);
+    mode = search.get("wusi_bg") || "";
+    forceImage = search.get("bgimg") || "";
   } catch (e) {
+    mode = "";
     forceImage = "";
   }
 
-  // 调试/自动化验证用状态对象：settled 变成 true 表示"最终背景已经定下来了"
-  var state = { settled: false, source: null, image: null, mode: mode || "auto" };
+  // 调试/自动化验证用状态对象：
+  //   visible —— 已经有图显示（本地兜底也算）
+  //   settled —— 最终背景已经定下来（远端成功、或失败/超时后保留本地、或 banner 就绪）
+  //   el      —— 当前显示在最上层的 <img>（头部文字颜色采样直接复用它，不再二次请求）
+  var state = {
+    settled: false,
+    visible: false,
+    source: null,
+    image: null,
+    mode: mode || "auto",
+    el: null,
+  };
   window.__wusiBg = state;
 
   var host = null;
   var layerMain = null; // 上层：banner / 远端图
   var layerFallback = null; // 下层：本地兜底图
+  var fallbackShown = false;
+  var fallbackUrl = null;
+  var mainShown = false;
+  var remotePending = false;
+  var attemptToken = 0;
+  var failedRemote = [];
+
+  function fire(name, detail) {
+    try {
+      document.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
+    } catch (e) {}
+  }
 
   function pick(list) {
     return list && list.length ? list[Math.floor(Math.random() * list.length)] : null;
   }
 
-  // 尽量不连续两次抽到同一张（用 sessionStorage 记上一张）
-  function pickFresh(list) {
+  function readHist(key) {
+    try {
+      var arr = JSON.parse(sessionStorage.getItem(key) || "[]");
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function rememberHist(key, url, size) {
+    if (!url) return;
+    var arr = readHist(key).filter(function (u) {
+      return u !== url;
+    });
+    arr.push(url);
+    if (arr.length > size) {
+      arr = arr.slice(arr.length - size);
+    }
+    try {
+      sessionStorage.setItem(key, JSON.stringify(arr));
+    } catch (e) {}
+    try {
+      sessionStorage.setItem(LAST_KEY, url);
+    } catch (e) {}
+  }
+
+  // 抽一张尽量"新鲜"的图：先排除最近用过的（history）、坏图、本次已试过的；
+  // 都排光了就退一步只排除坏图 / 本次试过的，保证一定能抽到。
+  function pickFresh(list, opts) {
     if (!list || !list.length) {
       return null;
     }
-    var last = null;
-    try {
-      last = sessionStorage.getItem("wusi_bg_last");
-    } catch (e) {}
-    var pool = list;
-    if (last && list.length > 1) {
+    opts = opts || {};
+    var bad = opts.bad || {};
+    var exclude = opts.exclude || [];
+    var hist = opts.historyKey ? readHist(opts.historyKey) : [];
+    var pool = list.filter(function (url) {
+      if (isBad(url, bad)) return false;
+      if (exclude.indexOf(url) !== -1) return false;
+      if (hist.indexOf(url) !== -1) return false;
+      return true;
+    });
+    if (!pool.length) {
       pool = list.filter(function (url) {
-        return url !== last;
+        return !isBad(url, bad) && exclude.indexOf(url) === -1;
       });
     }
+    if (!pool.length) {
+      pool = list;
+    }
     var url = pick(pool);
-    try {
-      if (url) {
-        sessionStorage.setItem("wusi_bg_last", url);
-      }
-    } catch (e) {}
+    if (opts.historyKey) {
+      rememberHist(opts.historyKey, url, opts.historySize || 8);
+    } else {
+      try {
+        sessionStorage.setItem(LAST_KEY, url);
+      } catch (e) {}
+    }
     return url;
+  }
+
+  function readBad() {
+    try {
+      var raw = localStorage.getItem(BAD_KEY);
+      var obj = raw ? JSON.parse(raw) : {};
+      return obj && typeof obj === "object" ? obj : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function writeBad(obj) {
+    try {
+      localStorage.setItem(BAD_KEY, JSON.stringify(obj));
+    } catch (e) {}
+  }
+
+  function isBad(url, bad) {
+    var t = bad[url];
+    if (!t) return false;
+    if (Date.now() - t > BAD_TTL) {
+      delete bad[url];
+      return false;
+    }
+    return true;
+  }
+
+  function markBad(url) {
+    if (!url || failedRemote.indexOf(url) !== -1) return;
+    failedRemote.push(url);
+    var bad = readBad();
+    bad[url] = Date.now();
+    // 只留最近 40 条，别把 localStorage 撑大
+    var keys = Object.keys(bad);
+    if (keys.length > 40) {
+      keys.sort(function (a, b) {
+        return bad[a] - bad[b];
+      });
+      for (var i = 0; i < keys.length - 40; i++) {
+        delete bad[keys[i]];
+      }
+    }
+    writeBad(bad);
+  }
+
+  function pickRemote() {
+    var bad = readBad();
+    var pool = remote.filter(function (url) {
+      return !isBad(url, bad);
+    });
+    if (!pool.length) {
+      pool = remote;
+    }
+    return pickFresh(pool, {
+      exclude: failedRemote,
+      historyKey: HIST_REMOTE_KEY,
+      historySize: HIST_REMOTE_SIZE,
+    });
+  }
+
+  function newLayer(kind) {
+    var img = document.createElement("img");
+    img.className = "wusi-bg-layer wusi-bg-layer-" + kind;
+    img.alt = "";
+    img.decoding = "async";
+    img.setAttribute("aria-hidden", "true");
+    return img;
   }
 
   function ensureHost() {
@@ -93,151 +229,179 @@
     host = document.createElement("div");
     host.id = "wusi-bg";
     host.setAttribute("aria-hidden", "true");
-    layerFallback = document.createElement("div");
-    layerFallback.className = "wusi-bg-layer wusi-bg-layer-fallback";
-    layerMain = document.createElement("div");
-    layerMain.className = "wusi-bg-layer wusi-bg-layer-main";
+    layerFallback = newLayer("fallback");
+    layerMain = newLayer("main");
     host.appendChild(layerFallback);
     host.appendChild(layerMain);
     document.body.insertBefore(host, document.body.firstChild);
     return host;
   }
 
-  function apply(layer, url, cb) {
-    if (!layer) {
-      if (cb) {
-        cb();
-      }
-      return;
-    }
-    layer.style.backgroundImage = 'url("' + url + '")';
-    // 先设图、下一帧再改 opacity，保证淡入过渡生效；cb 在"已经画上"之后才回调
+  function reveal(img) {
+    if (!img) return;
     requestAnimationFrame(function () {
-      layer.classList.add("is-on");
-      if (cb) {
-        cb();
-      }
+      img.classList.add("is-on");
     });
   }
 
-  // 异步探测一张图：加载成功才真正用（onload），失败回调 false；不做任何阻塞
-  function loadImage(url, cb) {
-    if (!url) {
-      cb(false);
-      return;
+  // 单次请求装图：成功后把新 <img> 放进 #wusi-bg 对应层并淡入。
+  // wantCors=true 时先按 CORS 方式加载（为了后面 canvas 采样背景亮度），
+  // 对方没给 Access-Control-Allow-Origin 就换普通方式再加载一次 —— 保证背景一定能显示。
+  function loadLayer(kind, url, wantCors, cb) {
+    var crossOrigin = !!(wantCors && /^https?:/i.test(url));
+
+    function attempt(img, cors) {
+      var done = false;
+      img.onload = function () {
+        if (done) return;
+        done = true;
+        img.onload = img.onerror = null;
+        cb(null, img);
+      };
+      img.onerror = function () {
+        if (done) return;
+        if (cors) {
+          // CORS 失败（对方没有 CORS 头）：换普通方式（新的 <img>，避免缓存住失败）
+          attempt(newLayer(kind), false);
+          return;
+        }
+        done = true;
+        img.onload = img.onerror = null;
+        cb(new Error("image load failed"), img);
+      };
+      if (cors) {
+        img.crossOrigin = "anonymous";
+      }
+      img.setAttribute("src", url);
     }
-    var img = new Image();
-    img.onload = function () {
-      cb(true);
-    };
-    img.onerror = function () {
-      cb(false);
-    };
-    img.src = url;
+
+    attempt(newLayer(kind), crossOrigin);
   }
 
-  function finish(source, url) {
+  function showVisible(source, url, img) {
+    state.visible = true;
     state.source = source;
     state.image = url || null;
+    state.el = img || state.el;
+    fire("wusi:bg-visible", { source: source, url: url || null });
+  }
+
+  function settle(source, url, img) {
+    if (state.settled) {
+      return;
+    }
     state.settled = true;
+    state.source = source;
+    state.image = url || null;
+    if (img) {
+      state.el = img;
+    }
     document.documentElement.classList.add("wusi-bg-ready");
-    // 广播给同文件的「头部标题自适应颜色」模块去采样亮度
-    try {
-      document.dispatchEvent(
-        new CustomEvent("wusi:bg-settled", { detail: { source: source, url: url || null } })
-      );
-    } catch (e) {}
+    fire("wusi:bg-settled", { source: source, url: url || null });
   }
 
-  // 本地兜底：随机取一张本地图池的图，加载成功就铺上
+  // 本地兜底：立刻选一张本地图池的图加载。加载好就等于"有图可看"，
+  // 远端还在路上时先把这一层垫上；远端失败就靠它当最终背景。
   function showFallback() {
-    ensureHost();
-    var url = pickFresh(local);
-    if (!url) {
-      finish("none", null);
+    if (!ensureHost()) {
       return;
     }
-    loadImage(url, function (ok) {
-      if (ok) {
-        apply(layerFallback, url, function () {
-          finish("local", url);
+    if (fallbackShown) {
+      return;
+    }
+    var tried = {};
+    var first = pickFresh(local, {
+      exclude: failedRemote,
+      historyKey: HIST_LOCAL_KEY,
+      historySize: HIST_LOCAL_SIZE,
+    });
+    if (!first) {
+      if (!remotePending) {
+        settle("none", null, null);
+      }
+      return;
+    }
+
+    (function attempt(url) {
+      tried[url] = true;
+      loadLayer("fallback", url, false, function (err, img) {
+        if (!err) {
+          host.replaceChild(img, layerFallback);
+          layerFallback = img;
+          fallbackShown = true;
+          fallbackUrl = url;
+          reveal(img);
+          if (!mainShown) {
+            showVisible("local", url, img);
+          }
+          if (!remotePending) {
+            settle("local", url, img);
+          }
+          return;
+        }
+        var next = pickFresh(local, {
+          exclude: failedRemote.concat(Object.keys(tried)),
+          historyKey: HIST_LOCAL_KEY,
+          historySize: HIST_LOCAL_SIZE,
         });
-        return;
-      }
-      // 抽到的本地图坏了：换一张再试一次
-      var next = pick(
-        local.filter(function (item) {
-          return item !== url;
-        })
-      );
-      if (!next) {
-        finish("none", null);
-        return;
-      }
-      loadImage(next, function (ok2) {
-        if (ok2) {
-          apply(layerFallback, next, function () {
-            finish("local", next);
-          });
-        } else {
-          finish("none", null);
+        if (next) {
+          attempt(next);
+          return;
+        }
+        if (!remotePending) {
+          settle("none", null, null);
         }
       });
-    });
+    })(first);
   }
 
-  // 探测并应用一张"主图"（远端随机图）；失败/超时交给 onFail
-  function tryMain(url, onFail) {
-    ensureHost();
+  // 探测并应用一张"主图"（远端随机图）；失败/超时交给 onGiveUp
+  function tryMain(url, tries, onGiveUp) {
     if (!url) {
-      onFail();
+      remotePending = false;
+      onGiveUp();
       return;
     }
-    var settled = false;
-    var timer = null;
-    var localTimer = null;
-
-    // 远端迟迟不来：先垫一张本地图，避免长时间只有底色
-    localTimer = setTimeout(function () {
-      if (settled) {
-        return;
-      }
-      var fallbackUrl = pickFresh(local);
-      if (!fallbackUrl) {
-        return;
-      }
-      loadImage(fallbackUrl, function (ok) {
-        if (ok && !settled) {
-          apply(layerFallback, fallbackUrl);
-        }
-      });
-    }, LOCAL_DELAY);
-
-    timer = setTimeout(function () {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timer);
-      clearTimeout(localTimer);
-      onFail();
+    ensureHost();
+    var token = ++attemptToken;
+    var timedOut = false;
+    var timer = setTimeout(function () {
+      if (token !== attemptToken) return;
+      timedOut = true;
+      remotePending = false;
+      onGiveUp();
     }, REMOTE_TIMEOUT);
 
-    loadImage(url, function (ok) {
-      if (settled) {
+    loadLayer("main", url, true, function (err, img) {
+      if (token !== attemptToken || timedOut) return;
+      clearTimeout(timer);
+      if (!err) {
+        remotePending = false;
+        host.replaceChild(img, layerMain);
+        layerMain = img;
+        mainShown = true;
+        reveal(img);
+        showVisible("remote", url, img);
+        settle("remote", url, img);
         return;
       }
-      settled = true;
-      clearTimeout(timer);
-      clearTimeout(localTimer);
-      if (ok) {
-        apply(layerMain, url, function () {
-          finish("remote", url);
-        });
-      } else {
-        onFail();
+      markBad(url);
+      if (tries > 1) {
+        tryMain(pickRemote(), tries - 1, onGiveUp);
+        return;
       }
+      remotePending = false;
+      onGiveUp();
     });
+  }
+
+  function finishWithFallback() {
+    remotePending = false;
+    if (fallbackShown) {
+      settle("local", fallbackUrl, layerFallback);
+    } else {
+      showFallback(); // 里面会在加载完 / 全失败后 settle
+    }
   }
 
   // 有 banner 的页面：主题的 #header 头图已经被样式表改成整屏固定背景，
@@ -251,23 +415,35 @@
         break;
       }
     }
+
     function ok() {
       // 真的有像素才算成功（404 时 complete 也是 true，但 naturalWidth 是 0）
       if (img && img.naturalWidth > 0) {
-        finish("banner", banner);
-      } else {
-        fail();
+        state.visible = true;
+        document.documentElement.classList.add("wusi-bg-ready");
+        fire("wusi:bg-visible", { source: "banner", url: banner });
+        state.el = img;
+        settle("banner", banner, img);
+        return;
       }
+      fail();
     }
+
     function fail() {
       // banner 挂了：撤掉"整屏头图"类名、藏掉坏图，退回远端随机背景
       document.documentElement.classList.remove("wusi-page-banner");
       if (img) {
         img.style.display = "none";
       }
-      ensureHost();
-      tryMain(pickFresh(remote), showFallback);
+      if (!ensureHost()) {
+        document.addEventListener("DOMContentLoaded", fail, { once: true });
+        return;
+      }
+      remotePending = true;
+      showFallback();
+      tryMain(pickRemote(), REMOTE_AUTO_TRIES, finishWithFallback);
     }
+
     if (!img) {
       fail();
       return;
@@ -282,8 +458,13 @@
 
   function start() {
     if (forceImage) {
-      ensureHost();
-      tryMain(forceImage, showFallback);
+      if (!ensureHost()) {
+        document.addEventListener("DOMContentLoaded", start, { once: true });
+        return;
+      }
+      remotePending = true;
+      showFallback();
+      tryMain(forceImage, 1, finishWithFallback);
       return;
     }
     if (banner && mode !== "local" && mode !== "remote" && mode !== "fail") {
@@ -299,16 +480,18 @@
       showFallback();
       return;
     }
+    remotePending = true;
+    showFallback(); // 先铺本地，别让首屏空着
     if (mode === "remote") {
-      tryMain(pickFresh(remote), showFallback);
+      tryMain(pickRemote(), 1, finishWithFallback);
       return;
     }
     if (mode === "fail") {
       // 故意指向一个不存在的图，走真实的 onerror → 本地兜底路径
-      tryMain("/__wusi_bg_force_fail__.webp", showFallback);
+      tryMain("/__wusi_bg_force_fail__.webp", 1, finishWithFallback);
       return;
     }
-    tryMain(pickFresh(remote), showFallback);
+    tryMain(pickRemote(), REMOTE_AUTO_TRIES, finishWithFallback);
   }
 
   start();
@@ -372,92 +555,96 @@
 })();
 
 /* ==========================================================================
-   头部标题自适应文字颜色：用 canvas 采样「标题后面那块背景」的平均亮度，
-   背景偏黑 → html.wusi-hero-dark（白字），偏亮 → html.wusi-hero-light（黑字）。
-   · 远端图源带 Access-Control-Allow-Origin: *，加 crossOrigin 后能读像素；
-   · 读不到（没给 CORS / 图加载失败）就保持默认的「白字 + 深阴影」，不报错；
-   · 图片按 background-size: cover 映射到视口，采样区域 = 标题文字大致所在的位置。
+   头部标题自适应文字颜色：采样「标题后面那块背景」的平均亮度。
+   · 直接复用正在显示的 <img>（远端图用 CORS 方式加载，所以能读像素），不再二次请求图片；
+   · 亮色主题：背景偏亮 → html.wusi-hero-light（黑字），偏暗 → wusi-hero-dark（白字）；
+   · 暗色主题：背景有一层 45% 黑遮罩 + 页面整体是深色，统一用白字，不用采样；
+   · 读不到像素（图没 CORS / 加载失败）就保持默认的「白字 + 深阴影」，不报错；
+   · 图片按 object-fit: cover 映射到视口，采样区域 = 标题文字大致所在的位置。
    ========================================================================== */
 (function () {
   "use strict";
-  var THRESHOLD = 0.55;
+  var THRESHOLD = 0.6; // 叠加白色蒙版后的等效亮度阈值
   var timer = null;
-  function currentUrl() {
-    var st = window.__wusiBg || {};
-    if (document.documentElement.classList.contains("wusi-page-banner")) {
-      var img = document.querySelector("#header img");
-      if (img && img.getAttribute("src")) {
-        return img.src;
-      }
-    }
-    return st.image || null;
+
+  function isDark() {
+    return document.documentElement.getAttribute("data-theme") === "dark";
   }
-  function setTheme(lum) {
+
+  function apply(light) {
     var html = document.documentElement;
-    var light = lum > THRESHOLD;
     html.classList.toggle("wusi-hero-light", light);
     html.classList.toggle("wusi-hero-dark", !light);
-    window.__wusiHeroLum = Math.round(lum * 100) / 100;
   }
-  function sample(url) {
-    if (!url) {
+
+  function currentEl() {
+    var st = window.__wusiBg || {};
+    return st.el || null;
+  }
+
+  function sample(img) {
+    if (!img || !img.naturalWidth || !img.naturalHeight) {
       return;
     }
-    var img = new Image();
-    var sameOrigin = url.indexOf("//") === -1 || url.indexOf(location.origin) === 0;
-    if (!sameOrigin) {
-      img.crossOrigin = "anonymous";
+    // 暗色主题：页面整体压暗，标题统一白字，不需要读像素（也就不用 CORS）
+    if (isDark()) {
+      window.__wusiHeroLum = null;
+      apply(false);
+      return;
     }
-    img.onload = function () {
-      try {
-        var vw = document.documentElement.clientWidth || window.innerWidth;
-        var vh = document.documentElement.clientHeight || window.innerHeight;
-        var header = document.getElementById("header");
-        var heroH = header ? header.getBoundingClientRect().height : Math.min(vh, 400);
-        // 标题大致区域（视口坐标）：中间 50% 宽、header 垂直中段
-        var rx = vw * 0.25;
-        var ry = heroH * 0.28;
-        var rw = vw * 0.5;
-        var rh = heroH * 0.44;
-        var iw = img.naturalWidth;
-        var ih = img.naturalHeight;
-        if (!iw || !ih) {
-          return;
-        }
-        // cover 映射：图片按 max(vw/iw, vh/ih) 缩放后居中，再换算成图片坐标
-        var scale = Math.max(vw / iw, vh / ih);
-        var ox = (vw - iw * scale) / 2;
-        var oy = (vh - ih * scale) / 2;
-        var sx = (rx - ox) / scale;
-        var sy = (ry - oy) / scale;
-        var sw = rw / scale;
-        var sh = rh / scale;
-        sx = Math.max(0, Math.min(sx, iw - 1));
-        sy = Math.max(0, Math.min(sy, ih - 1));
-        sw = Math.max(1, Math.min(sw, iw - sx));
-        sh = Math.max(1, Math.min(sh, ih - sy));
-        var canvas = document.createElement("canvas");
-        canvas.width = 32;
-        canvas.height = 16;
-        var ctx = canvas.getContext("2d");
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-        var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-        var sum = 0;
-        var count = 0;
-        for (var i = 0; i < data.length; i += 4) {
-          sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
-          count++;
-        }
-        setTheme(sum / count / 255);
-      } catch (e) {
-        // 跨域读不到像素（没有 CORS 头）：保持默认白字 + 阴影，不报错
+    try {
+      var vw = document.documentElement.clientWidth || window.innerWidth;
+      var vh = document.documentElement.clientHeight || window.innerHeight;
+      var header = document.getElementById("header");
+      var heroH = header ? header.getBoundingClientRect().height : Math.min(vh, 400);
+      // 标题大致区域（视口坐标）：中间 50% 宽、header 垂直中段
+      var rx = vw * 0.25;
+      var ry = heroH * 0.28;
+      var rw = vw * 0.5;
+      var rh = heroH * 0.44;
+      var iw = img.naturalWidth;
+      var ih = img.naturalHeight;
+      // cover 映射：图片按 max(vw/iw, vh/ih) 缩放后居中，再换算成图片坐标
+      var scale = Math.max(vw / iw, vh / ih);
+      var ox = (vw - iw * scale) / 2;
+      var oy = (vh - ih * scale) / 2;
+      var sx = (rx - ox) / scale;
+      var sy = (ry - oy) / scale;
+      var sw = rw / scale;
+      var sh = rh / scale;
+      sx = Math.max(0, Math.min(sx, iw - 1));
+      sy = Math.max(0, Math.min(sy, ih - 1));
+      sw = Math.max(1, Math.min(sw, iw - sx));
+      sh = Math.max(1, Math.min(sh, ih - sy));
+      var canvas = document.createElement("canvas");
+      canvas.width = 32;
+      canvas.height = 16;
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      var sum = 0;
+      var count = 0;
+      for (var i = 0; i < data.length; i += 4) {
+        sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+        count++;
       }
-    };
-    img.src = url;
+      var raw = sum / count / 255;
+      // 叠加亮色主题那层 12% 白蒙版后的等效亮度（与 CSS 里 #wusi-bg::after 对应）
+      var eff = raw * 0.88 + 0.12;
+      window.__wusiHeroLum = Math.round(eff * 100) / 100;
+      apply(eff > THRESHOLD);
+    } catch (e) {
+      // 跨域读不到像素（没有 CORS 头）：保持默认白字 + 阴影，不报错
+      window.__wusiHeroLum = null;
+      apply(false);
+    }
   }
+
   function update() {
-    sample(currentUrl());
+    sample(currentEl());
   }
+
+  document.addEventListener("wusi:bg-visible", update);
   document.addEventListener("wusi:bg-settled", update);
   window.addEventListener("load", function () {
     setTimeout(update, 200);
@@ -466,4 +653,19 @@
     clearTimeout(timer);
     timer = setTimeout(update, 300);
   });
+
+  // 亮/暗主题切换后重新判断（只监听 data-theme，避免监听 class 造成死循环）
+  try {
+    var lastDark = isDark();
+    new MutationObserver(function () {
+      var dark = isDark();
+      if (dark !== lastDark) {
+        lastDark = dark;
+        update();
+      }
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  } catch (e) {}
+
+  // 初始兜底：万一脚本晚于背景事件执行，也跑一次
+  window.addEventListener("DOMContentLoaded", update);
 })();
