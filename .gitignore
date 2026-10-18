@@ -38,3 +38,6 @@ __pycache__/
 .obsidian/workspace*.json
 .obsidian/cache
 .obsidian/plugins/obsidian-git/data.json
+# 新建了却没改名的「未命名 / Untitled」笔记：别提交，否则站上会多一个空白页
+content/posts/未命名.md
+content/posts/Untitled.md

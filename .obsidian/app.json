@@ -1,6 +1,6 @@
 {
   "attachmentFolderPath": "static/images/obsidian",
-  "newLinkFormat": "shortest",
+  "newLinkFormat": "absolute",
   "useMarkdownLinks": true,
   "newFileLocation": "folder",
   "newFileFolderPath": "content/posts",
@@ -8,5 +8,6 @@
   "livePreview": true,
   "showLineNumber": true,
   "readableLineLength": true,
-  "defaultViewMode": "source"
+  "defaultViewMode": "source",
+  "userIgnoreFilters": ["public/"]
 }

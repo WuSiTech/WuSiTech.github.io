@@ -1,16 +1,47 @@
 {{- /* 图片渲染钩子（站点级）：
-   Obsidian 里粘贴图片会自动存到 static/images/obsidian/，正文里生成的链接形如
-     ![](static/images/obsidian/xxx.png)   或   ![](/static/images/obsidian/xxx.png)
-   这里统一处理成站点根路径，让 Markdown 里怎么写都能正常显示：
-     1) 去掉 static/ 前缀（Hugo 的 static 目录就是站点根）
-     2) 相对路径补成以 / 开头（否则浏览器会按当前文章路径解析）
-   同时统一加懒加载属性。外链（http/https//）原样保留。 */ -}}
-{{- $u := .Destination -}}
-{{- if hasPrefix $u "/static/" -}}
-  {{- $u = strings.TrimPrefix "/static" $u -}}
-{{- else if hasPrefix $u "static/" -}}
-  {{- $u = strings.TrimPrefix "static" $u -}}
-{{- else if not (or (hasPrefix $u "http://") (hasPrefix $u "https://") (hasPrefix $u "//") (hasPrefix $u "/") (hasPrefix $u "data:")) -}}
-  {{- $u = printf "/%s" $u -}}
+   目的：让 Markdown 正文里「怎么写图片路径」都不容易断图。Obsidian 里粘贴图片会
+   落到 static/images/obsidian/，按 app.json 的 newLinkFormat = absolute，
+   正文里生成的链接是：
+       ![](static/images/obsidian/Pasted%20image%2020261018140500.png)
+   （绝对路径写法，站点根就是 Hugo 的 static/ 目录，所以 static/ 前缀必须去掉）
+
+   也可能出现的写法，这里一并兜住：
+       ![](/static/images/obsidian/x.png)              手打了前导斜杠
+       ![](../../static/images/obsidian/x.png)         相对当前文章页的旧写法
+       ![](/images/obsidian/x.png)                     站点根写法（老文章都是这种）
+       ![](x.png)                                      裸文件名（Obsidian shortest 格式）
+
+   处理规则：
+     1) 外链（http:// https:// // data:）原样保留；
+     2) 先做 URL 解码（%20 → 空格）再统一成站点根路径；
+     3) 路径里出现 static/ 的，从 static 往后的部分就是站点根路径；
+     4) 剩下的依次按 static/、static/images/obsidian/ 找真实文件，命中哪个用哪个；
+     5) 全部加 loading=lazy / decoding=async（不影响图片本身的宽高属性）。 */ -}}
+{{- $src := .Destination -}}
+{{- $out := $src -}}
+{{- $external := or (hasPrefix $src "http://") (hasPrefix $src "https://") (hasPrefix $src "//") (hasPrefix $src "data:") -}}
+{{- if and (not $external) (ne $src "") -}}
+  {{- /* 1) URL 解码：%20 → 空格，拿到磁盘上的真实路径 */ -}}
+  {{- $p := $src -}}
+  {{- with urls.Parse $src -}}
+    {{- $p = .Path -}}
+  {{- end -}}
+  {{- /* 2) 归一化：去掉前导 / 和 ../ 前缀 */ -}}
+  {{- $p = path.Clean $p -}}
+  {{- range seq 8 -}}
+    {{- if hasPrefix $p "/" -}}{{- $p = strings.TrimPrefix "/" $p -}}{{- end -}}
+    {{- if hasPrefix $p "../" -}}{{- $p = strings.TrimPrefix "../" $p -}}{{- end -}}
+  {{- end -}}
+  {{- /* 3) 选出站点根路径 */ -}}
+  {{- if hasPrefix $p "static/" -}}
+    {{- $out = strings.TrimPrefix "static" $p -}}
+  {{- else if os.FileExists (path.Join "static" $p) -}}
+    {{- $out = printf "/%s" $p -}}
+  {{- else if os.FileExists (path.Join "static/images/obsidian" $p) -}}
+    {{- $out = printf "/images/obsidian/%s" $p -}}
+  {{- else -}}
+    {{- $out = printf "/%s" $p -}}
+  {{- end -}}
+  {{- $out = replace $out " " "%20" -}}
 {{- end -}}
-<img src="{{ $u | safeURL }}" alt="{{ .Text }}" loading="lazy" decoding="async"{{ with .Title }} title="{{ . }}"{{ end }}>
+<img src="{{ $out | safeURL }}" alt="{{ .Text }}" loading="lazy" decoding="async"{{ with .Title }} title="{{ . }}"{{ end }}>

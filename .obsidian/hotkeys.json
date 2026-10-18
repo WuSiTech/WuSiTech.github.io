@@ -1,0 +1,14 @@
+{
+  "obsidian-git:push": [
+    {
+      "modifiers": ["Mod", "Shift"],
+      "key": "G"
+    }
+  ],
+  "templates:insert-template": [
+    {
+      "modifiers": ["Mod", "Alt"],
+      "key": "T"
+    }
+  ]
+}
