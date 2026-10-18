@@ -66,7 +66,7 @@ draft: false
 
 ## 图片粘贴测试
 图片粘贴测试
-![](2026-03-17-17-03-12.webp)
+![](/images/pool/bg-web/2026-03-17-17-03-12.webp)
 *图片测试*
 
 ## 公式测试
@@ -240,7 +240,6 @@ tags:
     - themes
 categories:
     - Documentation
-image: pawel-czerwinski-8uZPynIu-rQ-unsplash.jpg
 
 ---
 
