@@ -5,8 +5,8 @@ draft = false
 description = "较为通俗的介绍的DDOS攻击"
 categories = [ "网络" ]
 tags = [ "攻击", "DDOS", "Linux" ]
-cover = "/images/pool/covers/covers-02.webp"
-banner = ""
+cover = "/images/posts/ddos_introduce/cover.webp"
+banner = "/images/posts/ddos_introduce/cover.webp"
 +++
 
 （复制了自己以前的文章）
@@ -27,7 +27,7 @@ DDoS(DDoS:Distributed Denial of Service)**分布式拒绝服务攻击**，就是
 
 在0x10中已经略讲了DoS的原理，DDoS与DoS之差在于D（distributed，分布式）。DoS的攻击是一台机器对服务器的攻击，DDoS攻击可以看作DoS攻击的Plus版本，它可以将分布在不同地方的多台计算机联合起来形成攻击平台，对一个或多个目标发动攻击，从而产生成倍的拒绝服务攻击的威力。如图
 
-![IMG_256](images/ddos_introduce_files/image1.webp)
+![IMG_256](/images/posts/ddos_introduce/image1.webp)
 
 一个完整的DDoS攻击体系包括攻击者、主控端、代理机（傀儡机/肉鸡）和攻击目标（服务器）四部分组成
 
@@ -112,7 +112,7 @@ ping.exe和IcmpSendEcho速度慢的另一个原因是它们必须等待目标主
 
 要知道SYN Flood如何攻击，就要先知道TCP协议怎么传输文件
 
-![IMG_257](images/ddos_introduce_files/image2.webp)
+![IMG_257](/images/posts/ddos_introduce/image2.webp)
 
 先打个比方：在打电话时
 
@@ -140,7 +140,7 @@ TCP中每一个数据包都有一个序号，这样接收的时候就知道发�
 
 服务器表示：
 
-![IMG_258](images/ddos_introduce_files/image3.jpeg)
+![IMG_258](/images/posts/ddos_introduce/image3.jpeg)
 
 此外还有ACK Flood，这用于计算机与计算机（用户与用户）之间的攻击，用户与用户互相进行三次握手，而不是用户-服务器那样单向的。
 
@@ -150,13 +150,13 @@ TCP中每一个数据包都有一个序号，这样接收的时候就知道发�
 
 要阅读下面的内容，请先知道什么是UDP协议怎样传输数据以及UDP与TCP的区别，请自行百度，另附区别梗图（Data:数据|Receiver:接收方|Sender:发送方）
 
-![IMG_259](images/ddos_introduce_files/image4.webp)
+![IMG_259](/images/posts/ddos_introduce/image4.webp)
 
 UDP协议是一种无连接的协议，使用UDP协议传输报文之前，客户端和服务器之间不需要建立连接。如果在从客户端到服务器端的传递过程中出现报文的丢失，协议本身也不做任何检测或提示。这种报文处理方式决定了UDP协议资源消耗小、处理速度快，在被广泛应用的同时也为攻击者发动UDP Flood攻击提供了可能。
 
 UDP Flood传统攻击方式如下：（没错，就是之前那图改的）
 
-![IMG_260](images/ddos_introduce_files/image5.webp)
+![IMG_260](/images/posts/ddos_introduce/image5.webp)
 
 攻击者通过僵尸网络向目标设备发送大量伪造的UDP报文，这种报文一般为大包且速率非常快，通常会造成链路拥塞甚至网络瘫痪。（非常正宗的DDOS攻击）
 
@@ -178,7 +178,7 @@ UDP反射放大攻击的核心在于“放大”二字。由于某些服务的�
 
 当然实际情况远比文章中复杂，具体可以参见文末链接（链接失灵请复制名称然后搜索或者到wusi.eo.mk查看原文）
 
-![IMG_261](images/ddos_introduce_files/image6.webp)
+![IMG_261](/images/posts/ddos_introduce/image6.webp)
 
 ## **1x20 连接型攻击**
 
@@ -210,7 +210,7 @@ DNS服务器：WDNMD
 
 DNS Reply Flood与DNS Query Flood大致相同，但发送的不是请求包，而是应答包，类似与ACK Flood
 
-![IMG_262](images/ddos_introduce_files/image7.webp)
+![IMG_262](/images/posts/ddos_introduce/image7.webp)
 
 ## **1x30 特殊协议缺陷攻击**
 

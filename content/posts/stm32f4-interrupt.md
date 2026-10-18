@@ -5,8 +5,8 @@ draft = false
 description = "以 STM32F411CEU6 与标准外设库为例，完整讲解和实现PA0 下降沿触发 EXTI0 中断、翻转 PC13 电平的中断链路：使能时钟、配置GPIO、SYSCFG映射(相当于F1的AFIO)、EXTI 触发条件、NVIC 优先级分组与中断服务程序."
 categories = [ "STM32" ]
 tags = [ "STM32F4", "中断" ]
-cover = "/images/pool/covers/covers-104.webp"
-banner = ""
+cover = "/images/posts/stm32f4-interrupt/cover.webp"
+banner = "/images/posts/stm32f4-interrupt/banner.webp"
 +++
 
 参考：[https://www.bilibili.com/video/BV1th411z7sn](https://www.bilibili.com/video/BV1th411z7sn)
@@ -20,12 +20,12 @@ banner = ""
 
 • 中断优先级：当有多个中断源同时申请中断时，CPU会根据中断源的轻重缓急进行裁决，优先响应更加紧急的中断源（就像病人去医院一样，让病情危急的病人先治疗）
 
-![](/images/20261016-185545.webp)
+![](/images/posts/stm32f4-interrupt/20261016-185545.webp)
 
 • 中断嵌套：当一个中断程序正在运行时，又有新的更高优先级的中断源申请中断，CPU再次暂停当前中断程序，转而去处理新的中断程序，处理完成后依次进行返回
 
 如图阐释了中断的工作原理：
-![中断可以嵌套](/images/20261016-184440.webp)
+![中断可以嵌套](/images/posts/stm32f4-interrupt/20261016-184440.webp)
 
 需注意中断是阻塞的，因此不能在中断函数中调用所需时间过长的函数，否则会影响主函数的执行产生混乱。
 
@@ -33,20 +33,20 @@ banner = ""
 
 ## STM32的中断链路是什么？
 
-![中断链路](/images/interrupt-path.webp)
+![中断链路](/images/posts/stm32f4-interrupt/interrupt-path.webp)
 
 如图，通过SYSCFG，可以从GPIOx中选出要中断的引脚。然后接到EXTI，EXTI负责检测进来的信号是否满足触发中断的条件（条件由自己设置）。当触发中断的条件时，信号通过EXTIx和其他的通路触发NVIC，NVIC负责将信息汇报CPU，此时中断触发。
 
 对于SYSCFG，我们可以把它看做一个“接线器”，它负责将P?x（指PAx，PBx,...）接到对应的EXTI。值得注意的是，PAx/PBx...等相同x但不同GPIOx的引脚共用一个SYSCFG寄存器，也就是说，当设置PA0通过SYSCFG连接到EXTI0时，PB0,PC0等等就不能使用中断，否则会引发未知错误。
 
-![SYSCFG/AFIO](/images/20261016-185707.webp)
+![SYSCFG/AFIO](/images/posts/stm32f4-interrupt/20261016-185707.webp)
 
 对于EXTI，他是一个“检测器”和“控制器”。检测前端来的信号是否满足条件，以及控制EXTIx等通道传输中断信号。如图，ST公司将P?0-P?4的线分别映射到EXTI0-EXTI4，但是后续5-15，ST将其分别映射到两个EXTI通路中P?5-P?9共同使用EXTI9_5，P?10-P?15同理。
 
 那可能有人会问：如果使用了P?5-P?15，在EXTI9_5或EXTI15_10中该如何判定到底是哪个口引起的中断呢？
-其实，中断信号储存在寄存器内，可以使用if (EXTI->PR & (1 << x)) 来判断和执行（x取5-15，是P?x的x。PR是挂起寄存器的意思），如下图。~~（看不懂的话可以配课看的www）~~![](/images/20261016-185755.webp)
+其实，中断信号储存在寄存器内，可以使用if (EXTI->PR & (1 << x)) 来判断和执行（x取5-15，是P?x的x。PR是挂起寄存器的意思），如下图。~~（看不懂的话可以配课看的www）~~![](/images/posts/stm32f4-interrupt/20261016-185755.webp)
 
-NVIC是一个外设，用于管理和传递中断，还可以设置优先级（见上面优先级的图）![](/images/20261016-185446.webp)
+NVIC是一个外设，用于管理和传递中断，还可以设置优先级（见上面优先级的图）![](/images/posts/stm32f4-interrupt/20261016-185446.webp)
 
 在STM32中实现中断，本质上就是打通这三个“关卡”。
 
@@ -282,7 +282,7 @@ list, please refer to stm32f4xx.h file) */
 
 第三，NVIC_IRQChannelPreemptionPriority（抢）和NVIC_IRQChannelSubPriority（响）
 
-这两个玩意是分组的抢占优先级和响应优先级，和前面分组（NVIC_PriorityGroupConfig）的关系如下![](/images/20261016-193817.webp)
+这两个玩意是分组的抢占优先级和响应优先级，和前面分组（NVIC_PriorityGroupConfig）的关系如下![](/images/posts/stm32f4-interrupt/20261016-193817.webp)
 
 > 最核心的一条铁律是：数值越小，优先级越高。
 > 为了让你彻底弄清它们，我们可以打个比方，并总结它们的核心区别：
