@@ -5,8 +5,8 @@ draft = false
 description = "较为通俗的介绍的DDOS攻击"
 categories = [ "网络" ]
 tags = [ "攻击", "DDOS", "Linux" ]
-cover = "/images/posts/ddos_introduce/cover.webp"
-banner = "/images/posts/ddos_introduce/cover.webp"
+cover = "/images/pool/covers/covers-03.avif"
+banner = "/images/banner-600w.webp"
 +++
 
 （复制了自己以前的文章）
