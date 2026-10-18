@@ -44,8 +44,24 @@
   {{- end -}}
 {{- end -}}
 
+{{- /* 首屏占位图：static/images/bg-local/ 下的 10 张极小的图（约 20-30KB）。
+       页面打开时先立刻铺一张占位，等 media 分支那 112 张大图加载完再淡入替换，
+       这样首屏不会白屏，也不会被 1~2MB 的大图拖慢。 */ -}}
+{{- $localNames := slice -}}
+{{- $ldir := try (os.ReadDir "static/images/bg-local") -}}
+{{- with $ldir.Value -}}
+  {{- range . -}}
+    {{- if and (not .IsDir) (strings.HasSuffix .Name ".webp") -}}
+      {{- $localNames = $localNames | append .Name -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- $local := slice -}}
+{{- range sort $localNames -}}
+  {{- $local = $local | append (printf "/images/bg-local/%s" .) -}}
+{{- end -}}
 <script>
-  window.__WUSI_BG__ = {{ dict "banner" $banner "pool" $remote | jsonify | safeJS }};
+  window.__WUSI_BG__ = {{ dict "banner" $banner "pool" $remote "local" $local | jsonify | safeJS }};
   {{- if $banner }}
   /* 本页显式指定了 banner：让样式表把主题那张头图改成整屏固定背景（见 /css/wusi-bg.css）。
      在 <head> 里加类名，保证首帧就生效，不会先闪一下普通背景。 */
