@@ -1,0 +1,104 @@
+name: 同步背景池
+
+# ---------------------------------------------------------------------------
+# 背景图池放在 media 孤儿分支的 images/pool/bg-web/（原图 bg/ 已删除）。
+# media 一变，data/remote_backgrounds.yml 就跟着变，并触发一次站点构建。
+#
+# 流程与 sync-cover-pool.yml 一致：
+#   1. 用 Git Tree API 列出 media 分支 images/pool/bg-web/ 下的图片
+#   2. 生成 data/remote_backgrounds.yml（站内路径 + remote_backgrounds: 键）
+#   3. 用 GITHUB_TOKEN 提交回 main
+#   4. 显式 gh workflow run 触发 hugo.yaml（media 的 push 不会触发它）
+#
+# ⚠️ push 事件用的是「被推送的那个提交里的工作流文件」：本文件必须在 media
+#    分支上也有同样一份，否则往 media 推图片时根本不会触发。
+# ---------------------------------------------------------------------------
+on:
+  push:
+    branches: [media]
+    paths:
+      - "images/pool/bg-web/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: sync-bg-pool
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: 准备 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 生成背景名单（Git Tree API 列 media 分支）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 .github/scripts/sync_bg_pool.py --from-git-tree
+
+      - name: 提交并推送（有变化才提交）
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "committed=false" >> "${GITHUB_OUTPUT}"
+          git add data/remote_backgrounds.yml
+          if git diff --cached --quiet; then
+            echo "名单没有变化，跳过提交"
+            exit 0
+          fi
+          git diff --cached --stat
+          git commit -m "自动同步背景池：来源 media 分支"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "committed=true" >> "${GITHUB_OUTPUT}"
+              echo "已推送新名单到 main"
+              exit 0
+            fi
+            echo "推送失败（第 ${attempt} 次），rebase 后重试"
+            git pull --rebase --autostash origin main || true
+            sleep 5
+          done
+          echo "::error::连续 3 次推送失败，请手动 push"
+          exit 1
+
+      - name: 请求一次构建部署（新背景才会出现在线上）
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh workflow run hugo.yaml --ref main -R "${GITHUB_REPOSITORY}"; then
+            echo "已请求 Build and deploy 重新构建"
+          else
+            echo "::warning::自动触发部署失败，请到 Actions 手动运行 Build and deploy"
+          fi
+
+      - name: 汇总
+        if: always()
+        run: |
+          {
+            echo "### 同步背景池"
+            echo '```'
+            git status --short | head -20
+            echo '```'
+            if [ -f data/remote_backgrounds.yml ]; then
+              echo "背景图条数：$(grep -c '^  - \"' data/remote_backgrounds.yml || true)"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
