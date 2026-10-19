@@ -1,12 +1,12 @@
 +++
-title = "如何通过 CF Pages Function + GitHub 仓库实现评论区构建"
+title = "如何实现评论区构建通过 CF Pages Function + GitHub 仓库"
 date = "2026-10-15T18:00:00+08:00"
 draft = false
 description = "静态博客没有后端，评论一般挂第三方服务。这篇文章记录我怎么把评论直接存进自己的 Git 仓库，用 Cloudflare Pages 的 Function 代写提交，以及中间踩的坑。"
 categories = [ "网站" ]
 tags = [ "website", "cloudflare", "github" ]
 cover = "/images/pool/covers/covers-04.avif"
-banner = ""
+banner = "/images/bg-local/ph-01.webp"
 mermaid = true
 +++
 
