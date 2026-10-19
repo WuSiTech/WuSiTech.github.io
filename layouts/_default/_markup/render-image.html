@@ -19,7 +19,11 @@
      5) 全部加 loading=lazy / decoding=async（不影响图片本身的宽高属性）；
      6) 按主题的要求把 <img> 包进 <a class="article-gallery-item" href="原图地址">，
         主题 afterFooter 里的 PhotoSwipe 用 a.article-gallery-item 当灯箱相册（点图放大）。
-        ⚠️ 类名别改：主题模板里写死了 '.article-entry' + 'a.article-gallery-item'。 */ -}}
+        ⚠️ 类名别改：主题模板里写死了 '.article-entry' + 'a.article-gallery-item'。
+     7) 灯箱要能缩放/拖动，锚点上必须有 data-pswp-width / data-pswp-height：
+        PhotoSwipe Lightbox 只从这两个 dataset 读原图尺寸（没有就当成 0×0，
+        缩放级别全是 1 → isZoomable() 为 false，滚轮/双击/拖动都不会有反应）。
+        主题自己的 gallery.html 是 <img onload> 里写的，这里同样处理。 */ -}}
 {{- $src := .Destination -}}
 {{- $out := $src -}}
 {{- $external := or (hasPrefix $src "http://") (hasPrefix $src "https://") (hasPrefix $src "//") (hasPrefix $src "data:") -}}
@@ -47,4 +51,4 @@
   {{- end -}}
   {{- $out = replace $out " " "%20" -}}
 {{- end -}}
-<a class="article-gallery-item" href="{{ $out | safeURL }}"><img src="{{ $out | safeURL }}" alt="{{ .Text }}" loading="lazy" decoding="async"{{ with .Title }} title="{{ . }}"{{ end }}></a>
+<a class="article-gallery-item" href="{{ $out | safeURL }}"><img src="{{ $out | safeURL }}" alt="{{ .Text }}" loading="lazy" decoding="async" onload="this.parentNode.dataset.pswpWidth=this.naturalWidth;this.parentNode.dataset.pswpHeight=this.naturalHeight"{{ with .Title }} title="{{ . }}"{{ end }}></a>
