@@ -6,13 +6,15 @@ description = "记录本站随机固定背景的实现过程：从主题不透�
 categories = [ "网站" ]
 tags = [ "website", "hugo", "css" ]
 cover = "/images/pool/covers/covers-05.avif"
-banner = ""
+banner = "/images/banner-600w.webp"
 mermaid = true
 +++
 
 （本文整理自本站背景与视觉效果的实现过程，留作备查）
 
-开工之前，先感谢两位：
+## 0xFF 感谢大佬
+
+开工之前，先感谢大佬：
 
 - [D-SKETON](https://d-sketon.github.io)：主题 [reimu](https://github.com/D-SKETON/hugo-theme-reimu) 的作者。本站的整体框架和大量视觉效果原型都来自这个主题，本文提到的许多改造，也是在他的主题基础上完成的。
 - [CialloKing](https://cialloking.github.io)：背景图池取自他的站点，页脚那些随机背景图就来自这里，图池引用链的思路也参考了他的做法。
@@ -103,7 +105,7 @@ sequenceDiagram
 
 ## 0x50 预加载遮罩
 
-主题有个"少女祈祷中"的全屏遮罩，要等 `window.load` 才收起，也就是等所有资源加载完——包括那张 260KB 的背景大图。结果就是遮罩停留 1~2 秒。
+主题有个"少女祈祷中"的全屏遮罩，要等 `window.load` 才收起，也就是等所有资源加载完——包括那张 260KB 的背景大图。结果就是遮罩停留 1\~2 秒。
 
 这里有个坑值得记：主题的 `#loader` 里，`loading` 这个类名表示**已隐藏**，不是"加载中"。
 
@@ -199,4 +201,4 @@ media 分支
 
 **CSS 越来越长。** 站点级覆盖样式已经有好几个文件，主题升级时得跟着检查。
 
-> 本文由 AI 辅助生成，内容依据本站实际实现整理，代码细节以仓库源码为准。
+> 本文由 AI ~~辅助~~生成，内容依据本站实际实现整理，代码细节以仓库源码为准。
