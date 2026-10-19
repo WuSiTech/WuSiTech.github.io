@@ -6,7 +6,7 @@ description = "静态博客没有后端，评论一般挂第三方服务。这�
 categories = [ "网站" ]
 tags = [ "website", "cloudflare", "github" ]
 cover = "/images/pool/covers/covers-04.avif"
-banner = "/images/bg-local/ph-01.webp"
+banner = ""
 mermaid = true
 +++
 
