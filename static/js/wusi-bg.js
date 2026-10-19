@@ -26,6 +26,21 @@
      ?wusi_bg=fail    模拟远端失败（验证回落到本地）
      ?bgimg=<url>     强制指定一张背景图（验证头部文字颜色/回退等）
    ========================================================================== */
+/* 预加载遮罩「少女祈祷中」收起太慢：主题的滑出动画是 0.8s（spinner 0.5s），
+   兜底图早就铺好了，遮罩还要慢慢滑走，首屏就白等这 0.8s。这里把「收起」动画
+   压到 0.15s —— 只影响收起这一下，不影响它出现，也不改主题文件。
+   注意：主题里 #loader 的 `loading` 类表示「已隐藏」（类一加，两半屏滑出）。 */
+(function () {
+  "use strict";
+  try {
+    var style = document.createElement("style");
+    style.textContent =
+      "#loader.loading .loading-bg{transition-duration:.15s}" +
+      "#loader.loading .spinner-box{transition-duration:.15s}";
+    (document.head || document.documentElement).appendChild(style);
+  } catch (e) {}
+})();
+
 (function () {
   "use strict";
 
@@ -329,6 +344,17 @@
           host.replaceChild(img, layerFallback);
           layerFallback = img;
           fallbackShown = true;
+          // 兜底图（约 40KB）已可见：确保预加载遮罩已经收起，
+          // 正常背景大图继续后台异步加载，到了再淡入替换。
+          // ⚠️ 主题里 #loader 的 `loading` 类是「已隐藏」状态：类一加两半屏才滑走。
+          // 所以这里只能是 add（不是 remove）——remove 会把收起的遮罩重新弹出来。
+          (function () {
+            var loader = document.getElementById("loader");
+            if (loader && !loader.classList.contains("loading")) {
+              loader.classList.add("loading");
+              document.body.style.overflow = "auto";
+            }
+          })();
           fallbackUrl = url;
           reveal(img);
           if (!mainShown) {
