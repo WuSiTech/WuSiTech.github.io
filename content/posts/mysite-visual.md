@@ -6,7 +6,7 @@ description = "记录本站随机固定背景的实现过程：从主题不透�
 categories = [ "网站" ]
 tags = [ "website", "hugo", "css" ]
 cover = "/images/pool/covers/covers-05.avif"
-banner = "/images/banner-600w.webp"
+banner = ""
 mermaid = true
 +++
 
