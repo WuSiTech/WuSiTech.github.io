@@ -6,7 +6,7 @@ description = "以 STM32F411CEU6 与标准外设库为例，完整讲解和实�
 categories = [ "STM32" ]
 tags = [ "STM32F4", "中断" ]
 cover = "/images/pool/covers/covers-01.avif"
-banner = "/images/posts/stm32f4-interrupt/banner.webp"
+banner = ""
 +++
 
 参考：[https://www.bilibili.com/video/BV1th411z7sn](https://www.bilibili.com/video/BV1th411z7sn)
