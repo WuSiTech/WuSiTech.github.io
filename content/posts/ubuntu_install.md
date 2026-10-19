@@ -6,7 +6,7 @@ description = "详细阐释了如何进行Ubuntu安装"
 categories = [ "Ubuntu" ]
 tags = [ "Ubuntu", "系统", "Linux" ]
 cover = "/images/pool/covers/covers-02.avif"
-banner = "/images/banner.webp"
+banner = ""
 +++
 
 （复制了自己以前的文章）
