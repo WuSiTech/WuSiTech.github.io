@@ -184,3 +184,22 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 {{- end -}}
 <!-- katex_per_page -->
+{{- /* 亮暗色跟随规则（站点级覆盖）：
+       1) 用户在右上角手动选过亮/暗 → 尊重用户选择（localStorage.dark_mode = true/false）
+       2) 系统偏好暗色 → 暗色
+       3) 其余情况（系统亮色或没有偏好）→ 按时间：19:00~06:00 暗色，其余亮色
+       注意：这段必须在主题的颜色脚本之后执行（放在 head 末尾），否则会被覆盖。 */ -}}
+<script id="wusi-time-theme">
+  (function () {
+    try {
+      var saved = localStorage.getItem('dark_mode');
+      if (saved === 'true' || saved === 'false') { return; } // 手动选过，不干预
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var hour = new Date().getHours();
+      var byTime = hour >= 19 || hour < 6; // 19 点到次日 6 点算夜间
+      var dark = prefersDark || byTime;
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    } catch (e) { /* 忽略 */ }
+  })();
+</script>
+<!-- time-theme -->
