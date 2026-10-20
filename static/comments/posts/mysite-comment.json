@@ -1,0 +1,17 @@
+{
+  "slug": "posts/mysite-comment",
+  "comments": [
+    {
+      "id": "c_1792471726578_54f118",
+      "replyTo": "",
+      "name": "吾思",
+      "email": "",
+      "website": "",
+      "body": "补充：还有一个，可以单独fork一个comment的分支，像背景图一样",
+      "ts": "2026-10-20T04:48:46.578Z",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.",
+      "hidden": false,
+      "author": false
+    }
+  ]
+}
