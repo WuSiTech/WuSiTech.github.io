@@ -391,8 +391,9 @@ html[data-theme="dark"] #wusi-bg-hint {
   opacity: 0.95;
 }
 
-/* 窄屏导航已经开始变挤，提示字先收掉（主题在 1024 以下就在收缩菜单了） */
-@media (max-width: 1024px) {
+/* 窄屏/中屏隐藏提示字：这段文案比较长，实测在 ~1230px 以下会顶到右上角的三角徽章，
+   所以 ≥1230px 才显示（换图按钮本身仍保留，小图标不占地方） */
+@media (max-width: 1229px) {
   #wusi-bg-hint {
     display: none;
   }

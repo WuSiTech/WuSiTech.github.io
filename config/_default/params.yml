@@ -616,7 +616,7 @@ injector:
   # 这里用主题自带的 --highlight-* 变量重新分配，亮/暗模式各自生效。
   head_end: |
     <!-- 全站随机固定背景（样式；数据/逻辑见 layouts/partials/head/init.html + static/js/wusi-bg.js） -->
-    <link rel="stylesheet" href="/css/wusi-bg.css?v=6" />
+    <link rel="stylesheet" href="/css/wusi-bg.css?v=7" />
     <!-- 站点级头部样式（代码块配色、隐藏 RSS 按钮）：原内联样式块已拆到 static/css/wusi-head.css，
          仍从 head_end 引入，与主题 CSS 的层叠顺序不变 -->
     <link rel="stylesheet" href="/css/wusi-head.css?v=1">
@@ -637,7 +637,7 @@ injector:
       <!-- 站内本地搜索：索引 /index.json，零外部请求 -->
       <script src="/js/search.js?v=12" defer></script>
       <!-- 全站随机固定背景：远端随机图 + 失败回落本地图池，固定不滚动（详见 static/js/wusi-bg.js） -->
-      <script src="/js/wusi-bg.js?v=6" defer></script>
+      <script src="/js/wusi-bg.js?v=7" defer></script>
       <!-- 加载页超时提示（少女祈祷中超过 5 秒时提示去另一个站点） -->
       <script src="/js/loader-tip.js?v=1" defer></script>
     <!-- ===== 页底「BLOG状态」固定条（引用仓库里的本地徽章，不请求任何外部资源） =====

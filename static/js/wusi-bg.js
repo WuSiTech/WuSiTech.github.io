@@ -51,7 +51,7 @@
 
   // 脚本版本标记：改 wusi-bg.js 时和 params.yml 的 ?v= 一起加 1。
   // 排查「怎么没生效」时，控制台看 window.__wusiBgVersion、或页面 <html data-wusi-bg-version="…"> 即可确认加载到的是哪一版。
-  var WUSI_BG_VERSION = "6";
+  var WUSI_BG_VERSION = "7";
   window.__wusiBgVersion = WUSI_BG_VERSION;
   try {
     document.documentElement.setAttribute("data-wusi-bg-version", WUSI_BG_VERSION);
@@ -1163,7 +1163,7 @@
       var hint = document.createElement("span");
       hint.id = "wusi-bg-hint";
       hint.className = "wusi-bg-hint";
-      hint.textContent = "点击背景图可看全图";
+      hint.textContent = "点击背景图可看全图，左边刷新按钮可换图QwQ";
       host.appendChild(hint);
     }
   }
