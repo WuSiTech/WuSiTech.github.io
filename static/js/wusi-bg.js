@@ -870,6 +870,39 @@
     }
   });
 
+  // 顶部导航栏里加一行小字提示（「点击背景图可看全图」）。
+  // 只有当前页确实有背景图可看时才插，避免出现「点了没反应」的假提示；
+  // 插入位置：#sub-nav（搜索图标所在容器）末尾，样式见 wusi-bg.css 的 .wusi-bg-hint。
+  function ensureHint() {
+    if (document.getElementById("wusi-bg-hint")) {
+      return;
+    }
+    var host = document.getElementById("sub-nav") || document.getElementById("header-nav");
+    if (!host) {
+      return;
+    }
+    var hint = document.createElement("span");
+    hint.id = "wusi-bg-hint";
+    hint.className = "wusi-bg-hint";
+    hint.textContent = "点击背景图可看全图";
+    host.appendChild(hint);
+  }
+
+  function maybeHint() {
+    if (currentImageUrl()) {
+      ensureHint();
+    }
+  }
+
+  document.addEventListener("wusi:bg-settled", maybeHint);
+  document.addEventListener("wusi:bg-visible", maybeHint);
+  window.addEventListener("load", maybeHint);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", maybeHint);
+  } else {
+    maybeHint();
+  }
+
   // 调试 / 自动化入口
   window.__wusiBgViewer = { open: open, close: close, isOpen: isOpen };
 })();

@@ -347,3 +347,34 @@ html.wusi-bg-viewing body {
     display: none !important;
   }
 }
+
+/* ==========================================================================
+   顶部导航栏里的提示小字：「点击背景图可看全图」
+   由 static/js/wusi-bg.js 在确认「当前页有背景图可看」后插入 #sub-nav 末尾
+   （搜索图标后面），颜色是博丽灵梦红（#e60012）。窄屏导航太挤，直接隐藏。
+   ========================================================================== */
+#wusi-bg-hint {
+  align-self: center;
+  margin-left: 6px;
+  padding: 0 4px 0 6px;
+  color: var(--wusi-reimu-red, #e60012);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.85;
+}
+
+html[data-theme="dark"] #wusi-bg-hint {
+  opacity: 0.95;
+}
+
+/* 窄屏导航已经开始变挤，提示字先收掉（主题在 1024 以下就在收缩菜单了） */
+@media (max-width: 1024px) {
+  #wusi-bg-hint {
+    display: none;
+  }
+}
