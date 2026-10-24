@@ -49,6 +49,14 @@
     return;
   }
 
+  // 脚本版本标记：改 wusi-bg.js 时和 params.yml 的 ?v= 一起加 1。
+  // 排查「怎么没生效」时，控制台看 window.__wusiBgVersion、或页面 <html data-wusi-bg-version="…"> 即可确认加载到的是哪一版。
+  var WUSI_BG_VERSION = "6";
+  window.__wusiBgVersion = WUSI_BG_VERSION;
+  try {
+    document.documentElement.setAttribute("data-wusi-bg-version", WUSI_BG_VERSION);
+  } catch (e) {}
+
   var REMOTE_TIMEOUT = 4000; // 远端图探测超时（毫秒）→ 判定失败、保留本地兜底
   var REMOTE_AUTO_TRIES = 2; // 自动模式下最多试几个远端候选（404 很快，换一张比直接回落好）
   var BAD_KEY = "wusi_bg_bad_v1"; // 远端坏图记忆（localStorage）
@@ -967,16 +975,8 @@
       close();
     });
 
-    // 滚轮缩放（以鼠标位置为锚点）
-    viewer.addEventListener(
-      "wheel",
-      function (e) {
-        e.preventDefault();
-        var factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
-        setZoom(zoom * factor, e.clientX, e.clientY);
-      },
-      { passive: false }
-    );
+    // 滚轮缩放在 document 捕获阶段处理（见下方），这里不给遮罩单独绑，
+    // 否则一次滚轮会触发两次缩放。
 
     // 双击：1x ↔ 2x
     viewerImg.addEventListener("dblclick", function (e) {
@@ -1091,6 +1091,22 @@
       close();
     }
   });
+
+  // 滚轮缩放：绑在 document 的「捕获阶段」而不是遮罩上。
+  // 这样查看层打开后，滚轮无论落在图片、遮罩、还是别的盖在上面的元素上都能收到，
+  // 也不会被主题/扩展的滚动监听吞掉；同时 preventDefault 掉页面滚动。
+  document.addEventListener(
+    "wheel",
+    function (e) {
+      if (!isOpen()) {
+        return;
+      }
+      e.preventDefault();
+      var factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
+      setZoom(zoom * factor, e.clientX, e.clientY);
+    },
+    { capture: true, passive: false }
+  );
 
   // 顶部导航栏右侧的「换一张背景图」按钮 + 「点击背景图可看全图」小字。
   // 只有当前页确实有背景图可看时才插，避免出现「点了没反应」的假提示；
