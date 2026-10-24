@@ -1,0 +1,7 @@
+# media 分支只放图片，这里只做最小的属性声明：
+# 图片标记为 binary，避免任何平台的行尾/文本滤镜碰坏原图字节。
+* text=auto eol=lf
+*.webp binary
+*.avif binary
+*.png binary
+*.jpg binary
