@@ -520,6 +520,103 @@
     tryMain(pickRemote(), REMOTE_AUTO_TRIES, finishWithFallback);
   }
 
+  // ---------------------------------------------------------------------------
+  // 手动换图：导航栏「换一张背景图」按钮 / 控制台 window.__wusiBgSwitch()
+  // 复用自动选图那套规则：排除当前图 + 坏图 + 最近用过的；加载失败自动换下一张。
+  // banner 页（文章页头图当背景）点换图时，会先撤掉整屏 banner 再换成随机图。
+  // ---------------------------------------------------------------------------
+  var switchAttempt = 0;
+
+  function hideBannerForSwitch() {
+    if (!document.documentElement.classList.contains("wusi-page-banner")) {
+      return;
+    }
+    document.documentElement.classList.remove("wusi-page-banner");
+    var imgs = document.querySelectorAll("#header img");
+    for (var i = 0; i < imgs.length; i++) {
+      imgs[i].style.display = "none";
+    }
+  }
+
+  function applySwitched(url, source, token, done) {
+    loadLayer("main", url, true, function (err, img) {
+      if (err) {
+        markBad(url);
+        done(false);
+        return;
+      }
+      if (token !== switchAttempt) {
+        return; // 已被更新的换图请求取代
+      }
+      ensureHost();
+      host.replaceChild(img, layerMain);
+      layerMain = img;
+      mainShown = true;
+      reveal(img);
+      state.visible = true;
+      state.settled = true;
+      state.source = source;
+      state.image = url;
+      state.el = img;
+      document.documentElement.classList.add("wusi-bg-ready");
+      rememberHist(source === "remote" ? HIST_REMOTE_KEY : HIST_LOCAL_KEY, url,
+                   source === "remote" ? HIST_REMOTE_SIZE : HIST_LOCAL_SIZE);
+      // bg-visible 让「头部标题文字取色」重新采样
+      fire("wusi:bg-visible", { source: source, url: url });
+      fire("wusi:bg-switched", { source: source, url: url });
+      done(true);
+    });
+  }
+
+  function switchBackground() {
+    var pool = remote.length ? remote : local;
+    if (!pool || !pool.length) {
+      return false;
+    }
+    var source = remote.length ? "remote" : "local";
+    var token = ++switchAttempt;
+    attemptToken++; // 作废还没完成的自动选图
+    remotePending = false;
+    hideBannerForSwitch();
+    if (!ensureHost()) {
+      return false;
+    }
+
+    var current = state.image || "";
+    var used = [];
+    var tries = 3;
+
+    (function attempt() {
+      var next = pickFresh(pool, {
+        exclude: used.concat([current]),
+        historyKey: source === "remote" ? HIST_REMOTE_KEY : HIST_LOCAL_KEY,
+        historySize: source === "remote" ? HIST_REMOTE_SIZE : HIST_LOCAL_SIZE,
+      });
+      if (!next) {
+        fire("wusi:bg-switch-failed", {});
+        return;
+      }
+      used.push(next);
+      applySwitched(next, source, token, function (ok) {
+        if (ok) {
+          return;
+        }
+        if (token !== switchAttempt) {
+          return;
+        }
+        if (--tries > 0) {
+          attempt();
+          return;
+        }
+        fire("wusi:bg-switch-failed", {});
+      });
+    })();
+
+    return true;
+  }
+
+  window.__wusiBgSwitch = switchBackground;
+
   start();
 })();
 
@@ -733,6 +830,67 @@
   var viewerImg = null;
   var lastFocus = null;
 
+  // ---- 查看层缩放（滚轮缩放 + 放大后拖动平移 + 双击复位）----
+  var MAX_ZOOM = 4;
+  var zoom = 1;
+  var panX = 0;
+  var panY = 0;
+  var dragging = false;
+  var dragStartX = 0;
+  var dragStartY = 0;
+  var panStartX = 0;
+  var panStartY = 0;
+
+  function applyTransform() {
+    if (!viewerImg) {
+      return;
+    }
+    viewerImg.style.transform =
+      "translate3d(" + panX + "px," + panY + "px,0) scale(" + zoom + ")";
+    viewerImg.style.cursor = zoom > 1.001 ? "grab" : "zoom-in";
+    document.documentElement.classList.toggle("wusi-bg-zoomed", zoom > 1.001);
+  }
+
+  function clampPan() {
+    var w = viewerImg ? viewerImg.offsetWidth : 0;
+    var h = viewerImg ? viewerImg.offsetHeight : 0;
+    var maxX = Math.max(0, ((zoom - 1) * w) / 2);
+    var maxY = Math.max(0, ((zoom - 1) * h) / 2);
+    panX = Math.max(-maxX, Math.min(maxX, panX));
+    panY = Math.max(-maxY, Math.min(maxY, panY));
+  }
+
+  // 以 (cx, cy) 视口坐标为锚点缩放：缩放前后该点下面的图片内容不动
+  function setZoom(next, cx, cy) {
+    next = Math.max(1, Math.min(MAX_ZOOM, next));
+    if (Math.abs(next - zoom) < 0.001) {
+      return;
+    }
+    var rect = viewer.getBoundingClientRect();
+    var centerX = rect.left + rect.width / 2;
+    var centerY = rect.top + rect.height / 2;
+    var px = (typeof cx === "number" ? cx : centerX) - centerX;
+    var py = (typeof cy === "number" ? cy : centerY) - centerY;
+    var ratio = next / zoom;
+    panX = px - (px - panX) * ratio;
+    panY = py - (py - panY) * ratio;
+    zoom = next;
+    if (zoom <= 1.001) {
+      zoom = 1;
+      panX = 0;
+      panY = 0;
+    }
+    clampPan();
+    applyTransform();
+  }
+
+  function resetZoom() {
+    zoom = 1;
+    panX = 0;
+    panY = 0;
+    applyTransform();
+  }
+
   function isOpen() {
     return document.documentElement.classList.contains("wusi-bg-viewing");
   }
@@ -780,6 +938,7 @@
     viewerImg.className = "wusi-bg-viewer-img";
     viewerImg.alt = "当前背景大图";
     viewerImg.draggable = false;
+    viewerImg.title = "滚轮缩放 · 双击复位";
 
     var closeBtn = document.createElement("button");
     closeBtn.type = "button";
@@ -789,18 +948,79 @@
 
     var hint = document.createElement("p");
     hint.className = "wusi-bg-viewer-hint";
-    hint.textContent = "点击任意处或按 Esc 关闭";
+    hint.textContent = "滚轮缩放 · 放大后拖动平移 · 双击复位 · 点击空白处或按 Esc 关闭";
 
     viewer.appendChild(viewerImg);
     viewer.appendChild(closeBtn);
     viewer.appendChild(hint);
     (document.body || document.documentElement).appendChild(viewer);
 
-    viewer.addEventListener("click", close);
+    // 点遮罩空白处关闭；点在图片上不关（要留给双击缩放 / 拖动平移）
+    viewer.addEventListener("click", function (e) {
+      if (e.target === viewerImg) {
+        return;
+      }
+      close();
+    });
     closeBtn.addEventListener("click", function (e) {
       e.stopPropagation();
       close();
     });
+
+    // 滚轮缩放（以鼠标位置为锚点）
+    viewer.addEventListener(
+      "wheel",
+      function (e) {
+        e.preventDefault();
+        var factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
+        setZoom(zoom * factor, e.clientX, e.clientY);
+      },
+      { passive: false }
+    );
+
+    // 双击：1x ↔ 2x
+    viewerImg.addEventListener("dblclick", function (e) {
+      e.preventDefault();
+      setZoom(zoom > 1.001 ? 1 : 2, e.clientX, e.clientY);
+    });
+
+    // 放大后按住拖动平移
+    viewerImg.addEventListener("pointerdown", function (e) {
+      if (zoom <= 1.001) {
+        return;
+      }
+      dragging = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      panStartX = panX;
+      panStartY = panY;
+      try {
+        viewerImg.setPointerCapture(e.pointerId);
+      } catch (err) {}
+      viewerImg.style.cursor = "grabbing";
+      e.preventDefault();
+    });
+    viewerImg.addEventListener("pointermove", function (e) {
+      if (!dragging) {
+        return;
+      }
+      panX = panStartX + (e.clientX - dragStartX);
+      panY = panStartY + (e.clientY - dragStartY);
+      clampPan();
+      applyTransform();
+    });
+    function endDrag(e) {
+      if (!dragging) {
+        return;
+      }
+      dragging = false;
+      try {
+        viewerImg.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+      applyTransform();
+    }
+    viewerImg.addEventListener("pointerup", endDrag);
+    viewerImg.addEventListener("pointercancel", endDrag);
   }
 
   function open() {
@@ -815,6 +1035,7 @@
     build();
     lastFocus = document.activeElement;
     viewerImg.setAttribute("src", url);
+    resetZoom();
     document.documentElement.classList.add("wusi-bg-viewing");
     var btn = viewer.querySelector(".wusi-bg-viewer-close");
     if (btn) {
@@ -832,6 +1053,7 @@
       return;
     }
     document.documentElement.classList.remove("wusi-bg-viewing");
+    resetZoom();
     try {
       document.dispatchEvent(new CustomEvent("wusi:bg-viewer-close", {}));
     } catch (e) {}
@@ -870,29 +1092,82 @@
     }
   });
 
-  // 顶部导航栏里加一行小字提示（「点击背景图可看全图」）。
+  // 顶部导航栏右侧的「换一张背景图」按钮 + 「点击背景图可看全图」小字。
   // 只有当前页确实有背景图可看时才插，避免出现「点了没反应」的假提示；
-  // 插入位置：#sub-nav（搜索图标所在容器）末尾，样式见 wusi-bg.css 的 .wusi-bg-hint。
-  function ensureHint() {
-    if (document.getElementById("wusi-bg-hint")) {
-      return;
-    }
+  // 插入位置：#sub-nav（深色模式 / 搜索图标所在容器）末尾，样式见 wusi-bg.css。
+  var switchBtn = null;
+
+  function buildSwitchButton() {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "wusi-bg-switch";
+    btn.className = "wusi-bg-switch";
+    btn.title = "换一张背景图";
+    btn.setAttribute("aria-label", "换一张背景图");
+    btn.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M20 11a8 8 0 1 0-2.34 5.66"></path><path d="M20 4v7h-7"></path></svg>';
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!window.__wusiBgSwitch) {
+        return;
+      }
+      var ok = false;
+      try {
+        ok = window.__wusiBgSwitch();
+      } catch (err) {
+        ok = false;
+      }
+      btn.classList.toggle("is-loading", !!ok);
+      if (!ok) {
+        return;
+      }
+      // 兜底：正常会在 wusi:bg-switched / wusi:bg-switch-failed 时去掉 loading
+      clearTimeout(btn.__wusiTimer);
+      btn.__wusiTimer = setTimeout(function () {
+        btn.classList.remove("is-loading");
+      }, 8000);
+    });
+    return btn;
+  }
+
+  function ensureControls() {
     var host = document.getElementById("sub-nav") || document.getElementById("header-nav");
     if (!host) {
       return;
     }
-    var hint = document.createElement("span");
-    hint.id = "wusi-bg-hint";
-    hint.className = "wusi-bg-hint";
-    hint.textContent = "点击背景图可看全图";
-    host.appendChild(hint);
+    if (!document.getElementById("wusi-bg-switch")) {
+      switchBtn = buildSwitchButton();
+      host.appendChild(switchBtn);
+    } else {
+      switchBtn = document.getElementById("wusi-bg-switch");
+    }
+    if (!document.getElementById("wusi-bg-hint")) {
+      var hint = document.createElement("span");
+      hint.id = "wusi-bg-hint";
+      hint.className = "wusi-bg-hint";
+      hint.textContent = "点击背景图可看全图";
+      host.appendChild(hint);
+    }
   }
 
   function maybeHint() {
     if (currentImageUrl()) {
-      ensureHint();
+      ensureControls();
     }
   }
+
+  document.addEventListener("wusi:bg-switched", function () {
+    if (switchBtn) {
+      switchBtn.classList.remove("is-loading");
+    }
+  });
+  document.addEventListener("wusi:bg-switch-failed", function () {
+    if (switchBtn) {
+      switchBtn.classList.remove("is-loading");
+    }
+  });
 
   document.addEventListener("wusi:bg-settled", maybeHint);
   document.addEventListener("wusi:bg-visible", maybeHint);
@@ -904,5 +1179,16 @@
   }
 
   // 调试 / 自动化入口
-  window.__wusiBgViewer = { open: open, close: close, isOpen: isOpen };
+  window.__wusiBgViewer = {
+    open: open,
+    close: close,
+    isOpen: isOpen,
+    getZoom: function () {
+      return zoom;
+    },
+    resetZoom: resetZoom,
+    switchBackground: function () {
+      return window.__wusiBgSwitch ? window.__wusiBgSwitch() : false;
+    },
+  };
 })();

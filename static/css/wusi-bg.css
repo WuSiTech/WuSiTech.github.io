@@ -288,16 +288,35 @@ html.wusi-bg-viewing body {
 #wusi-bg-viewer img.wusi-bg-viewer-img {
   display: block;
   max-width: 100%;
-  /* 底部给「点击任意处或按 Esc 关闭」那行提示留位置，避免压在图片上 */
+  /* 底部给「滚轮缩放 · 点击空白处或按 Esc 关闭」那行提示留位置，避免压在图片上 */
   max-height: calc(100vh - 96px);
   width: auto;
   height: auto;
   object-fit: contain;
   border-radius: 6px;
   box-shadow: 0 16px 60px rgba(0, 0, 0, 0.6);
-  cursor: zoom-out;
+  /* 滚轮缩放：transform-origin 取中心，JS 里按鼠标位置算平移，保证缩放锚点不漂 */
+  transform-origin: center center;
+  will-change: transform;
+  cursor: zoom-in;
+  touch-action: none;
   /* 主题暗色模式的 img { filter: brightness(70%) } 不要作用到查看图上 */
   filter: none !important;
+}
+
+/* 放大后可拖动：光标由 JS 切成 grab / grabbing（放在这里只是兜底） */
+html.wusi-bg-zoomed #wusi-bg-viewer img.wusi-bg-viewer-img {
+  cursor: grab;
+}
+
+/* 移动端提示文案更长，给底部多留一点空间，避免压到图片 */
+@media (max-width: 767px) {
+  #wusi-bg-viewer img.wusi-bg-viewer-img {
+    max-height: calc(100vh - 120px);
+  }
+  #wusi-bg-viewer .wusi-bg-viewer-hint {
+    font-size: 12px;
+  }
 }
 
 #wusi-bg-viewer .wusi-bg-viewer-close {
@@ -376,5 +395,71 @@ html[data-theme="dark"] #wusi-bg-hint {
 @media (max-width: 1024px) {
   #wusi-bg-hint {
     display: none;
+  }
+}
+
+/* ==========================================================================
+   导航栏「换一张背景图」按钮
+   由 wusi-bg.js 在确认有背景图可看后插到 #sub-nav（深色模式 / 搜索图标那排）末尾。
+   图标是刷新箭头，点一下换一张随机背景；加载中图标转圈，完成后自动停。
+   ========================================================================== */
+#wusi-bg-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 0 2px 0 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--wusi-reimu-red, #e60012);
+  cursor: pointer;
+  opacity: 0.8;
+  transition:
+    opacity 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.3s ease;
+}
+
+#wusi-bg-switch svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+#wusi-bg-switch:hover,
+#wusi-bg-switch:focus-visible {
+  opacity: 1;
+  background: rgba(230, 0, 18, 0.1);
+  transform: rotate(30deg);
+}
+
+#wusi-bg-switch:active {
+  transform: rotate(30deg) scale(0.92);
+}
+
+#wusi-bg-switch.is-loading {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+#wusi-bg-switch.is-loading svg {
+  animation: wusi-bg-spin 0.9s linear infinite;
+}
+
+@keyframes wusi-bg-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #wusi-bg-switch.is-loading svg {
+    animation: none;
   }
 }
