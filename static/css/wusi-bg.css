@@ -246,3 +246,104 @@ html.wusi-page-banner #header img {
   -webkit-mask: none !important;
   mask: none !important;
 }
+
+/* ==========================================================================
+   点击背景 → 全屏查看当前这张背景图
+   逻辑在 static/js/wusi-bg.js 末尾（事件委托：只有点到页面空白处才打开，
+   点链接/按钮/正文/卡片都不会触发）。这里只负责查看层的样式。
+   · #wusi-bg 本身 pointer-events: none，所以不能直接给它绑 click；
+   · 遮罩用 fixed + inset:0，z-index 高于主题所有浮层（回到顶部 999）；
+   · html.wusi-bg-viewing 时锁页面滚动、显示遮罩。
+   ========================================================================== */
+#wusi-bg-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 10, 14, 0.93);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.22s ease,
+    visibility 0.22s ease;
+  cursor: zoom-out;
+}
+
+html.wusi-bg-viewing #wusi-bg-viewer {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 查看时锁滚动（html 和 body 都锁，各浏览器滚动容器不一致） */
+html.wusi-bg-viewing,
+html.wusi-bg-viewing body {
+  overflow: hidden !important;
+}
+
+#wusi-bg-viewer img.wusi-bg-viewer-img {
+  display: block;
+  max-width: 100%;
+  /* 底部给「点击任意处或按 Esc 关闭」那行提示留位置，避免压在图片上 */
+  max-height: calc(100vh - 96px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.6);
+  cursor: zoom-out;
+  /* 主题暗色模式的 img { filter: brightness(70%) } 不要作用到查看图上 */
+  filter: none !important;
+}
+
+#wusi-bg-viewer .wusi-bg-viewer-close {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#wusi-bg-viewer .wusi-bg-viewer-close:hover,
+#wusi-bg-viewer .wusi-bg-viewer-close:focus-visible {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+#wusi-bg-viewer .wusi-bg-viewer-hint {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  margin: 0;
+  padding: 0 16px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+/* 打印：查看层不打印 */
+@media print {
+  #wusi-bg-viewer {
+    display: none !important;
+  }
+}

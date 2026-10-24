@@ -695,3 +695,181 @@
   // 初始兜底：万一脚本晚于背景事件执行，也跑一次
   window.addEventListener("DOMContentLoaded", update);
 })();
+
+/* ==========================================================================
+   点击背景 → 全屏查看当前这张背景图
+   样式见 static/css/wusi-bg.css 末尾。
+
+   · 背景层 #wusi-bg 自身是 pointer-events: none（不挡页面点击），所以不能直接
+     给它绑 click；这里改成在 document 上做事件委托，只认「页面空白处」：
+     html / body / #wrap / #container / #main / #content / #sidebar / #header 本身被点中才打开，
+     点在链接、按钮、输入框、正文、卡片、页脚通栏等任何具体元素上都不会触发；
+   · 显示的是当前真正在用的那张图：优先取 __wusiBg.el 的 currentSrc / src
+     （有 banner 的文章页就是 #header 里那张头图），没有 el 时退回 __wusiBg.image；
+   · 打开后 html 加上 wusi-bg-viewing（锁滚动 + 显示遮罩），Esc / 点遮罩任意处 /
+     右上角 × 关闭；打开、关闭各派发一个 wusi:bg-viewer-open / wusi:bg-viewer-close 事件。
+   ========================================================================== */
+(function () {
+  "use strict";
+  if (!window.__WUSI_BG__) {
+    return;
+  }
+
+  // 只有这些「容器本身」被点到才算点在背景上；具体元素（p / div / img / a ...）一律不算
+  var BLANK_TARGETS = [
+    "html",
+    "body",
+    "#wrap",
+    "#container",
+    "#main",
+    "#content",
+    "#sidebar",
+    "#header",
+    "#header-outer", // 主题头图里包着 #header-title 的那层，点标题以外的空白区就是它
+  ];
+  var INTERACTIVE = "a,button,input,textarea,select,label,summary,[contenteditable],[role='button']";
+
+  var viewer = null;
+  var viewerImg = null;
+  var lastFocus = null;
+
+  function isOpen() {
+    return document.documentElement.classList.contains("wusi-bg-viewing");
+  }
+
+  function currentImageUrl() {
+    var st = window.__wusiBg || {};
+    var el = st.el;
+    if (el && el.tagName === "IMG") {
+      var url = el.currentSrc || el.getAttribute("src") || el.src;
+      if (url) {
+        return url;
+      }
+    }
+    return st.image || "";
+  }
+
+  function isBlankTarget(target) {
+    if (!target || target.nodeType !== 1) {
+      return false;
+    }
+    if (target.closest && target.closest(INTERACTIVE)) {
+      return false;
+    }
+    for (var i = 0; i < BLANK_TARGETS.length; i++) {
+      var sel = BLANK_TARGETS[i];
+      if (sel.charAt(0) === "#" ? target.id === sel.slice(1) : target.tagName.toLowerCase() === sel) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function build() {
+    if (viewer && viewer.parentNode) {
+      return;
+    }
+    viewer = document.createElement("div");
+    viewer.id = "wusi-bg-viewer";
+    viewer.className = "wusi-bg-viewer";
+    viewer.setAttribute("role", "dialog");
+    viewer.setAttribute("aria-modal", "true");
+    viewer.setAttribute("aria-label", "当前背景大图");
+
+    viewerImg = document.createElement("img");
+    viewerImg.className = "wusi-bg-viewer-img";
+    viewerImg.alt = "当前背景大图";
+    viewerImg.draggable = false;
+
+    var closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "wusi-bg-viewer-close";
+    closeBtn.setAttribute("aria-label", "关闭");
+    closeBtn.textContent = "×";
+
+    var hint = document.createElement("p");
+    hint.className = "wusi-bg-viewer-hint";
+    hint.textContent = "点击任意处或按 Esc 关闭";
+
+    viewer.appendChild(viewerImg);
+    viewer.appendChild(closeBtn);
+    viewer.appendChild(hint);
+    (document.body || document.documentElement).appendChild(viewer);
+
+    viewer.addEventListener("click", close);
+    closeBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      close();
+    });
+  }
+
+  function open() {
+    var st = window.__wusiBg || {};
+    if (!st.visible && !st.settled) {
+      return;
+    }
+    var url = currentImageUrl();
+    if (!url) {
+      return;
+    }
+    build();
+    lastFocus = document.activeElement;
+    viewerImg.setAttribute("src", url);
+    document.documentElement.classList.add("wusi-bg-viewing");
+    var btn = viewer.querySelector(".wusi-bg-viewer-close");
+    if (btn) {
+      try {
+        btn.focus({ preventScroll: true });
+      } catch (e) {}
+    }
+    try {
+      document.dispatchEvent(new CustomEvent("wusi:bg-viewer-open", { detail: { url: url } }));
+    } catch (e) {}
+  }
+
+  function close() {
+    if (!isOpen()) {
+      return;
+    }
+    document.documentElement.classList.remove("wusi-bg-viewing");
+    try {
+      document.dispatchEvent(new CustomEvent("wusi:bg-viewer-close", {}));
+    } catch (e) {}
+    if (lastFocus && lastFocus.focus) {
+      try {
+        lastFocus.focus({ preventScroll: true });
+      } catch (e) {}
+    }
+    lastFocus = null;
+  }
+
+  document.addEventListener(
+    "click",
+    function (e) {
+      if (e.defaultPrevented || e.button !== 0 || isOpen()) {
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+        return;
+      }
+      var sel = window.getSelection ? String(window.getSelection() || "") : "";
+      if (sel) {
+        return; // 正在选文字，不抢点击
+      }
+      if (!isBlankTarget(e.target)) {
+        return;
+      }
+      open();
+    },
+    false
+  );
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && isOpen()) {
+      close();
+    }
+  });
+
+  // 调试 / 自动化入口
+  window.__wusiBgViewer = { open: open, close: close, isOpen: isOpen };
+})();
