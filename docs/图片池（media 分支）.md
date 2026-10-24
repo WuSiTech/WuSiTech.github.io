@@ -92,8 +92,9 @@ python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录> --chec
 
 - `data/covers.yml`：**唯一的封面池数据**（没填 `cover` 的文章从里面洗牌取图）。**自动生成，不要手改**；
   media 加图后工作流会自动重写它并提交，新图会直接进随机池（不再需要手动 `--covers-yml`，该参数已删除）。
-- `media.lock`：建池时 media 分支的提交哈希。它不是构建输入（构建永远取 media 最新提交），
+- `media.lock`：media 分支当前提交的哈希快照。它不是构建输入（构建永远取 media 最新提交），
   只用来查「当时用的是哪一版图片」，回滚时按它检出即可。
+  **2026-10-24 做过一次历史压缩**（见文末「历史压缩」一节），现在 media 只剩一个提交 `f8311d1`。
 
 ## 加图 / 换图 / 删图
 
@@ -117,6 +118,7 @@ cd - && git worktree remove /tmp/media
 2. 它随后显式请求一次 `hugo.yaml`，新图片随之下线（也自动进随机封面池，不用再手动跑脚本）。
 
 ⚠️ **不要 force push / rebase 重写 media 历史**：`media.lock` 和 CI 缓存键都按提交哈希记。
+（唯一例外：2026-10-24 为了清掉历史里的旧版本图片做过一次，做法见文末「历史压缩」。）
 
 ## 自查
 
@@ -131,3 +133,36 @@ python .github/scripts/sync_cover_pool.py --from-dir static/images/pool/covers -
 grep -c '^- /images/pool/covers/' data/covers.yml
 grep -c 'COVER_OPTIONS' static/admin/config.yml   # 应为 2（一对标记行）
 ```
+
+## 历史压缩（2026-10-24）
+
+media 是孤儿分支，历史上堆了不少「旧版本图片」：最初的 113MB 封面原图、后来压到 ~80KB 的新版、
+被替换/删除的背景图等。**删文件只删 tip、不删历史**，所以当时 media 的可达对象约 **421.5 MB**。
+2026-10-24 把历史压成**一个提交**，只保留当时的 1158 个文件（tree 与压缩前的 tip 完全一致）：
+
+```bash
+# 1. 用 worktree 从当前 tip 建孤儿提交（index 保留全部文件）
+git worktree add /tmp/media origin/media
+cd /tmp/media
+git checkout --orphan media-fresh
+git commit -m "图片池：历史压缩为单个提交"
+
+# 2. 校验 tree 一致后再强推（--force-with-lease 防止误伤别人刚推的提交）
+git rev-parse 'HEAD^{tree}'          # 必须等于 origin/media^{tree}
+git push --force-with-lease=refs/heads/media:<旧 tip> origin media-fresh:refs/heads/media
+
+# 3. 把 main 上的 media.lock 改成新 tip
+```
+
+结果：media 分支 = **单提交 `f8311d1`**（1158 个文件 / 211.9 MB），可达历史从 421.5 MB 降到 **211.5 MB**；
+本地 `git gc --prune=now` 后 `.git` 从 480 MB 降到 239 MB（GitHub 端要等它自己的 GC，
+仓库 Settings 里的大小不会立刻下降）。
+
+注意：强推之后**其他机器**上旧的 `media` 会分叉，需要：
+
+```bash
+git fetch origin media
+git branch -f media origin/media      # 或者删掉重建 worktree
+```
+
+以后再需要压缩历史时照上面三步做，**同时更新 main 的 `media.lock`**。

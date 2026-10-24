@@ -89,7 +89,8 @@ main 上只留清单：`data/covers.yml`（唯一的封面池清单）和 `media
 - **加图 / 换图**：把原图提交到 `media` 分支的 `images/pool/covers/`（保持原格式、原文件名，不压缩）。
   推送后 `sync-cover-pool.yml` 会自动更新 `data/covers.yml`（随机封面池）和后台「封面图」下拉框选项，
   并触发一次站点构建；新图随之下线。
-- `media.lock`：建池时 media 分支的提交哈希（想找回/回滚某版图片时按它检出）。
+- `media.lock`：media 分支当前提交的哈希快照（**2026-10-24 历史压缩后整个 media 只剩一个提交 `f8311d1`**；
+  想检出这一版图片时按它检出）。
 - `data/covers.yml`：**唯一的封面池数据**（没填封面的文章从里面洗牌取图，主题 `helpers/randomCover.html` 直接读它）。
   内容 = media 分支全量 374 张的站内路径；**自动生成，不要手改**（工作流会重写并提交）。
   本地想手动同步一次：`python .github/scripts/sync_cover_pool.py --from-dir <media 检出目录>`。
