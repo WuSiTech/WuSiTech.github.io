@@ -5,7 +5,7 @@
 #
 # 想加背景：把图（建议最长边 1920、q82，约 80~260KB）提交到 media 分支的
 # images/pool/bg-web/，工作流会自动重跑并提交新的清单，站点随之重建。
-# 共 474 张。
+# 共 469 张。
 remote_backgrounds:
   - "/images/pool/bg-web/2_10_24_001.webp"
   - "/images/pool/bg-web/2_10_24_002.webp"
@@ -34,7 +34,6 @@ remote_backgrounds:
   - "/images/pool/bg-web/2_10_24_028.webp"
   - "/images/pool/bg-web/2_10_24_029.webp"
   - "/images/pool/bg-web/2_10_24_030.webp"
-  - "/images/pool/bg-web/2_10_24_032.webp"
   - "/images/pool/bg-web/2_10_24_033.webp"
   - "/images/pool/bg-web/2_10_24_034.webp"
   - "/images/pool/bg-web/2_10_24_035.webp"
@@ -94,7 +93,6 @@ remote_backgrounds:
   - "/images/pool/bg-web/2_10_24_093.webp"
   - "/images/pool/bg-web/2_10_24_094.webp"
   - "/images/pool/bg-web/2_10_24_095.webp"
-  - "/images/pool/bg-web/2_10_24_096.webp"
   - "/images/pool/bg-web/2_10_24_097.webp"
   - "/images/pool/bg-web/2_10_24_098.webp"
   - "/images/pool/bg-web/2_10_24_099.webp"
@@ -111,8 +109,8 @@ remote_backgrounds:
   - "/images/pool/bg-web/4714982eb58c49e697f91dbf3ac6c1149daa10ff.jpg@1192w.webp"
   - "/images/pool/bg-web/12728082_180635373000_2.webp"
   - "/images/pool/bg-web/26476900_p0-topaz-upscale-4x.webp"
-  - "/images/pool/bg-web/55027268_p000-topaz-upscale-2.2x.webp"
   - "/images/pool/bg-web/55027268_p0-topaz-upscale-2.2x.webp"
+  - "/images/pool/bg-web/55027268_p000-topaz-upscale-2.2x.webp"
   - "/images/pool/bg-web/58612341_p0-topaz-upscale-2x.webp"
   - "/images/pool/bg-web/61029751_p0-topaz-upscale-3.4x.webp"
   - "/images/pool/bg-web/62740952_p0-topaz-upscale-6x.webp"
@@ -172,8 +170,8 @@ remote_backgrounds:
   - "/images/pool/bg-web/105805359_p0-topaz-upscale-2x.webp"
   - "/images/pool/bg-web/106558705_p0-topaz-upscale-4x.webp"
   - "/images/pool/bg-web/106841968_p0-topaz-upscale-4x.webp"
-  - "/images/pool/bg-web/107246896_p0-topaz-upscale-5x.webp"
   - "/images/pool/bg-web/107246896_p000-topaz-upscale-5x.webp"
+  - "/images/pool/bg-web/107246896_p0-topaz-upscale-5x.webp"
   - "/images/pool/bg-web/107729136_p0-topaz-upscale-2x.webp"
   - "/images/pool/bg-web/107812291_p0-topaz-upscale-5x.webp"
   - "/images/pool/bg-web/110521940_p0-topaz-upscale-2x.webp"
@@ -201,7 +199,6 @@ remote_backgrounds:
   - "/images/pool/bg-web/Image_1792823703167_797.webp"
   - "/images/pool/bg-web/Image_1792823705797_644.webp"
   - "/images/pool/bg-web/Image_1792823706607_105.webp"
-  - "/images/pool/bg-web/Image_1792823708903_336.webp"
   - "/images/pool/bg-web/Image_1792823711490_29.webp"
   - "/images/pool/bg-web/Image_1792823712453_952.webp"
   - "/images/pool/bg-web/Image_1792823717179_490.webp"
@@ -470,13 +467,11 @@ remote_backgrounds:
   - "/images/pool/bg-web/bg-237.webp"
   - "/images/pool/bg-web/bg-238.webp"
   - "/images/pool/bg-web/bg-239.webp"
-  - "/images/pool/bg-web/c7fbc65093126a56e2912d6e96e96d5a40dee912.webp"
   - "/images/pool/bg-web/c7肘_pid34844544_星月夜p0-topaz-upscale-3x.webp"
   - "/images/pool/bg-web/ce583ce233d62fc8eb5b150d62b3d7fd7cac5d70.webp"
   - "/images/pool/bg-web/eac4b74543a982266ebe427f8882b9014a90eb6f.webp"
   - "/images/pool/bg-web/v2-7016aff4746b8a6f6b6d18bba940fcd3_1440w.webp"
   - "/images/pool/bg-web/v2-bed631faa97cbcccae2817aeee95aa7b_r.webp"
-  - "/images/pool/bg-web/v2-dada3e61805b94ce5da65d4962bbd45e_r.webp"
   - "/images/pool/bg-web/ののこ_pid101113223_色は匂へど散りぬるをp0-topaz-upscale-3.2x.webp"
   - "/images/pool/bg-web/夜祭り_pid127780731_永遠の巫女p0-topaz-denoise.webp"
   - "/images/pool/bg-web/大魔王るあえる_pid91352978_霊夢さんp0-topaz-upscale-2x.webp"
