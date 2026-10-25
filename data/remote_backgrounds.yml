@@ -5,7 +5,7 @@
 #
 # 想加背景：把图（建议最长边 1920、q82，约 80~260KB）提交到 media 分支的
 # images/pool/bg-web/，工作流会自动重跑并提交新的清单，站点随之重建。
-# 共 392 张。
+# 共 391 张。
 remote_backgrounds:
   - "/images/pool/bg-web/2_10_24_001.webp"
   - "/images/pool/bg-web/2_10_24_003.webp"
@@ -82,8 +82,8 @@ remote_backgrounds:
   - "/images/pool/bg-web/5fdf61967f9618e26c5d2a00f4ab4260.webp"
   - "/images/pool/bg-web/2026-03-17-17-03-12.webp"
   - "/images/pool/bg-web/26476900_p0-topaz-upscale-4x.webp"
-  - "/images/pool/bg-web/55027268_p000-topaz-upscale-2.2x.webp"
   - "/images/pool/bg-web/55027268_p0-topaz-upscale-2.2x.webp"
+  - "/images/pool/bg-web/55027268_p000-topaz-upscale-2.2x.webp"
   - "/images/pool/bg-web/58612341_p0-topaz-upscale-2x.webp"
   - "/images/pool/bg-web/61029751_p0-topaz-upscale-3.4x.webp"
   - "/images/pool/bg-web/62740952_p0-topaz-upscale-6x.webp"
@@ -143,8 +143,8 @@ remote_backgrounds:
   - "/images/pool/bg-web/105805359_p0-topaz-upscale-2x.webp"
   - "/images/pool/bg-web/106558705_p0-topaz-upscale-4x.webp"
   - "/images/pool/bg-web/106841968_p0-topaz-upscale-4x.webp"
-  - "/images/pool/bg-web/107246896_p0-topaz-upscale-5x.webp"
   - "/images/pool/bg-web/107246896_p000-topaz-upscale-5x.webp"
+  - "/images/pool/bg-web/107246896_p0-topaz-upscale-5x.webp"
   - "/images/pool/bg-web/107729136_p0-topaz-upscale-2x.webp"
   - "/images/pool/bg-web/107812291_p0-topaz-upscale-5x.webp"
   - "/images/pool/bg-web/110521940_p0-topaz-upscale-2x.webp"
@@ -345,7 +345,6 @@ remote_backgrounds:
   - "/images/pool/bg-web/bg-180.webp"
   - "/images/pool/bg-web/bg-181.webp"
   - "/images/pool/bg-web/bg-183.webp"
-  - "/images/pool/bg-web/bg-184.webp"
   - "/images/pool/bg-web/bg-185.webp"
   - "/images/pool/bg-web/bg-186.webp"
   - "/images/pool/bg-web/bg-187.webp"
