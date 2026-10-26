@@ -10,7 +10,7 @@ enableRobotsTXT = true
 mainSections = ["posts"]          # 文章所在目录（content/posts）
 author = "吾思"
 description = "思集成之大道，考计科之行踪"
-subtitle = "DAZE~"        # 副标题
+subtitle = "BAKA DA☆ZE!"        # 副标题
 
 # ⚠️ 不要用 baseURL = '/' + relativeURLs = true：
 # sitemap.xml 里的 <loc>、以及 canonical / og:url 都必须是绝对地址，
