@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#161615">
+    <title>WuSi Simple Encryptor</title>
+    <meta name="description" content="WuSi Simple Encryptor：浏览器端的文件加密工具，按比例随机加密 1 MiB 数据块，ChaCha20 + HMAC-SHA256，兼容桌面版 PHENC04 格式，文件全程留在本机。">
+    <link rel="icon" href="assets/app.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="assets/app-icon.png">
+    <script>
+        (function () {
+            try {
+                var theme = localStorage.getItem('wusi-web-theme');
+                if (theme !== 'dark' && theme !== 'light') theme = 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 图标库 -->
+    <svg class="sprite" aria-hidden="true" focusable="false">
+        <symbol id="i-lock" viewBox="0 0 24 24">
+            <rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/>
+            <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>
+            <path d="M12 14.5v2"/>
+        </symbol>
+        <symbol id="i-upload" viewBox="0 0 24 24">
+            <path d="M12 16V4"/>
+            <path d="m7 9 5-5 5 5"/>
+            <path d="M20 16.5a4.5 4.5 0 0 0-2.4-8.3h-1.1A6 6 0 0 0 4.7 11 4 4 0 0 0 6 18.7"/>
+        </symbol>
+        <symbol id="i-eye" viewBox="0 0 24 24">
+            <path d="M2.5 12S6 5 12 5s9.5 7 9.5 7S18 19 12 19 2.5 12 2.5 12Z"/>
+            <circle cx="12" cy="12" r="3"/>
+        </symbol>
+        <symbol id="i-eye-off" viewBox="0 0 24 24">
+            <path d="m3 3 18 18"/>
+            <path d="M10.6 5.2A11 11 0 0 1 12 5c6 0 9.5 7 9.5 7a18 18 0 0 1-2.3 3.3"/>
+            <path d="M6.2 6.2C3.6 8.1 2.5 12 2.5 12S6 19 12 19c1.9 0 3.5-.6 4.9-1.4"/>
+            <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>
+        </symbol>
+        <symbol id="i-download" viewBox="0 0 24 24">
+            <path d="M12 3v12"/>
+            <path d="m7 10 5 5 5-5"/>
+            <path d="M4.5 20h15"/>
+        </symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+        </symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24">
+            <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7Z"/>
+        </symbol>
+        <symbol id="i-x" viewBox="0 0 24 24">
+            <path d="M18 6 6 18M6 6l12 12"/>
+        </symbol>
+        <symbol id="i-key" viewBox="0 0 24 24">
+            <circle cx="7.5" cy="15.5" r="4"/>
+            <path d="m10.4 12.6 9.1-9.1"/>
+            <path d="m16.5 6.5 2.5 2.5"/>
+            <path d="m14 9 2.5 2.5"/>
+        </symbol>
+        <symbol id="i-info" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9.5"/>
+            <path d="M12 11v5.5"/>
+            <path d="M12 7.5h.01"/>
+        </symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24">
+            <path d="M10.3 4.1 2 18.4A2 2 0 0 0 3.7 21.5h16.6a2 2 0 0 0 1.7-3.1L13.7 4.1a2 2 0 0 0-3.4 0Z"/>
+            <path d="M12 9.5V14"/>
+            <path d="M12 17.5h.01"/>
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+            <path d="m20 6-11 11-5-5"/>
+        </symbol>
+    </svg>
+
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="#" aria-label="WuSi Simple Encryptor">
+                <img class="brand-icon" src="assets/app-icon.png" alt="" width="22" height="22">
+                <span class="brand-name">WuSi Simple Encryptor</span>
+            </a>
+
+            <div class="topbar-actions">
+                <span class="compat">PHENC04 兼容</span>
+                <button class="icon-btn" id="themeBtn" type="button" aria-label="切换到浅色模式" title="切换主题">
+                    <svg class="icon icon-sun"><use href="#i-sun"></use></svg>
+                    <svg class="icon icon-moon"><use href="#i-moon"></use></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="wrap">
+        <section class="intro">
+            <h1>文件加密</h1>
+            <p>本地处理，不上传数据</p>
+        </section>
+
+        <div class="workspace">
+            <!-- 文件与参数 -->
+            <section class="card panel" aria-labelledby="panelTitle">
+                <div class="card-head">
+                    <h2 id="panelTitle">文件</h2>
+                    <div class="queue-tools">
+                        <span class="meta" id="queueMeta">未添加文件</span>
+                        <button class="link-btn" id="clearFiles" type="button" disabled>清空</button>
+                    </div>
+                </div>
+
+                <div class="dropzone" id="dropzone" role="button" tabindex="0"
+                     aria-label="添加文件：点击选择或拖放文件到这里">
+                    <div class="dz-icon">
+                        <svg class="icon"><use href="#i-upload"></use></svg>
+                    </div>
+                    <div class="dz-copy">
+                        <p class="dz-title">添加文件</p>
+                        <p class="dz-sub">拖放或点击选择 · 支持多选</p>
+                    </div>
+                    <input id="fileInput" type="file" multiple hidden>
+                </div>
+
+                <div class="file-list" id="fileList" hidden></div>
+
+                <div class="field">
+                    <div class="field-head">
+                        <label for="password">密码</label>
+                    </div>
+                    <div class="input-wrap">
+                        <span class="input-icon">
+                            <svg class="icon"><use href="#i-key"></use></svg>
+                        </span>
+                        <input id="password" type="password" placeholder="加密或解密密码"
+                               autocomplete="new-password" spellcheck="false" maxlength="256">
+                        <button class="input-btn" id="togglePw" type="button"
+                                aria-label="显示密码" aria-pressed="false" title="显示密码">
+                            <svg class="icon icon-eye"><use href="#i-eye"></use></svg>
+                            <svg class="icon icon-eye-off"><use href="#i-eye-off"></use></svg>
+                        </button>
+                    </div>
+                    <p class="hint">密码仅用于本次处理，不会保存。</p>
+                </div>
+
+                <div class="field">
+                    <div class="field-head">
+                        <label for="ratio">加密比例</label>
+                        <output class="ratio-out" id="ratioOut" for="ratio">25%</output>
+                    </div>
+                    <div class="range-wrap">
+                        <input id="ratio" type="range" min="1" max="100" step="1" value="25"
+                               aria-describedby="ratioHint estimate">
+                    </div>
+                    <div class="presets" role="group" aria-label="加密比例快捷选择">
+                        <button type="button" data-ratio="10">10%</button>
+                        <button type="button" data-ratio="25" class="is-active">25%</button>
+                        <button type="button" data-ratio="50">50%</button>
+                        <button type="button" data-ratio="100">100%</button>
+                    </div>
+                    <p class="hint hint-warn" id="ratioHint">
+                        <span>低于 100% 时，未选中的块仍是明文。</span>
+                    </p>
+                    <p class="hint" id="estimate" hidden></p>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" id="encryptBtn" type="button">
+                        <svg class="icon"><use href="#i-lock"></use></svg>
+                        <span>加密</span>
+                    </button>
+                    <button class="btn btn-ghost" id="decryptBtn" type="button">
+                        <svg class="icon"><use href="#i-key"></use></svg>
+                        <span>解密</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 输出 -->
+            <div class="output-wrap">
+                <section class="card output" aria-labelledby="outputTitle">
+                    <div class="card-head">
+                        <h2 id="outputTitle">输出</h2>
+                        <button class="link-btn" id="clearLog" type="button">清空日志</button>
+                    </div>
+
+                    <div class="progress" id="progressCard" hidden>
+                        <div class="progress-head">
+                            <span class="progress-label" id="progressLabel">准备中…</span>
+                            <span class="progress-pct" id="progressPct">0%</span>
+                        </div>
+                        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                             aria-valuenow="0" id="progressBarWrap">
+                            <div class="progress-fill" id="progressBar"></div>
+                        </div>
+                        <p class="progress-file" id="progressFile"></p>
+                    </div>
+
+                    <div class="log" id="log" role="log" aria-live="polite" aria-label="处理日志">
+                        <div class="log-empty">
+                            <p>暂无任务</p>
+                            <span>加密或解密结果会显示在这里。</span>
+                        </div>
+                    </div>
+
+                    <div class="results-section">
+                        <div class="card-head card-head-sm">
+                            <h3>可下载文件</h3>
+                            <div class="results-actions">
+                                <button class="link-btn" id="clearResults" type="button" disabled>清空</button>
+                                <button class="btn btn-sm" id="saveAllBtn" type="button" disabled>
+                                    <svg class="icon"><use href="#i-download"></use></svg>
+                                    全部保存
+                                </button>
+                            </div>
+                        </div>
+                        <div class="results" id="results">
+                            <p class="empty">处理完成后在这里保存。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="output-foot">
+                    <a class="back-link" href="/tools/index.html">返回上一级</a>
+                </div>
+            </div>
+        </div>
+
+        <section class="disclaimer" aria-labelledby="disclaimerTitle">
+            <h2 id="disclaimerTitle">免责声明</h2>
+            <p><strong>本站不提供任何破解服务。</strong>本工具仅用于加密，或解密你拥有合法权限的文件；
+               不支持绕过密码、找回遗忘密码或破解他人文件。</p>
+        </section>
+
+        <p class="small-note">浏览器无法覆盖原文件，处理结果需要手动保存；忘记密码无法找回，请提前备份。</p>
+        <p class="repo-line">开源地址：<a href="https://github.com/WuSiTech/simple_encrypter-AI-Gen-" target="_blank" rel="noopener noreferrer" title="https://github.com/WuSiTech/simple_encrypter-AI-Gen-">github.com/WuSiTech/simple_encrypter-AI-Gen-</a></p>
+    </main>
+
+    <div class="toasts" id="toasts" aria-live="assertive"></div>
+
+    <noscript>
+        <div class="noscript">这个工具需要 JavaScript 才能运行，请在浏览器中启用 JavaScript。</div>
+    </noscript>
+
+    <script src="js/crypto.js" defer></script>
+    <script src="js/format.js" defer></script>
+    <script src="js/app.js" defer></script>
+</body>
+</html>
