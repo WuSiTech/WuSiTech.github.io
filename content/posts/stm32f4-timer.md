@@ -28,7 +28,7 @@ banner = ""
 
 定时器按复杂度和应用场景分为高级定时器、通用定时器和基本定时器，如图
 
-![STM32 定时器分类：高级/通用/基本](static/images/obsidian/Pasted%20image%2020261105193123.png)
+![STM32 定时器分类：高级/通用/基本](static/images/obsidian/Pasted%20image%2020261105193123.webp)
 
 注意：STM32F103C8T6 只有 **TIM1 ~ TIM4**（1 个高级 + 3 个通用），没有基本定时器 TIM6/TIM7。
 
@@ -46,7 +46,7 @@ banner = ""
 
 基本定时器是结构最简单的定时器，由**时基单元、时钟信号和触发控制器**构成。如图
 
-![基本定时器框图](static/images/obsidian/Pasted%20image%2020261105194534.png)
+![基本定时器框图](static/images/obsidian/Pasted%20image%2020261105194534.webp)
 
 **时钟信号**是一种波，一般取其上升沿为触发。
 
@@ -62,7 +62,7 @@ banner = ""
 
 工作流程如下：
 
-![基本定时器计数流程](static/images/obsidian/新建%20Bitmap%20image.bmp)
+![基本定时器计数流程](static/images/obsidian/新建%20Bitmap%20image.webp)
 
 > 补充一个容易忽略的点：PSC 和 ARR 都有**影子寄存器**。你写进去的值不会立刻生效，而是要等下一次更新事件（UEV）才被搬到工作寄存器。这样改参数时不会把当前正在计数的周期截断。HAL/标准库里的“预装载”开关控制的就是这个行为。
 
@@ -70,7 +70,7 @@ banner = ""
 
 通用定时器由下图几部分组成，图中可分为三个部分：上（红）、左下（蓝）和右下（绿）。
 
-![通用定时器框图](static/images/obsidian/新建%20Bitmap%20image%201.bmp)
+![通用定时器框图](static/images/obsidian/新建%20Bitmap%20image%201.webp)
 
 上部分（红）是基本定时器的“Plus 版”：时基单元的 CNT 可以选择向上计数（++）还是向下（--）计数（基本定时器只能 ++）；触发控制器可以选择时钟信号来源（TIMx_ETR 外部、ITRx 其他定时器、编码器等）；信号还可以送给 DAC 和 ADC。
 
@@ -84,7 +84,7 @@ banner = ""
 
 高级定时器 = 通用定时器 + 重复次数计数器 + 死区生成电路 DTG + 刹车输入 BKIN。
 
-![高级定时器框图](static/images/obsidian/Pasted%20image%2020261105204030.png)
+![高级定时器框图](static/images/obsidian/Pasted%20image%2020261105204030.webp)
 
 - **重复计数器 RCR**：通用定时器是 CNT 每次溢出都产生更新事件；高级定时器可以设置“溢出 RCR+1 次才产生一次更新事件”，方便做整数倍分频。
 - **死区生成电路**：互补输出（CH1/CH1N）在切换时插入一段死区，防止上下桥臂直通烧管，是电机驱动的刚需。
@@ -106,7 +106,7 @@ STM32 的定时器还支持**级联模式**，即可以“满 65536 进 1”：A
 
 定时中断的基本结构：时钟输入 → 时基单元 → 输出控制。
 
-![定时中断基本结构](static/images/obsidian/Pasted%20image%2020261105204410.png)
+![定时中断基本结构](static/images/obsidian/Pasted%20image%2020261105204410.webp)
 
 当 CNT 计到 ARR（向上计数）时，状态寄存器会先置一个**中断标志位**（UIF）。中断标志位通过**中断输出控制**（相当于一个开关）决定要不要向 NVIC 申请中断；即使不开中断，标志位本身也会置起来，所以可以用“查询标志位”的方式做轮询，也可以让这个事件去触发别的外设（ADC、DAC、其他定时器）。
 
