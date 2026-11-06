@@ -367,19 +367,33 @@ def count_refs(root: Path, name: str, dirs=REF_DIRS):
 
 def rewrite_refs(root: Path, old_name: str, new_name: str, dirs=REF_DIRS):
     """把所有文本里的旧文件名改成新文件名。返回 (改动列表, 命中总数, 成功改写数)。"""
-    rx = ref_regex(old_name)
+    # 正文里的图片引用有两种写法：原名（含空格）与 URL 编码（%20），
+    # 两种都要换，否则 Obsidian 粘贴的 ![](…%20…png) 会漏改、转码后断图。
+    variants = [(old_name, new_name)]
+    old_enc = old_name.replace(" ", "%20")
+    if old_enc != old_name:
+        variants.append((old_enc, new_name.replace(" ", "%20")))
+
     changes, hit_total, ok_total = [], 0, 0
     for p, text in list(iter_ref_files(root, dirs)):
-        found = list(rx.finditer(text))
-        if not found:
+        new_text = text
+        file_hits = 0
+        for old_v, new_v in variants:
+            rx = ref_regex(old_v)
+            found = list(rx.finditer(new_text))
+            if not found:
+                continue
+            file_hits += len(found)
+            for m in found:
+                kind = _boundary_of(m)
+                changes.append((p.relative_to(root).as_posix(),
+                                new_text.count("\n", 0, m.start()) + 1, old_v, new_v, kind))
+            # 前缀（路径 + 边界字符）必须原样保留，只换文件名
+            new_text = rx.sub(lambda m, o=old_v, n=new_v: _keep_prefix(m, o) + n, new_text)
+
+        if file_hits == 0:
             continue
-        hit_total += len(found)
-        for m in found:
-            kind = _boundary_of(m)
-            changes.append((p.relative_to(root).as_posix(),
-                            text.count("\n", 0, m.start()) + 1, old_name, new_name, kind))
-        # 前缀（路径 + 边界字符）必须原样保留，只换文件名
-        new_text = rx.sub(lambda m: _keep_prefix(m, old_name) + new_name, text)
+        hit_total += file_hits
         tmp = p.with_suffix(p.suffix + ".autowebp.tmp")
         try:
             # 统一 UTF-8 无 BOM，二进制写入保证 LF 不被换行转换带歪
@@ -389,7 +403,7 @@ def rewrite_refs(root: Path, old_name: str, new_name: str, dirs=REF_DIRS):
             print(f"      [!] 改写失败 {p.relative_to(root).as_posix()}：{exc}")
             tmp.unlink(missing_ok=True)
             continue
-        ok_total += len(found)
+        ok_total += file_hits
     return changes, hit_total, ok_total
 
 
