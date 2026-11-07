@@ -582,7 +582,20 @@ void DMA1_Channel1_IRQHandler(void)
 }
 ```
 
-配置时把 `DMA_BufferSize` 设成 `2 * BUF_LEN`，开 HT/TC 中断，循环模式。这样 CPU 处理前半时 DMA 写后半，处理后半时 DMA 写前半，适合音频、振动采样。
+配置时把 `DMA_BufferSize` 设成 `2 * BUF_LEN`，开 HT/TC 中断，循环模式：
+
+```c
+DMA_ITConfig(DMA1_Channel1, DMA_IT_HT | DMA_IT_TC, ENABLE);
+
+NVIC_InitTypeDef NVIC_InitStructure;
+NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel1_IRQn;
+NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+NVIC_Init(&NVIC_InitStructure);
+```
+
+这样 CPU 处理前半时 DMA 写后半，处理后半时 DMA 写前半，适合音频、振动采样。
 
 ### 0x45 定时器触发 ADC + DMA（等间隔采样）
 

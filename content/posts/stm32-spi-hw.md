@@ -114,9 +114,10 @@ SPI1 重映射到 PB3/PB4/PB5 会和 JTAG 冲突，需要先关 JTAG（保留 SW
 | 0 | RXDMAEN | 接收 DMA 使能 |
 | 1 | TXDMAEN | 发送 DMA 使能 |
 | 2 | SSOE | 硬件 NSS 输出使能 |
-| 6 | ERRIE | 错误中断 |
-| 7 | RXNEIE | 接收非空中断 |
-| 8 | TXEIE | 发送空中断 |
+| 4 | FRF | 帧格式（SPI/TI） |
+| 5 | ERRIE | 错误中断 |
+| 6 | RXNEIE | 接收非空中断 |
+| 7 | TXEIE | 发送空中断 |
 
 ### 0x23 SPI_SR
 
