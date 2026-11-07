@@ -204,11 +204,11 @@ I2C 的 SCL 由 PCLK1 分频：
 ```text
 标准模式：CCR = PCLK1 / (2 × 100kHz)
 快速模式：CCR = PCLK1 / (3 × 400kHz)   （DUTY=2）
-TRISE = (PCLK1 × tr) + 1
+TRISE = PCLK1(MHz) × tr(µs) + 1
 ```
 
-36 MHz、100 kHz：`CCR = 180`，`TRISE = 36`（tr=1000ns）。
-36 MHz、400 kHz：`CCR = 30`，`TRISE = 12`（tr=300ns）。
+36 MHz、100 kHz：`CCR = 180`，`TRISE = 36 × 1 + 1 = 37`（tr=1000ns）。
+36 MHz、400 kHz：`CCR = 30`，`TRISE = 36 × 0.3 + 1 ≈ 11`（库内整数运算，tr=300ns）。
 
 标准库的 `I2C_Init()` 会根据 `I2C_ClockSpeed` 自动算，不用手填。
 

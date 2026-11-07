@@ -303,11 +303,11 @@ LSE 32.768 kHz、PRL = 32767：
 
 ### 0x35 影子寄存器与同步
 
-RTC 的预分频、计数器、闹钟都有**影子寄存器**：
+RTC 的**预分频（PRL）和闹钟（ALR）有影子寄存器**，计数器 CNT 是实际计数器：
 
-- 写 `PRL/CNT/ALR` 实际写的是“待更新值”，要等下一个 RTC 时钟周期才生效；
-- 读 `CNT` 读的是影子寄存器，避免读到“正在变化”的值；
-- APB1 复位后要等 **RSF**（寄存器同步标志）才能读 RTC 寄存器；
+- 写 `PRL/ALR` 写的是“待更新值”，要等更新事件才搬到工作寄存器；
+- 写 `CNT` 是直接装载计数器（写完仍建议等 RTOFF）；
+- 读 `CNT` 经 APB 同步，读之前要等 **RSF**（寄存器同步标志）；
 - 每次写操作要等 **RTOFF**（上一次写完成）。
 
 标准库封装：
@@ -349,21 +349,30 @@ uint32_t RTC_GetCounter_Reg(void)
 
 ### 0x37 RTC 校准
 
-晶振有频偏，可以用 `BKP_RTCCR` 的 CAL[6:0] 做数字校准：
+晶振有频偏，可以用 `BKP_RTCCR` 的 CAL[6:0] 做数字校准。每步约 **0.954 ppm**：
+
+- CAL = 0：不校准；
+- CAL = 0~63：把 RTC **放慢** CAL × 0.954 ppm；
+- CAL = 64~127：把 RTC **加快** (127 − CAL) × 0.954 ppm，CAL=127 相当于不加快。
+
+所以校准范围约 ±60 ppm，不是 ±120。
 
 ```c
 void RTC_Calibrate(int8_t ppm)
 {
-    uint32_t cal;
+    int32_t Steps = (int32_t)((ppm < 0 ? -ppm : ppm) / 0.954f + 0.5f);
+    uint32_t Cal;
 
-    if (ppm >= 0) cal = (ppm * 2048) / 1000000;   /* 放慢 */
-    else          cal = 128 + ((-ppm) * 2048) / 1000000;  /* 加快 */
+    if (Steps > 63) Steps = 63;
 
-    BKP->RTCCR = (BKP->RTCCR & ~0x7F) | (cal & 0x7F);
+    if (ppm >= 0) Cal = (uint32_t)Steps;          /* 放慢：0~63 */
+    else          Cal = 127 - (uint32_t)Steps;    /* 加快：64~127 */
+
+    BKP->RTCCR = (BKP->RTCCR & ~0x7F) | (Cal & 0x7F);
 }
 ```
 
-每步约 0.95 ppm，范围约 ±120 ppm。校准前先用“24 小时误差”算出 ppm：
+写 `BKP_RTCCR` 前同样要 `PWR_BackupAccessCmd(ENABLE)`。校准前先用“24 小时误差”算出 ppm：
 
 ```text
 ppm = (实测误差秒数 / 86400) × 1e6
