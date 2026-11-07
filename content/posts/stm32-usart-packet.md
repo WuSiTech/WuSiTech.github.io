@@ -12,7 +12,7 @@ banner = ""
 
 总结自：[STM32入门教程-2023版](https://www.bilibili.com/video/BV1th411z7sn) 第 9 章后半（9-4、9-5、9-6）。
 
-代码基于 **STM32F103C8T6 + 标准外设库 3.5.0**，不包含新建工程和接线步骤。
+代码基于 **STM32F103C8T6 + STM32F10x 标准外设库 3.5.0**（API 已按 STM32F10x StdPeriph 3.5 头文件核对；Delay/OLED/Key 为课程配套驱动），不包含新建工程和接线步骤。
 
 | 视频 | 视频里讲了什么 | 本文对应 |
 | ---- | -------------- | -------- |
@@ -619,6 +619,8 @@ void Text_IRQHandler(uint8_t RxData)
 }
 ```
 
+在 `USART1_IRQHandler` 里把原来的 HEX 状态机换成调用 `Text_IRQHandler(RxData)`（或者把两者合成一个按协议分发的状态机），文本包才能收到。
+
 主循环：
 
 ```c
@@ -696,6 +698,8 @@ void Packet_IRQHandler(uint8_t RxData)
     }
 }
 ```
+
+同样在 `USART1_IRQHandler` 里调用 `Packet_IRQHandler(RxData)`，主循环只负责处理完整包：
 
 主循环校验并处理：
 

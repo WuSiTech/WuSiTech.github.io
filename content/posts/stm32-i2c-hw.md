@@ -12,7 +12,7 @@ banner = ""
 
 总结自：[STM32入门教程-2023版](https://www.bilibili.com/video/BV1th411z7sn) 第 10 章后半（10-4、10-5）。
 
-代码基于 **STM32F103C8T6 + 标准外设库 3.5.0**，不包含新建工程和接线步骤。
+代码基于 **STM32F103C8T6 + STM32F10x 标准外设库 3.5.0**（API 已按 STM32F10x StdPeriph 3.5 头文件核对；Delay/OLED/Key 为课程配套驱动），不包含新建工程和接线步骤。
 
 | 视频 | 视频里讲了什么 | 本文对应 |
 | ---- | -------------- | -------- |
@@ -294,7 +294,7 @@ I2C 中断（EV/ER）不要设得太高，也不要太长：
 ### 0x51 写寄存器
 
 ```c
-#define MPU6050_ADDR 0x68
+#define MPU6050_ADDR 0xD0   /* 8 位写地址：0x68 << 1 */
 
 void MPU6050_WriteReg(uint8_t RegAddress, uint8_t Data)
 {
@@ -319,7 +319,7 @@ void MPU6050_WriteReg(uint8_t RegAddress, uint8_t Data)
 }
 ```
 
-标准库的 `I2C_Send7bitAddress()` 要求传 **7 位地址**（0x68），内部自动左移并加读写位；不要传已经左移过的 0xD0。
+标准库的 `I2C_Send7bitAddress()` 传的是**已经左移好的 8 位地址**（0x68 << 1 = 0xD0），函数内部只负责置/清最低位（R/W），不会再左移。传 0x68 会被当成地址 0x34，从机不应答，卡在 EV6。从机模式下的 `I2C_OwnAddress1` 同理，也要传左移后的 8 位地址（代码里用 `Address << 1`）。
 
 ### 0x52 读寄存器
 
@@ -467,6 +467,8 @@ I2C1_TX 固定用 **DMA1_Channel6**，I2C1_RX 用 **DMA1_Channel7**；I2C2 的�
 MPU6050 的 FIFO 一次可能有几百字节，用 DMA 读最省 CPU：
 
 ```c
+uint8_t RxBuf[32];   /* FIFO 数据缓冲区 */
+
 void I2C_DMA_Rx_Init(void)
 {
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
@@ -673,7 +675,7 @@ void AT24C02_WriteByte(uint8_t Reg, uint8_t Data)
     I2C_GenerateSTART(I2C1, ENABLE);
     while (I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT) != SUCCESS);
 
-    I2C_Send7bitAddress(I2C1, 0x50, I2C_Direction_Transmitter);
+    I2C_Send7bitAddress(I2C1, 0xA0, I2C_Direction_Transmitter);   /* 0x50 << 1 */
     while (I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED) != SUCCESS);
 
     I2C_SendData(I2C1, Reg);

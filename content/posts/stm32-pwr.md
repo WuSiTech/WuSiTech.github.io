@@ -12,7 +12,7 @@ banner = ""
 
 总结自：[STM32入门教程-2023版](https://www.bilibili.com/video/BV1th411z7sn) 第 13 章（13-1、13-2）。
 
-代码基于 **STM32F103C8T6 + 标准外设库 3.5.0**，不包含新建工程和接线步骤。
+代码基于 **STM32F103C8T6 + STM32F10x 标准外设库 3.5.0**（API 已按 STM32F10x StdPeriph 3.5 头文件核对；Delay/OLED/Key 为课程配套驱动），不包含新建工程和接线步骤。
 
 | 视频 | 视频里讲了什么 | 本文对应 |
 | ---- | -------------- | -------- |
@@ -620,10 +620,10 @@ void Clock_Switch(uint32_t PLLMul)
 PA8 可以输出 SYSCLK/PLL/HSI/HSE 的分频：
 
 ```c
-RCC_MCOConfig(RCC_MCO_SYSCLK_Div4);   /* PA8 输出 SYSCLK/4 */
+RCC_MCOConfig(RCC_MCO_PLLCLK_Div2);   /* PA8 输出 PLL/2 */
 ```
 
-72 MHz 时 PA8 输出 18 MHz，示波器一量就知道 PLL 有没有生效。测完记得关掉 MCO（`RCC_MCOConfig(RCC_MCO_NoClock)`），省电。
+72 MHz 时 PA8 输出 36 MHz（F1 的 MCO 只有固定分频，不能任意 /4），示波器一量就知道 PLL 有没有生效。测完记得关掉 MCO（`RCC_MCOConfig(RCC_MCO_NoClock)`），省电。
 
 ### 0x58 PLL 起振失败
 

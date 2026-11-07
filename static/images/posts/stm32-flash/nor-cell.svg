@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" font-family="Microsoft YaHei, PingFang SC, sans-serif">
+  <rect width="960" height="560" fill="#ffffff"/>
+
+  <!-- ============ 左：浮栅 MOS 剖面 ============ -->
+  <text x="40" y="42" font-size="20" font-weight="bold" fill="#1f2937">浮栅 MOS 剖面（NOR Flash 的存储单元）</text>
+
+  <!-- 衬底 -->
+  <rect x="40" y="330" width="390" height="120" fill="#dbeafe" stroke="#334155" stroke-width="1.5"/>
+  <text x="60" y="438" font-size="15" fill="#334155">p 型衬底</text>
+
+  <!-- 源/漏 n+ -->
+  <rect x="70" y="310" width="80" height="30" fill="#86efac" stroke="#166534" stroke-width="1.5"/>
+  <text x="92" y="331" font-size="15" fill="#14532d">n+ 源</text>
+  <rect x="320" y="310" width="80" height="30" fill="#86efac" stroke="#166534" stroke-width="1.5"/>
+  <text x="342" y="331" font-size="15" fill="#14532d">n+ 漏</text>
+
+  <!-- 沟道 -->
+  <rect x="150" y="310" width="170" height="30" fill="#bfdbfe" stroke="#1e3a8a" stroke-width="1"/>
+  <text x="188" y="331" font-size="14" fill="#1e3a8a">沟道</text>
+
+  <!-- 隧穿氧化层 -->
+  <rect x="150" y="298" width="170" height="12" fill="#fde68a" stroke="#b45309" stroke-width="1.5"/>
+  <text x="330" y="309" font-size="13" fill="#92400e">隧穿氧化层</text>
+
+  <!-- 浮栅 -->
+  <rect x="160" y="244" width="150" height="54" fill="#6b7280" stroke="#111827" stroke-width="1.5"/>
+  <text x="196" y="277" font-size="16" fill="#ffffff" font-weight="bold">浮栅（多晶硅）</text>
+
+  <!-- 层间介质 -->
+  <rect x="160" y="230" width="150" height="14" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
+  <text x="316" y="242" font-size="13" fill="#92400e">层间介质</text>
+
+  <!-- 控制栅 -->
+  <rect x="150" y="186" width="170" height="44" fill="#f87171" stroke="#7f1d1d" stroke-width="1.5"/>
+  <text x="186" y="214" font-size="16" fill="#ffffff" font-weight="bold">控制栅（ Control Gate ）</text>
+
+  <!-- 电极引线 -->
+  <line x1="110" y1="310" x2="110" y2="170" stroke="#111827" stroke-width="2"/>
+  <text x="98" y="162" font-size="15" font-weight="bold">S</text>
+  <line x1="360" y1="310" x2="360" y2="170" stroke="#111827" stroke-width="2"/>
+  <text x="352" y="162" font-size="15" font-weight="bold">D</text>
+  <line x1="235" y1="186" x2="235" y2="130" stroke="#111827" stroke-width="2"/>
+  <text x="222" y="122" font-size="15" font-weight="bold">G</text>
+
+  <!-- 编程箭头（热电子注入） -->
+  <defs>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#dc2626"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <path d="M 200,335 C 200,320 205,300 215,292" fill="none" stroke="#dc2626" stroke-width="3" marker-end="url(#arrowRed)"/>
+  <text x="70" y="380" font-size="15" fill="#dc2626" font-weight="bold">编程（写 0）：</text>
+  <text x="70" y="402" font-size="14" fill="#7f1d1d">沟道热电子穿过隧穿氧化层注入浮栅</text>
+
+  <!-- 擦除箭头（FN 隧穿） -->
+  <path d="M 260,300 C 255,320 250,340 245,352" fill="none" stroke="#2563eb" stroke-width="3" marker-end="url(#arrowBlue)"/>
+  <text x="40" y="470" font-size="15" fill="#1d4ed8" font-weight="bold">擦除（写 1）：</text>
+  <text x="40" y="492" font-size="14" fill="#1e3a8a">浮栅电子经 FN 隧穿回到衬底/源极</text>
+
+  <!-- 右侧结论条 -->
+  <rect x="40" y="510" width="390" height="38" fill="#f1f5f9" stroke="#94a3b8" rx="6"/>
+  <text x="52" y="534" font-size="14" fill="#0f172a">浮栅电子多 → 阈值电压高 → 读作 0；电子少 → 读作 1</text>
+
+  <!-- ============ 右：NOR / NAND 阵列 ============ -->
+  <text x="500" y="42" font-size="20" font-weight="bold" fill="#1f2937">NOR 与 NAND 的阵列结构</text>
+
+  <!-- NOR -->
+  <text x="560" y="80" font-size="16" font-weight="bold" fill="#065f46">NOR：并联，可随机访问</text>
+  <line x1="510" y1="120" x2="700" y2="120" stroke="#111827" stroke-width="2.5"/>
+  <text x="706" y="125" font-size="13" fill="#111827">位线 BL</text>
+
+  <g stroke="#111827" stroke-width="1.6" fill="none">
+    <line x1="540" y1="120" x2="540" y2="220"/>
+    <line x1="580" y1="120" x2="580" y2="220"/>
+    <line x1="620" y1="120" x2="620" y2="220"/>
+    <line x1="660" y1="120" x2="660" y2="220"/>
+    <line x1="540" y1="246" x2="540" y2="300"/>
+    <line x1="580" y1="246" x2="580" y2="300"/>
+    <line x1="620" y1="246" x2="620" y2="300"/>
+    <line x1="660" y1="246" x2="660" y2="300"/>
+  </g>
+  <g fill="#e0f2fe" stroke="#0369a1" stroke-width="1.4">
+    <rect x="526" y="220" width="28" height="26"/>
+    <rect x="566" y="220" width="28" height="26"/>
+    <rect x="606" y="220" width="28" height="26"/>
+    <rect x="646" y="220" width="28" height="26"/>
+  </g>
+  <text x="530" y="238" font-size="11" fill="#0c4a6e">M</text>
+  <text x="570" y="238" font-size="11" fill="#0c4a6e">M</text>
+  <text x="610" y="238" font-size="11" fill="#0c4a6e">M</text>
+  <text x="650" y="238" font-size="11" fill="#0c4a6e">M</text>
+  <line x1="510" y1="300" x2="700" y2="300" stroke="#111827" stroke-width="2.5"/>
+  <text x="706" y="305" font-size="13" fill="#111827">地</text>
+  <text x="520" y="330" font-size="13" fill="#334155">每个单元独立接到 BL：读出快，适合存代码</text>
+
+  <!-- NAND -->
+  <text x="760" y="80" font-size="16" font-weight="bold" fill="#7c2d12">NAND：串联，顺序访问</text>
+  <line x1="760" y1="120" x2="920" y2="120" stroke="#111827" stroke-width="2.5"/>
+  <text x="926" y="125" font-size="13" fill="#111827">BL</text>
+  <line x1="840" y1="120" x2="840" y2="158" stroke="#111827" stroke-width="1.6"/>
+  <g fill="#ffedd5" stroke="#c2410c" stroke-width="1.4">
+    <rect x="818" y="158" width="44" height="24"/>
+    <rect x="818" y="190" width="44" height="24"/>
+    <rect x="818" y="222" width="44" height="24"/>
+    <rect x="818" y="254" width="44" height="24"/>
+  </g>
+  <text x="828" y="175" font-size="11" fill="#7c2d12">M</text>
+  <text x="828" y="207" font-size="11" fill="#7c2d12">M</text>
+  <text x="828" y="239" font-size="11" fill="#7c2d12">M</text>
+  <text x="828" y="271" font-size="11" fill="#7c2d12">M</text>
+  <line x1="840" y1="278" x2="840" y2="310" stroke="#111827" stroke-width="1.6"/>
+  <line x1="760" y1="310" x2="920" y2="310" stroke="#111827" stroke-width="2.5"/>
+  <text x="926" y="315" font-size="13" fill="#111827">地</text>
+  <text x="760" y="340" font-size="13" fill="#334155">单元串联：密度高、顺序读，适合存数据</text>
+
+  <!-- 底部说明 -->
+  <line x1="40" y1="548" x2="920" y2="548" stroke="#cbd5e1"/>
+</svg>

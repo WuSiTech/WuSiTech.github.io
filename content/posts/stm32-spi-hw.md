@@ -12,7 +12,7 @@ banner = ""
 
 总结自：[STM32入门教程-2023版](https://www.bilibili.com/video/BV1th411z7sn) 第 11 章后半（11-4、11-5）。
 
-代码基于 **STM32F103C8T6 + 标准外设库 3.5.0**，不包含新建工程和接线步骤。
+代码基于 **STM32F103C8T6 + STM32F10x 标准外设库 3.5.0**（API 已按 STM32F10x StdPeriph 3.5 头文件核对；Delay/OLED/Key 为课程配套驱动），不包含新建工程和接线步骤。
 
 | 视频 | 视频里讲了什么 | 本文对应 |
 | ---- | -------------- | -------- |
@@ -275,6 +275,8 @@ W25Q64 是标准全双工，必须用 `SPI_Direction_2Lines_FullDuplex`。
 
 调试先用 /128 或 /256，稳定后再提速。
 
+> 注意：表里的 36 MHz 只是分频器的理论输出。F103 数据手册规定 SPI 最高时钟为 **18 MHz**，实际配置不要超过 18 MHz；W25Q64 本身能跑更高，但 MCU 端先到顶。
+
 ### 0x35 全双工时序细节
 
 一次 8 位交换的寄存器动作：
@@ -329,6 +331,12 @@ W25Q64 是标准全双工，必须用 `SPI_Direction_2Lines_FullDuplex`。
 ### 0x42 初始化代码
 
 ```c
+void MySPI_HW_W_SS(uint8_t Level)
+{
+    if (Level) GPIO_SetBits(GPIOA, GPIO_Pin_4);
+    else       GPIO_ResetBits(GPIOA, GPIO_Pin_4);
+}
+
 void MySPI_HW_Init(void)
 {
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);

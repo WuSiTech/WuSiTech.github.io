@@ -12,7 +12,7 @@ banner = ""
 
 总结自：[STM32入门教程-2023版](https://www.bilibili.com/video/BV1th411z7sn) 第 8 章（8-1、8-2）。
 
-代码基于 **STM32F103C8T6 + 标准外设库 3.5.0**，不包含新建工程和接线步骤。
+代码基于 **STM32F103C8T6 + STM32F10x 标准外设库 3.5.0**（API 已按 STM32F10x StdPeriph 3.5 头文件核对；Delay/OLED/Key 为课程配套驱动），不包含新建工程和接线步骤。
 
 | 视频 | 视频里讲了什么 | 本文对应 |
 | ---- | -------------- | -------- |
@@ -591,8 +591,8 @@ void DMA1_Channel1_IRQHandler(void)
 ```c
 void AD_TimerTrigger_Init(void)
 {
-    /* TIM2：72MHz / 7200 / 100 = 100Hz */
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+    /* TIM3：72MHz / 7200 / 100 = 100Hz */
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure;
     TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
@@ -600,13 +600,14 @@ void AD_TimerTrigger_Init(void)
     TIM_TimeBaseInitStructure.TIM_Period = 100 - 1;
     TIM_TimeBaseInitStructure.TIM_Prescaler = 7200 - 1;
     TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0;
-    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseInitStructure);
+    TIM_TimeBaseInit(TIM3, &TIM_TimeBaseInitStructure);
 
-    TIM_SelectOutputTrigger(TIM2, TIM_TRGO_Update);
-    TIM_Cmd(TIM2, ENABLE);
+    TIM_SelectOutputTrigger(TIM3, TIM_TRGOSource_Update);
+    TIM_Cmd(TIM3, ENABLE);
 
-    /* ADC 用 T2_TRGO 触发，关闭连续模式 */
-    ADC_ExternalTrigConvConfig(ADC1, ADC_ExternalTrigConv_T2_TRGO);
+    /* ADC 规则组触发源选 T3_TRGO：
+       在 ADC_Init 之前设置 ADC_ExternalTrigConv = ADC_ExternalTrigConv_T3_TRGO;
+       这里只负责打开外部触发。关闭连续模式（DISABLE），每次触发转一个序列。 */
     ADC_ExternalTrigConvCmd(ADC1, ENABLE);
 }
 ```

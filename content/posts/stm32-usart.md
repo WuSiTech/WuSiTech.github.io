@@ -12,7 +12,7 @@ banner = ""
 
 总结自：[STM32入门教程-2023版](https://www.bilibili.com/video/BV1th411z7sn) 第 9 章前半（9-1 ~ 9-3）。
 
-代码基于 **STM32F103C8T6 + 标准外设库 3.5.0**，不包含新建工程和接线步骤。
+代码基于 **STM32F103C8T6 + STM32F10x 标准外设库 3.5.0**（API 已按 STM32F10x StdPeriph 3.5 头文件核对；Delay/OLED/Key 为课程配套驱动），不包含新建工程和接线步骤。
 
 | 视频 | 视频里讲了什么 | 本文对应 |
 | ---- | -------------- | -------- |
@@ -139,7 +139,7 @@ USART_InitStructure.USART_Parity = USART_Parity_Even;
 
 ### 0x25 半双工与单线模式
 
-F103 的 USART 支持 `USART_HalfDuplex_Enable`，只用一根 TX 线做双向通信（类似单总线）。适合引脚紧张、距离很近的场合；调试时不如全双工直观，一般不用。
+F103 的 USART 支持半双工单线模式（`USART_HalfDuplexCmd(USART1, ENABLE)`），只用一根 TX 线做双向通信（类似单总线）。适合引脚紧张、距离很近的场合；调试时不如全双工直观，一般不用。
 
 ### 0x26 波特率误差能容忍多少
 
@@ -259,7 +259,7 @@ RS485 总线两端要接 120 Ω 终端电阻，A/B 不能接反。
 - 第 9 位 = 1：地址帧，所有从机都收；
 - 第 9 位 = 0：数据帧，只有被点名的从机收。
 
-F103 支持 `USART_WakeUpMode_Address`（地址唤醒）和 `IdleLine`（空闲唤醒），配合 `USART_SetAddress()` 使用。普通点对点通信不需要。
+F103 支持地址唤醒（`USART_WakeUp_AddressMark`）和空闲唤醒（`USART_WakeUp_IdleLine`），用 `USART_WakeUpConfig()` 选择、`USART_SetAddress()` 设本机地址，再配合 `USART_ReceiverWakeUpCmd()` 控制是否进入静默。普通点对点通信不需要。
 
 ## 0x50 软件设计
 
@@ -644,8 +644,12 @@ void Serial_Poll(void)
 通信协议里“一帧结束”有时不是换行，而是“一段时间没有新字节”。可以用定时器做超时：
 
 ```c
-static uint16_t LastTick;
+#define FRAME_MAX 64
+
+static uint8_t FrameBuf[FRAME_MAX];
+static volatile uint8_t FrameReady;
 static uint8_t FrameLen;
+static uint16_t LastTick;
 
 void Serial_TimeoutPoll(void)
 {
@@ -653,7 +657,10 @@ void Serial_TimeoutPoll(void)
 
     while (Serial_ReadByte(&Byte))
     {
-        FrameBuf[FrameLen++] = Byte;
+        if (FrameLen < FRAME_MAX)
+        {
+            FrameBuf[FrameLen++] = Byte;
+        }
         LastTick = 0;                     /* 收到字节就清零 */
     }
 

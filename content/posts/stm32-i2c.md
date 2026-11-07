@@ -12,7 +12,7 @@ banner = ""
 
 总结自：[STM32入门教程-2023版](https://www.bilibili.com/video/BV1th411z7sn) 第 10 章前半（10-1 ~ 10-3）。
 
-代码基于 **STM32F103C8T6 + 标准外设库 3.5.0**，不包含新建工程和接线步骤。
+代码基于 **STM32F103C8T6 + STM32F10x 标准外设库 3.5.0**（API 已按 STM32F10x StdPeriph 3.5 头文件核对；Delay/OLED/Key 为课程配套驱动），不包含新建工程和接线步骤。
 
 | 视频 | 视频里讲了什么 | 本文对应 |
 | ---- | -------------- | -------- |
@@ -432,6 +432,11 @@ uint8_t MyI2C_R_SDA(void)
     uint8_t BitValue = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_11);
     Delay_us(10);
     return BitValue;
+}
+
+uint8_t MyI2C_R_SCL(void)
+{
+    return GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_10);
 }
 
 void MyI2C_Init(void)

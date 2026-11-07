@@ -12,7 +12,7 @@ banner = ""
 
 总结自：[STM32入门教程-2023版](https://www.bilibili.com/video/BV1th411z7sn) 第 7 章（7-1、7-2）。
 
-代码基于 **STM32F103C8T6 + 标准外设库 3.5.0**，不包含新建工程和接线步骤；文中所有 `.c/.h` 都可以直接拖进工程编译。
+代码基于 **STM32F103C8T6 + STM32F10x 标准外设库 3.5.0**（API 已按 STM32F10x StdPeriph 3.5 头文件核对；Delay/OLED/Key 为课程配套驱动），不包含新建工程和接线步骤；文中所有 `.c/.h` 都可以直接拖进工程编译。
 
 | 视频 | 视频里讲了什么 | 本文对应 |
 | ---- | -------------- | -------- |
@@ -583,8 +583,9 @@ int main(void)
 void ADC_Injected_Init(void)
 {
     ADC_InjectedChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_55Cycles5);
-    ADC_ExternalTrigInjectedConvConfig(ADC1, ADC_ExternalTrigInjectedConv_None);
-    ADC_ExternalTrigInjectedConvCmd(ADC1, ENABLE);
+
+    /* 软件触发注入组：只靠 ADC_SoftwareStartInjectedConvCmd 启动，
+       不需要 ADC_ExternalTrigInjectedConvConfig（也没有 NONE 这个常量） */
 }
 
 uint16_t ADC_GetInjected(void)
@@ -676,8 +677,8 @@ uint16_t Filter_LowPass(uint16_t NewValue)
 ```c
 void AD_TimerTrigger_Init(void)
 {
-    /* 1. TIM2：72MHz / 7200 / 100 = 100Hz 触发 */
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+    /* 1. TIM3：72MHz / 7200 / 100 = 100Hz 触发 */
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure;
     TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
@@ -685,14 +686,16 @@ void AD_TimerTrigger_Init(void)
     TIM_TimeBaseInitStructure.TIM_Period = 100 - 1;
     TIM_TimeBaseInitStructure.TIM_Prescaler = 7200 - 1;
     TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0;
-    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseInitStructure);
+    TIM_TimeBaseInit(TIM3, &TIM_TimeBaseInitStructure);
 
     /* 2. 更新事件作为 TRGO 输出 */
-    TIM_SelectOutputTrigger(TIM2, TIM_TRGO_Update);
-    TIM_Cmd(TIM2, ENABLE);
+    TIM_SelectOutputTrigger(TIM3, TIM_TRGOSource_Update);
+    TIM_Cmd(TIM3, ENABLE);
 
-    /* 3. ADC 外部触发选 T2_TRGO，并打开外部触发 */
-    ADC_ExternalTrigConvConfig(ADC1, ADC_ExternalTrigConv_T2_TRGO);
+    /* 3. ADC 规则组触发源选 T3_TRGO：
+          在 ADC_Init 之前设置下面这一行
+          ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T3_TRGO;
+          再调用 ADC_ExternalTrigConvCmd(ADC1, ENABLE) 打开外部触发 */
     ADC_ExternalTrigConvCmd(ADC1, ENABLE);
 
     /* 4. 注意：此时 ADC_Init 里 ContinuousConvMode 要 DISABLE，
@@ -703,7 +706,7 @@ void AD_TimerTrigger_Init(void)
 配合 0x43 的扫描 + DMA，把 `ADC_ContinuousConvMode` 改成 `DISABLE`，就是“定时器等间隔采样 N 个点”的数据采集器：
 
 ```text
-TIM2 每 10ms 产生 TRGO → ADC 转换 1 个通道 → DMA 搬到数组
+TIM3 每 10ms 产生 TRGO → ADC 转换 1 个通道 → DMA 搬到数组
 ```
 
 采样率 = 定时器频率 = `72MHz / (PSC+1) / (ARR+1)`，与代码执行时间无关。要测 50 Hz 工频，采样率取 1 kHz；要测音频，采样率取 8 ~ 44.1 kHz，同时保证 `TCONV` 小于采样周期。
