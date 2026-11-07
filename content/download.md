@@ -1,6 +1,6 @@
 ---
 title: 下载
-description: 项目与源码地址
+description: 吾思 梦阁的项目与源码下载页：包含 STM32 工具、MiniDSO 示波器、网络与网站相关项目，提供 GitHub 仓库和发布包地址。
 date: 2026-10-16T00:00:00+08:00
 lastmod: 2026-10-26T00:00:00+08:00
 ---

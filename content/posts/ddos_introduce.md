@@ -2,7 +2,7 @@
 title = "DDoS 通俗绍介"
 date = "2026-07-27T19:30:00+08:00"
 draft = false
-description = "较为通俗的介绍的DDOS攻击"
+description = "用通俗的例子解释 DDoS 攻击的原理、常见类型（流量型、协议型、应用层）以及基础的防护与缓解思路。"
 categories = [ "网络" ]
 tags = [ "攻击", "DDOS", "Linux" ]
 cover = "/images/pool/covers/covers-03.avif"

@@ -33,7 +33,26 @@
 <title>
   {{ $title | safeHTML }}
 </title>
-<meta name="description" content="{{ .Params.description | default .Site.Params.description | safeHTML }}"/>
+{{- $desc := .Params.description -}}
+{{- if not $desc -}}
+  {{- if .IsHome -}}
+    {{- $desc = printf "%s（%s）：记录 STM32 嵌入式、网络、Linux 与网站开发的学习笔记，包含原理讲解、完整代码和故障排查。" .Site.Title .Site.Params.description -}}
+  {{- else if eq .Kind "term" -}}
+    {{- $kind := .Data.Singular -}}
+    {{- if eq $kind "category" }}{{ $kind = "分类" }}{{ else if eq $kind "tag" }}{{ $kind = "标签" }}{{ end -}}
+    {{- $desc = printf "「%s」相关的文章共 %d 篇，来自%s的%s归档，包含原理讲解、代码与调试记录。" .Title (len .Pages) .Site.Title $kind -}}
+  {{- else if eq .Kind "taxonomy" -}}
+    {{- $label := .Title -}}
+    {{- if eq $label "Categories" }}{{ $label = "分类" }}{{ else if eq $label "Tags" }}{{ $label = "标签" }}{{ end -}}
+    {{- $desc = printf "%s的全部%s列表：按 STM32 嵌入式、网络攻防、Linux、网站开发等主题整理文章，方便按方向查找。" .Site.Title $label -}}
+  {{- else if eq .Kind "section" -}}
+    {{- $desc = printf "%s的文章列表，共 %d 篇，涵盖 STM32、嵌入式、网络与网站开发。" .Site.Title (len .Pages) -}}
+  {{- else -}}
+    {{- $desc = .Site.Params.description -}}
+  {{- end -}}
+{{- end -}}
+{{- $desc = $desc | replaceRE "\\s+" " " -}}
+<meta name="description" content="{{ $desc | plainify | safeHTML }}"/>
 {{- $keywords := default .Site.Params.keywords .Params.keywords -}}
 {{- with $keywords }}
   {{- if reflect.IsSlice . }}
@@ -95,7 +114,7 @@
   <meta property="og:title" content="{{ $title | safeHTML }}" />
   <meta
     property="og:description"
-    content="{{ .Params.description | default .Site.Params.description | safeHTML }}"
+    content="{{ $desc | plainify | safeHTML }}"
   />
   <meta property="og:url" content="{{ .Permalink }}" />
   <meta
