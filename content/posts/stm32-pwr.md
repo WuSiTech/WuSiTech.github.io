@@ -69,7 +69,7 @@ F103 的电源域分三块：
 | ---- | ------------- |
 | 72 MHz 全速 | 30 ~ 50 mA |
 | 8 MHz | 5 ~ 10 mA |
-| Sleep | 1 ~ 5 mA |
+| Sleep | 5 ~ 15 mA |
 | Stop | 10 ~ 20 µA |
 | Standby | 约 2 µA |
 
@@ -788,7 +788,7 @@ void RTC_Wakeup_Init(uint32_t Seconds)
 | 模式 | 实测（参考） |
 | ---- | ------------ |
 | 72 MHz 全速 | 30 ~ 50 mA |
-| Sleep | 5 ~ 10 mA |
+| Sleep | 5 ~ 15 mA |
 | Stop | 10 ~ 20 µA |
 | Standby | 1 ~ 3 µA |
 

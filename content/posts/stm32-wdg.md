@@ -610,7 +610,6 @@ void Monitor_Task(void)
 调试器暂停时，IWDG/WWDG 还在跑，会一直复位。可以配置 DBGMCU 冻结：
 
 ```c
-RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 DBGMCU_Config(DBGMCU_IWDG_STOP, ENABLE);
 DBGMCU_Config(DBGMCU_WWDG_STOP, ENABLE);
 ```
