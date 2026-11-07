@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" width="900" height="360" font-family="Microsoft YaHei, PingFang SC, sans-serif">
+  <rect width="900" height="360" fill="#ffffff"/>
+
+  <!-- 起始条件 -->
+  <text x="20" y="30" font-size="16" font-weight="bold" fill="#1f2937">起始条件 S：SCL 高时 SDA 下降</text>
+  <text x="20" y="58" font-size="12" fill="#6b7280">SCL</text>
+  <line x1="45" y1="80" x2="260" y2="80" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="20" y="118" font-size="12" fill="#6b7280">SDA</text>
+  <line x1="45" y1="110" x2="140" y2="110" stroke="#dc2626" stroke-width="2.5"/>
+  <line x1="140" y1="110" x2="140" y2="150" stroke="#dc2626" stroke-width="2.5"/>
+  <line x1="140" y1="150" x2="260" y2="150" stroke="#dc2626" stroke-width="2.5"/>
+  <line x1="140" y1="70" x2="140" y2="165" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="150" y="62" font-size="12" fill="#b91c1c">下降沿 = 起始</text>
+
+  <!-- 数据与应答 -->
+  <text x="320" y="30" font-size="16" font-weight="bold" fill="#1f2937">数据位与应答：只在 SCL 低时改变 SDA</text>
+  <text x="320" y="58" font-size="12" fill="#6b7280">SCL</text>
+  <polyline points="345,80 345,120 385,120 385,80 425,80 425,120 465,120 465,80 505,80 505,120 545,120 545,80 585,80"
+            fill="none" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="320" y="178" font-size="12" fill="#6b7280">SDA</text>
+  <polyline points="345,145 365,145 365,185 405,185 405,145 445,145 445,185 485,185 485,145 525,145 525,185 585,185"
+            fill="none" stroke="#dc2626" stroke-width="2.5"/>
+  <text x="330" y="210" font-size="12" fill="#b91c1c">数据在 SCL 高电平期间必须稳定</text>
+  <text x="540" y="210" font-size="12" fill="#b91c1c">最后一位 SDA 低 = ACK</text>
+
+  <!-- 停止条件 -->
+  <text x="620" y="30" font-size="16" font-weight="bold" fill="#1f2937">停止条件 P：SCL 高时 SDA 上升</text>
+  <text x="620" y="58" font-size="12" fill="#6b7280">SCL</text>
+  <line x1="645" y1="80" x2="860" y2="80" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="620" y="118" font-size="12" fill="#6b7280">SDA</text>
+  <line x1="645" y1="150" x2="760" y2="150" stroke="#dc2626" stroke-width="2.5"/>
+  <line x1="760" y1="150" x2="760" y2="110" stroke="#dc2626" stroke-width="2.5"/>
+  <line x1="760" y1="110" x2="860" y2="110" stroke="#dc2626" stroke-width="2.5"/>
+  <line x1="760" y1="70" x2="760" y2="165" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="770" y="62" font-size="12" fill="#b91c1c">上升沿 = 停止</text>
+
+  <line x1="20" y1="310" x2="880" y2="310" stroke="#e5e7eb"/>
+  <text x="20" y="335" font-size="13" fill="#374151">读数据时：主机每收 1 字节回 ACK，最后一个字节回 NACK，再发停止条件。</text>
+</svg>
