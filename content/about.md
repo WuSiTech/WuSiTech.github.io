@@ -13,7 +13,7 @@ lastmod: 2026-01-01T00:00:00+08:00
 >
 > 像时间一样 冷酷而温柔
 
-主笔：吾思
+主笔：WuSi09
 
 站点其他页面:[工具页](https://wstek.win/tools/index.html)
 
