@@ -1,8 +1,8 @@
 +++
-title = "笑笑传之日傻子语言"
+title = "笑笑传之日⑨语言"
 date = "2026-11-08T21:30:00+08:00"
 draft = false
-description = "整活的编程语言，写起来不烧心，因为根本就写不了"
+description = "整活的编程语言，写起来不烧心\n不准日傻子！"
 categories = [ "编程" ]
 tags = [ "编译器", "汇编", "C++", "esolang" ]
 cover = "/images/pool/covers/covers-19.avif"
