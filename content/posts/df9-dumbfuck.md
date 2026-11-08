@@ -1,13 +1,13 @@
 +++
 title = "日⑨ DF9：把 C 压成乱码，再直出 x86-64 汇编"
 date = "2026-11-08T21:30:00+08:00"
-lastmod = "2026-11-08T21:30:00+08:00"
 draft = false
 description = "从 Brainfuck 式的深奥语法到 x86-64 汇编：拆解 DF9 的九条戒律、单遍编译器、ABI、线程与自举种子，附可运行示例和一行红黑树。"
 categories = [ "编程" ]
-tags = [ "DF9", "编译器", "汇编", "C++", "esolang" ]
-cover = "/images/posts/df9/cover.webp"
+tags = [ "编译器", "汇编", "C++", "esolang" ]
+cover = "/images/pool/covers/covers-19.avif"
 banner = ""
+lastmod = "2026-11-08T21:30:00+08:00"
 +++
 
 **dumbfuck⑨**，缩写 **DF9**，中文名 **日⑨**。作者是 [WuSiTech](https://github.com/WuSiTech)，仓库在 [WuSiTech/dumbfxxk](https://github.com/WuSiTech/dumbfxxk)。
