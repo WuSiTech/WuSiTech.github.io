@@ -1,0 +1,22 @@
+[wsdup]
+
+//最新版本号
+latest_version=0.5.0
+
+//最新版下载链接(多链接防止不稳定)
+link_1="https://example.com/file.zip"
+link_2=""
+link_3=""
+
+//模式：全量包(full) / 模块包(mod)
+mode=full
+
+//强制更新（当有重大问题如内存泄漏时）
+force_update=0
+
+//更新日志，支持换行
+update_log=
+"
+初始版本 Inital Version
+Ciallo～(∠・ω< )⌒★ From WS
+"
