@@ -2,7 +2,7 @@
 
 latest_version=1.1.0
 
-link_1="https://1837687029.share.123pan.cn/123pan/wIlMTd-SlmOv"
+link_1="https://yun.139.com/shareweb/#/w/i/2yA8UAjeUf4bq"
 link_2=""
 link_3=""
 
