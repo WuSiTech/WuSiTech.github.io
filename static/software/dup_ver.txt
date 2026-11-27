@@ -1,22 +1,26 @@
 [wsdup]
 
-latest_version=1.0.0
+latest_version=1.1.0
 
-link_1="https://example.com/wusi-full-1.0.0.exe"
+link_1="https://1837687029.share.123pan.cn/123pan/wIlMTd-SlmOv"
 link_2=""
 link_3=""
 
 mode=full
 
-is_browser=0
+is_browser=1
 
-date=20261126000000
+date=20261127000000
 
-force_update=0
+force_update=1
 
 update_log=
 "
+Ciallo～(∠・ω< )⌒★ From WuSi⑨
+1.1.0
+修复 大分块下载无响应问题
+修复 快传稳定性问题
+增加 相册视频管理
 1.0.0
 最初版本 Inital Version
-Ciallo～(∠・ω< )⌒★ From WuSi⑨
 "
